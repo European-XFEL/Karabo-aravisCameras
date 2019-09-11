@@ -9,6 +9,10 @@
 #ifndef KARABO_ARAVISCAMERAS_HH
 #define KARABO_ARAVISCAMERAS_HH
 
+extern "C" {
+  #include <arv.h>
+}
+
 #include <karabo/karabo.hpp>
 
 /**
@@ -69,6 +73,16 @@ namespace karabo {
 
 
     private:
+        void connect();
+        void acquire();
+        void stop();
+
+        static void stream_cb(void* context, ArvStreamCallbackType type, ArvBuffer* buffer);
+        static void new_buffer_cb(ArvStream* stream, void* context);
+
+        ArvCamera* m_camera;
+        ArvStream* m_stream;
+        GMainLoop *m_gloop;
 
     };
 }
