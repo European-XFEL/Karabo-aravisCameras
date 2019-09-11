@@ -41,6 +41,9 @@
           <incDir>
             <pElem>${KARABO}/include</pElem>
             <pElem>${KARABO}/extern/include</pElem>
+            <pElem>${KARABO}/extern/include/aravis-0.6</pElem>
+            <pElem>/usr/lib/x86_64-linux-gnu/glib-2.0/include</pElem>
+            <pElem>/usr/include/glib-2.0</pElem>
           </incDir>
         </ccTool>
         <linkerTool>
@@ -55,6 +58,7 @@
           </linkerDynSerch>
           <linkerLibItems>
             <linkerLibLibItem>karabo</linkerLibLibItem>
+            <linkerLibLibItem>aravis-0.6</linkerLibLibItem>
             <linkerOptionItem>`pkg-config --libs karaboDependencies`</linkerOptionItem>
           </linkerLibItems>
         </linkerTool>
@@ -80,6 +84,9 @@
           <incDir>
             <pElem>${KARABO}/include</pElem>
             <pElem>${KARABO}/extern/include</pElem>
+            <pElem>${KARABO}/extern/include/aravis-0.6</pElem>
+            <pElem>/usr/lib/x86_64-linux-gnu/glib-2.0/include</pElem>
+            <pElem>/usr/include/glib-2.0</pElem>
           </incDir>
         </ccTool>
         <fortranCompilerTool>
@@ -100,6 +107,7 @@
           </linkerDynSerch>
           <linkerLibItems>
             <linkerLibLibItem>karabo</linkerLibLibItem>
+            <linkerLibLibItem>aravis-0.6</linkerLibLibItem>
             <linkerOptionItem>`pkg-config --libs karaboDependencies`</linkerOptionItem>
           </linkerLibItems>
         </linkerTool>
