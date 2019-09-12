@@ -58,12 +58,6 @@ namespace karabo {
 
 
     AravisCameras::AravisCameras(const karabo::util::Hash& config) : Device<>(config) {        
-        /* Create a new glib main loop */
-        m_gloop = g_main_loop_new(g_main_context_new(), FALSE);
-
-        /* Run the main loop */
-        //g_main_loop_run(m_gloop); // Block, and apparently not needed TODO rm
-        
         KARABO_SLOT(connect);
         KARABO_SLOT(acquire);
         KARABO_SLOT(stop);
@@ -89,15 +83,15 @@ namespace karabo {
     void AravisCameras::connect() {
         // TODO connect worker
 
-        /* Instantiation of the available */
         std::string cameraIp = this->get<std::string>("cameraIp");
         m_camera = arv_camera_new(cameraIp.c_str());
 
         if (m_camera == NULL) {
             KARABO_LOG_ERROR << "Cannot connect to " << cameraIp;
+            // TODO free m_camera?
             return;
         }
-
+        
         KARABO_LOG_INFO << "Connected to " << cameraIp;
 
         Hash h;
@@ -112,29 +106,32 @@ namespace karabo {
     void AravisCameras::acquire() {
         m_stream = arv_camera_create_stream(m_camera, AravisCameras::stream_cb, static_cast<void*>(this));
 
-        /* And enable emission of this signal (it's disabled by default for performance reason) */
-        //arv_stream_set_emit_signals(m_stream, TRUE);
+        // Enable emission of signals (it's disabled by default for performance reason)
+        arv_stream_set_emit_signals(m_stream, TRUE);
 
+        // Create and push buffers to the stream
 	gint payload = arv_camera_get_payload(m_camera);
-	for (size_t i = 0; i < 5; i++)
+	for (size_t i = 0; i < 10; i++)
             arv_stream_push_buffer(m_stream, arv_buffer_new(payload, NULL));
 
         arv_camera_start_acquisition(m_camera);
 
-        /* Connect the new-buffer signal */
-        //g_signal_connect(m_stream, "new-buffer", G_CALLBACK(AravisCameras::new_buffer_cb), static_cast<void*>(this));
+        // Connect the 'new-buffer' signal
+        g_signal_connect(m_stream, "new-buffer", G_CALLBACK(AravisCameras::new_buffer_cb), static_cast<void*>(this));
 
         this->updateState(State::ACQUIRING);
     }
 
     
     void AravisCameras::stop() {
-        //if (ARV_IS_STREAM(m_stream))
-        //    arv_stream_set_emit_signals(m_stream, FALSE);
-
-	//g_clear_object(m_stream);  // TODO
+        if (ARV_IS_STREAM(m_stream)) {
+            // Disable emission of signals
+            arv_stream_set_emit_signals(m_stream, FALSE);
+            // TODO free m_stream
+        }
 
         arv_camera_stop_acquisition(m_camera);
+
         this->updateState(State::ON);
     }
 
@@ -143,12 +140,7 @@ namespace karabo {
         Self* self = static_cast<Self*>(context);
 
         // TODO proper logging
-        std::cout << "stream_cb" << std::endl;
-        if (type == ARV_STREAM_CALLBACK_TYPE_BUFFER_DONE) {
-            std::cout << "Buffer done" << std::endl;
-            // Do processing here
-
-        } else if (type == ARV_STREAM_CALLBACK_TYPE_INIT) {
+        if (type == ARV_STREAM_CALLBACK_TYPE_INIT) {
             std::cout << "Init stream" << std::endl;
                 if (!arv_make_thread_realtime(10) && !arv_make_thread_high_priority(-10)) {
                     std::cout << "Failed to make stream thread high priority" << std::endl;
@@ -161,7 +153,28 @@ namespace karabo {
         Self* self = static_cast<Self*>(context);
 
         // TODO proper logging
-        std::cout << "new_buffer_cb" << std::endl;
+
+        ArvBuffer* arv_buffer = arv_stream_pop_buffer(stream);
+	if (arv_buffer == NULL)
+		return;
+
+        if (arv_buffer_get_status(arv_buffer) == ARV_BUFFER_STATUS_SUCCESS) {
+            char *buffer_data;
+            int x, y, width, height;
+            size_t buffer_size;
+            ArvPixelFormat pixel_format;
+            guint32 frame_id;
+            
+            buffer_data = (char *) arv_buffer_get_data(arv_buffer, &buffer_size);
+            arv_buffer_get_image_region(arv_buffer, &x, &y, &width, &height);
+            pixel_format = arv_buffer_get_image_pixel_format(arv_buffer); // e.g. ARV_PIXEL_FORMAT_MONO_8
+            frame_id = arv_buffer_get_frame_id(arv_buffer);
+            std::cout << "Got frame " << frame_id << std::endl;
+            // TODO something with the buffer
+        }
+
+        // Push back the buffer to the stream
+        arv_stream_push_buffer(stream, arv_buffer);
     }
 
 }
