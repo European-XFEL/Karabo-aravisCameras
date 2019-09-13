@@ -4,7 +4,7 @@
     <logicalFolder name="HeaderFiles"
                    displayName="Header Files"
                    projectFiles="true">
-      <itemPath>src/AravisCameras.hh</itemPath>
+      <itemPath>src/AravisCamera.hh</itemPath>
     </logicalFolder>
     <logicalFolder name="ResourceFiles"
                    displayName="Resource Files"
@@ -13,12 +13,20 @@
     <logicalFolder name="SourceFiles"
                    displayName="Source Files"
                    projectFiles="true">
-      <itemPath>src/AravisCameras.cc</itemPath>
+      <itemPath>src/AravisCamera.cc</itemPath>
     </logicalFolder>
     <logicalFolder name="TestFiles"
                    displayName="Test Files"
                    projectFiles="false"
                    kind="TEST_LOGICAL_FOLDER">
+      <logicalFolder name="f1"
+                     displayName="aravisCameraApp"
+                     projectFiles="true"
+                     kind="TEST">
+        <itemPath>src/tests/CameraTest.cc</itemPath>
+        <itemPath>src/tests/CameraTest.hh</itemPath>
+        <itemPath>src/tests/test_runner.cc</itemPath>
+      </logicalFolder>
     </logicalFolder>
     <logicalFolder name="ExternalFiles"
                    displayName="Important Files"
@@ -63,9 +71,30 @@
           </linkerLibItems>
         </linkerTool>
       </compileType>
-      <item path="src/AravisCameras.cc" ex="false" tool="1" flavor2="0">
+      <folder path="TestFiles/f1">
+        <cTool>
+          <commandLine>`cppunit-config --cflags`</commandLine>
+        </cTool>
+        <ccTool>
+          <commandLine>`cppunit-config --cflags`</commandLine>
+        </ccTool>
+        <linkerTool>
+          <output>${TESTDIR}/TestFiles/f1</output>
+          <linkerLibItems>
+            <linkerOptionItem>`cppunit-config --libs`</linkerOptionItem>
+            <linkerLibLibItem>gobject-2.0</linkerLibLibItem>
+          </linkerLibItems>
+        </linkerTool>
+      </folder>
+      <item path="src/AravisCamera.cc" ex="false" tool="1" flavor2="0">
       </item>
-      <item path="src/AravisCameras.hh" ex="false" tool="3" flavor2="0">
+      <item path="src/AravisCamera.hh" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="src/tests/CameraTest.cc" ex="false" tool="1" flavor2="0">
+      </item>
+      <item path="src/tests/CameraTest.hh" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="src/tests/test_runner.cc" ex="false" tool="1" flavor2="0">
       </item>
     </conf>
     <conf name="Release" type="2">
@@ -112,9 +141,30 @@
           </linkerLibItems>
         </linkerTool>
       </compileType>
-      <item path="src/AravisCameras.cc" ex="false" tool="1" flavor2="0">
+      <folder path="TestFiles/f1">
+        <cTool>
+          <commandLine>`cppunit-config --cflags`</commandLine>
+        </cTool>
+        <ccTool>
+          <commandLine>`cppunit-config --cflags`</commandLine>
+        </ccTool>
+        <linkerTool>
+          <output>${TESTDIR}/TestFiles/f1</output>
+          <linkerLibItems>
+            <linkerOptionItem>`cppunit-config --libs`</linkerOptionItem>
+            <linkerLibLibItem>gobject-2.0</linkerLibLibItem>
+          </linkerLibItems>
+        </linkerTool>
+      </folder>
+      <item path="src/AravisCamera.cc" ex="false" tool="1" flavor2="0">
       </item>
-      <item path="src/AravisCameras.hh" ex="false" tool="3" flavor2="0">
+      <item path="src/AravisCamera.hh" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="src/tests/CameraTest.cc" ex="false" tool="1" flavor2="0">
+      </item>
+      <item path="src/tests/CameraTest.hh" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="src/tests/test_runner.cc" ex="false" tool="1" flavor2="0">
       </item>
     </conf>
   </confs>

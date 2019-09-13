@@ -6,7 +6,7 @@
  * Copyright (c) European XFEL GmbH Hamburg. All rights reserved.
  */
 
-#include "AravisCameras.hh"
+#include "AravisCamera.hh"
 
 using namespace std;
 
@@ -15,9 +15,9 @@ USING_KARABO_NAMESPACES;
 namespace karabo {
 
 
-    KARABO_REGISTER_FOR_CONFIGURATION(BaseDevice, Device<>, AravisCameras)
+    KARABO_REGISTER_FOR_CONFIGURATION(BaseDevice, Device<>, AravisCamera)
 
-    void AravisCameras::expectedParameters(Schema& expected) {
+    void AravisCamera::expectedParameters(Schema& expected) {
         STRING_ELEMENT(expected).key("cameraIp")
                 .displayedName("Camera IP")
                 .description("The IP address of the network camera (eg 131.169.140.193).")  // TODO: hostname
@@ -83,18 +83,18 @@ namespace karabo {
     }
 
 
-    AravisCameras::AravisCameras(const karabo::util::Hash& config) : Device<>(config) {        
+    AravisCamera::AravisCamera(const karabo::util::Hash& config) : Device<>(config) {
         KARABO_SLOT(connect);
         KARABO_SLOT(acquire);
         KARABO_SLOT(stop);
     }
 
 
-    AravisCameras::~AravisCameras() {
+    AravisCamera::~AravisCamera() {
     }
 
 
-    void AravisCameras::preReconfigure(karabo::util::Hash& incomingReconfiguration) {
+    void AravisCamera::preReconfigure(karabo::util::Hash& incomingReconfiguration) {
         if (incomingReconfiguration.has("pixelFormat")) {
             const char* pixelFormat = incomingReconfiguration.get<std::string>("pixelFormat").c_str();
             arv_camera_set_pixel_format_from_string(m_camera, pixelFormat);
@@ -102,11 +102,11 @@ namespace karabo {
     }
 
 
-    void AravisCameras::postReconfigure() {
+    void AravisCamera::postReconfigure() {
     }
 
 
-    void AravisCameras::connect() {
+    void AravisCamera::connect() {
         // TODO connect worker
 
         const std::string cameraIp = this->get<std::string>("cameraIp");
@@ -121,7 +121,7 @@ namespace karabo {
         KARABO_LOG_INFO << "Connected to " << cameraIp;
 
         // Connect the control-lost signal
-        g_signal_connect(arv_camera_get_device(m_camera), "control-lost", G_CALLBACK(AravisCameras::control_lost_cb), static_cast<void*>(this));
+        g_signal_connect(arv_camera_get_device(m_camera), "control-lost", G_CALLBACK(AravisCamera::control_lost_cb), static_cast<void*>(this));
 
         Hash h;
         h.set("cameraId", std::string(arv_camera_get_device_id(m_camera)));
@@ -132,10 +132,10 @@ namespace karabo {
     }
 
     
-    void AravisCameras::acquire() {
+    void AravisCamera::acquire() {
         m_timer.now();
         m_counter = 0;
-        m_stream = arv_camera_create_stream(m_camera, AravisCameras::stream_cb, static_cast<void*>(this));
+        m_stream = arv_camera_create_stream(m_camera, AravisCamera::stream_cb, static_cast<void*>(this));
 
         // Enable emission of signals (it's disabled by default for performance reason)
         arv_stream_set_emit_signals(m_stream, TRUE);
@@ -148,13 +148,13 @@ namespace karabo {
         arv_camera_start_acquisition(m_camera);
 
         // Connect the 'new-buffer' signal
-        g_signal_connect(m_stream, "new-buffer", G_CALLBACK(AravisCameras::new_buffer_cb), static_cast<void*>(this));
+        g_signal_connect(m_stream, "new-buffer", G_CALLBACK(AravisCamera::new_buffer_cb), static_cast<void*>(this));
 
         this->updateState(State::ACQUIRING);
     }
 
     
-    void AravisCameras::stop() {
+    void AravisCamera::stop() {
         if (ARV_IS_STREAM(m_stream)) {
             // Disable emission of signals
             arv_stream_set_emit_signals(m_stream, FALSE);
@@ -168,7 +168,7 @@ namespace karabo {
     }
 
 
-    void AravisCameras::stream_cb(void *context, ArvStreamCallbackType type, ArvBuffer *buffer) {
+    void AravisCamera::stream_cb(void *context, ArvStreamCallbackType type, ArvBuffer *buffer) {
         Self* self = static_cast<Self*>(context);
 
         // TODO proper logging
@@ -181,7 +181,7 @@ namespace karabo {
     }
 
 
-    void AravisCameras::new_buffer_cb(ArvStream* stream, void* context) {
+    void AravisCamera::new_buffer_cb(ArvStream* stream, void* context) {
         Self* self = static_cast<Self*>(context);
 
         // TODO proper logging
@@ -222,7 +222,7 @@ namespace karabo {
     }
 
 
-    void AravisCameras::control_lost_cb(ArvGvDevice* gv_device, void* context) {
+    void AravisCamera::control_lost_cb(ArvGvDevice* gv_device, void* context) {
         // Control of the device is lost
 
         Self* self = static_cast<Self*>(context);
@@ -236,7 +236,7 @@ namespace karabo {
 
 
     template <class T>
-    void AravisCameras::writeOutputChannels(const void* data, gint width, gint height) {
+    void AravisCamera::writeOutputChannels(const void* data, gint width, gint height) {
         const Dims shape(height, width);
 
         // Non-copy NDArray constructor

@@ -6,8 +6,8 @@
  * Copyright (c) European XFEL GmbH Hamburg. All rights reserved.
  */
 
-#ifndef KARABO_ARAVISCAMERAS_HH
-#define KARABO_ARAVISCAMERAS_HH
+#ifndef KARABO_ARAVISCAMERA_HH
+#define KARABO_ARAVISCAMERA_HH
 
 extern "C" {
   #include <arv.h>
@@ -20,12 +20,12 @@ extern "C" {
  */
 namespace karabo {
 
-    class AravisCameras : public karabo::core::Device<> {
+    class AravisCamera : public karabo::core::Device<> {
 
     public:
 
         // Add reflection information and Karabo framework compatibility to this class
-        KARABO_CLASSINFO(AravisCameras, "AravisCameras", "2.0")
+        KARABO_CLASSINFO(AravisCamera, "AravisCamera", "2.6")
 
         /**
          * Necessary method as part of the factory/configuration system
@@ -39,12 +39,12 @@ namespace karabo {
          * already be validated using the information of the expectedParameters function.
          * The configuration is provided in a key/value fashion.
          */
-        AravisCameras(const karabo::util::Hash& config);
+        AravisCamera(const karabo::util::Hash& config);
 
         /**
          * The destructor will be called in case the device gets killed
          */
-        virtual ~AravisCameras();
+        virtual ~AravisCamera();
 
         /**
          * This function acts as a hook and is called after an reconfiguration request was received,
