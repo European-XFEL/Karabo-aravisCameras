@@ -79,10 +79,17 @@ namespace karabo {
 
         static void stream_cb(void* context, ArvStreamCallbackType type, ArvBuffer* buffer);
         static void new_buffer_cb(ArvStream* stream, void* context);
+        static void control_lost_cb(ArvGvDevice* gv_device, void* context);
+
+        template <class T>
+        void writeOutputChannels(const void* data, gint width, gint height);
 
         ArvCamera* m_camera;
         ArvStream* m_stream;
         GMainLoop *m_gloop;
+
+        karabo::util::Epochstamp m_timer;
+        unsigned long m_counter;
 
     };
 }
