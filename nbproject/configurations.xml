@@ -81,7 +81,7 @@
         <linkerTool>
           <output>${TESTDIR}/TestFiles/f1</output>
           <linkerLibItems>
-            <linkerOptionItem>`cppunit-config --libs`</linkerOptionItem>
+            <linkerOptionItem>`pkg-config cppunit --libs`</linkerOptionItem>
             <linkerLibLibItem>gobject-2.0</linkerLibLibItem>
           </linkerLibItems>
         </linkerTool>
@@ -151,7 +151,7 @@
         <linkerTool>
           <output>${TESTDIR}/TestFiles/f1</output>
           <linkerLibItems>
-            <linkerOptionItem>`cppunit-config --libs`</linkerOptionItem>
+            <linkerOptionItem>`pkg-config cppunit --libs`</linkerOptionItem>
             <linkerLibLibItem>gobject-2.0</linkerLibLibItem>
           </linkerLibItems>
         </linkerTool>

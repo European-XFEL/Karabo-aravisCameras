@@ -80,7 +80,7 @@ ${OBJECTDIR}/src/AravisCamera.o: src/AravisCamera.cc
 .build-tests-conf: .build-conf ${TESTFILES}
 ${TESTDIR}/TestFiles/f1: ${TESTDIR}/src/tests/CameraTest.o ${TESTDIR}/src/tests/test_runner.o ${OBJECTFILES:%.o=%_nomain.o}
 	${MKDIR} -p ${TESTDIR}/TestFiles
-	${LINK.cc}   -o ${TESTDIR}/TestFiles/f1 $^ ${LDLIBSOPTIONS} `cppunit-config --libs` -lgobject-2.0   
+	${LINK.cc}   -o ${TESTDIR}/TestFiles/f1 $^ ${LDLIBSOPTIONS} `pkg-config cppunit --libs` -lgobject-2.0   
 
 
 ${TESTDIR}/src/tests/CameraTest.o: src/tests/CameraTest.cc 
