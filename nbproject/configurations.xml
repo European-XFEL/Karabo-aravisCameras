@@ -51,6 +51,7 @@
             <pElem>${KARABO}/extern/include</pElem>
             <pElem>${KARABO}/extern/include/aravis-0.6</pElem>
             <pElem>/usr/lib/x86_64-linux-gnu/glib-2.0/include</pElem>
+            <pElem>/usr/lib64/glib-2.0/include</pElem>
             <pElem>/usr/include/glib-2.0</pElem>
           </incDir>
         </ccTool>
@@ -115,6 +116,7 @@
             <pElem>${KARABO}/extern/include</pElem>
             <pElem>${KARABO}/extern/include/aravis-0.6</pElem>
             <pElem>/usr/lib/x86_64-linux-gnu/glib-2.0/include</pElem>
+            <pElem>/usr/lib64/glib-2.0/include</pElem>
             <pElem>/usr/include/glib-2.0</pElem>
           </incDir>
         </ccTool>
