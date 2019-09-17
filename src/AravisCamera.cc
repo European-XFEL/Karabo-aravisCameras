@@ -83,7 +83,7 @@ namespace karabo {
     }
 
 
-    AravisCamera::AravisCamera(const karabo::util::Hash& config) : Device<>(config) {
+    AravisCamera::AravisCamera(const karabo::util::Hash& config) : Device<>(config), m_camera(NULL), m_stream(NULL) {
         KARABO_SLOT(connect);
         KARABO_SLOT(acquire);
         KARABO_SLOT(stop);
@@ -91,6 +91,12 @@ namespace karabo {
 
 
     AravisCamera::~AravisCamera() {
+        if (ARV_IS_STREAM(m_stream)) {
+            g_clear_object(&m_stream);
+        }
+        if (ARV_IS_CAMERA(m_camera)) {
+            g_clear_object(&m_camera);
+        }
     }
 
 
@@ -109,12 +115,19 @@ namespace karabo {
     void AravisCamera::connect() {
         // TODO connect worker
 
+        if (ARV_IS_STREAM(m_stream)) {
+            g_clear_object(&m_stream);
+        }
+        if (ARV_IS_CAMERA(m_camera)) {
+            g_clear_object(&m_camera);
+        }
+
         const std::string cameraIp = this->get<std::string>("cameraIp");
         m_camera = arv_camera_new(cameraIp.c_str());
 
-        if (m_camera == NULL) {
+        if (!ARV_IS_CAMERA(m_camera)) {
             KARABO_LOG_ERROR << "Cannot connect to " << cameraIp;
-            // TODO free m_camera?
+            m_camera = NULL;
             return;
         }
         
@@ -137,6 +150,11 @@ namespace karabo {
         m_counter = 0;
         m_stream = arv_camera_create_stream(m_camera, AravisCamera::stream_cb, static_cast<void*>(this));
 
+        if (!ARV_IS_STREAM(m_stream)) {
+            KARABO_LOG_ERROR << "Stream could not be created";
+            return;
+        }
+
         // Enable emission of signals (it's disabled by default for performance reason)
         arv_stream_set_emit_signals(m_stream, TRUE);
 
@@ -156,9 +174,9 @@ namespace karabo {
     
     void AravisCamera::stop() {
         if (ARV_IS_STREAM(m_stream)) {
-            // Disable emission of signals
+            // Disable emission of signals and free resource
             arv_stream_set_emit_signals(m_stream, FALSE);
-            // TODO free m_stream
+            g_clear_object(&m_stream);
         }
 
         arv_camera_stop_acquisition(m_camera);
@@ -187,7 +205,7 @@ namespace karabo {
         // TODO proper logging
 
         ArvBuffer* arv_buffer = arv_stream_pop_buffer(stream);
-	if (arv_buffer == NULL)
+	if (!ARV_IS_BUFFER(arv_buffer))
 		return;
 
         if (arv_buffer_get_status(arv_buffer) == ARV_BUFFER_STATUS_SUCCESS) {
@@ -213,7 +231,7 @@ namespace karabo {
                 // TODO PACKED formats
                 default:
                     std::cout << "Format " << pixel_format << " is not supported"  << std::endl;
-                    // TODO stop acquisition
+                    self->execute("stop");
             }
         }
 
@@ -229,8 +247,6 @@ namespace karabo {
 
         // TODO proper logging
         std::cout << "Control of the camera is lost" << std::endl;
-
-        // TODO clear m_camera and m_stream as needed
         self->updateState(State::UNKNOWN);
     }
 
