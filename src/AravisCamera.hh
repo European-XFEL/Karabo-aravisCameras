@@ -89,7 +89,6 @@ namespace karabo {
 
         ArvCamera* m_camera;
         ArvStream* m_stream;
-        GMainLoop *m_gloop;
 
         karabo::util::Epochstamp m_timer;
         unsigned long m_counter;
