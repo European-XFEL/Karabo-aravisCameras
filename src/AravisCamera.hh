@@ -77,6 +77,9 @@ namespace karabo {
         void acquire();
         void stop();
 
+        void clear_camera();
+        void clear_stream();
+
         static void stream_cb(void* context, ArvStreamCallbackType type, ArvBuffer* buffer);
         static void new_buffer_cb(ArvStream* stream, void* context);
         static void control_lost_cb(ArvGvDevice* gv_device, void* context);

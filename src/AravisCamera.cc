@@ -91,12 +91,8 @@ namespace karabo {
 
 
     AravisCamera::~AravisCamera() {
-        if (ARV_IS_STREAM(m_stream)) {
-            g_clear_object(&m_stream);
-        }
-        if (ARV_IS_CAMERA(m_camera)) {
-            g_clear_object(&m_camera);
-        }
+        this->clear_stream();
+        this->clear_camera();
     }
 
 
@@ -115,12 +111,8 @@ namespace karabo {
     void AravisCamera::connect() {
         // TODO connect worker
 
-        if (ARV_IS_STREAM(m_stream)) {
-            g_clear_object(&m_stream);
-        }
-        if (ARV_IS_CAMERA(m_camera)) {
-            g_clear_object(&m_camera);
-        }
+        this->clear_stream();
+        this->clear_camera();
 
         const std::string cameraIp = this->get<std::string>("cameraIp");
         m_camera = arv_camera_new(cameraIp.c_str());
@@ -173,16 +165,28 @@ namespace karabo {
 
     
     void AravisCamera::stop() {
-        if (ARV_IS_STREAM(m_stream)) {
-            // Disable emission of signals and free resource
-            arv_stream_set_emit_signals(m_stream, FALSE);
-            g_clear_object(&m_stream);
-        }
+        this->clear_stream();
 
         arv_camera_stop_acquisition(m_camera);
 
         this->set("frameRate", 0.);
         this->updateState(State::ON);
+    }
+
+
+    void AravisCamera::clear_camera() {
+        if (ARV_IS_CAMERA(m_camera)) {
+            g_clear_object(&m_camera);
+        }
+    }
+
+
+    void AravisCamera::clear_stream() {
+        if (ARV_IS_STREAM(m_stream)) {
+            // Disable emission of signals and free resource
+            arv_stream_set_emit_signals(m_stream, FALSE);
+            g_clear_object(&m_stream);
+        }
     }
 
 
