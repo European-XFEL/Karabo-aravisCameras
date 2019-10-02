@@ -183,6 +183,8 @@ namespace karabo {
 
     void AravisCamera::clear_stream() {
         if (ARV_IS_STREAM(m_stream)) {
+            // TODO possibly disconnect signal, see https://developer.gnome.org/gobject/stable/gobject-Signals.html#g-signal-handler-disconnect
+
             // Disable emission of signals and free resource
             arv_stream_set_emit_signals(m_stream, FALSE);
             g_clear_object(&m_stream);
@@ -248,6 +250,9 @@ namespace karabo {
         // Control of the device is lost
 
         Self* self = static_cast<Self*>(context);
+
+        // TODO what happens with multiple cameras on server?
+        // Possibly use arv_gv_device_get_device_address (gv_device) to verify IP address
 
         // TODO proper logging
         std::cout << "Control of the camera is lost" << std::endl;
