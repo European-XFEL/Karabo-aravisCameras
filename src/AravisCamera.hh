@@ -6,8 +6,12 @@
  * Copyright (c) European XFEL GmbH Hamburg. All rights reserved.
  */
 
-#ifndef KARABO_ARAVISCAMERAS_HH
-#define KARABO_ARAVISCAMERAS_HH
+#ifndef KARABO_ARAVISCAMERA_HH
+#define KARABO_ARAVISCAMERA_HH
+
+extern "C" {
+  #include <arv.h>
+}
 
 #include <karabo/karabo.hpp>
 
@@ -16,12 +20,12 @@
  */
 namespace karabo {
 
-    class AravisCameras : public karabo::core::Device<> {
+    class AravisCamera : public karabo::core::Device<> {
 
     public:
 
         // Add reflection information and Karabo framework compatibility to this class
-        KARABO_CLASSINFO(AravisCameras, "AravisCameras", "2.0")
+        KARABO_CLASSINFO(AravisCamera, "AravisCamera", "2.6")
 
         /**
          * Necessary method as part of the factory/configuration system
@@ -35,12 +39,12 @@ namespace karabo {
          * already be validated using the information of the expectedParameters function.
          * The configuration is provided in a key/value fashion.
          */
-        AravisCameras(const karabo::util::Hash& config);
+        AravisCamera(const karabo::util::Hash& config);
 
         /**
          * The destructor will be called in case the device gets killed
          */
-        virtual ~AravisCameras();
+        virtual ~AravisCamera();
 
         /**
          * This function acts as a hook and is called after an reconfiguration request was received,
@@ -69,6 +73,25 @@ namespace karabo {
 
 
     private:
+        void connect();
+        void acquire();
+        void stop();
+
+        void clear_camera();
+        void clear_stream();
+
+        static void stream_cb(void* context, ArvStreamCallbackType type, ArvBuffer* buffer);
+        static void new_buffer_cb(ArvStream* stream, void* context);
+        static void control_lost_cb(ArvGvDevice* gv_device, void* context);
+
+        template <class T>
+        void writeOutputChannels(const void* data, gint width, gint height);
+
+        ArvCamera* m_camera;
+        ArvStream* m_stream;
+
+        karabo::util::Epochstamp m_timer;
+        unsigned long m_counter;
 
     };
 }
