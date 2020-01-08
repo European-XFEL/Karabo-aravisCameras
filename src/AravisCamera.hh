@@ -15,12 +15,14 @@ extern "C" {
 
 #include <karabo/karabo.hpp>
 
+#include <image_source/ImageSource.hh>
+
 /**
  * The main Karabo namespace
  */
 namespace karabo {
 
-    class AravisCamera : public karabo::core::Device<> {
+    class AravisCamera : public ImageSource {
 
     public:
 

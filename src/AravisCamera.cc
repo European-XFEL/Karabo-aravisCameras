@@ -15,7 +15,7 @@ USING_KARABO_NAMESPACES;
 namespace karabo {
 
 
-    KARABO_REGISTER_FOR_CONFIGURATION(BaseDevice, Device<>, AravisCamera)
+    KARABO_REGISTER_FOR_CONFIGURATION(BaseDevice, Device<>, ImageSource, AravisCamera)
 
     void AravisCamera::expectedParameters(Schema& expected) {
         STRING_ELEMENT(expected).key("cameraIp")
@@ -39,24 +39,6 @@ namespace karabo {
                 .displayedName("Stop")
                 .allowedStates(State::ACQUIRING)
                 .commit();
-
-        Schema data;
-
-        NODE_ELEMENT(data).key("data")
-                .displayedName("Data")
-                .setDaqDataType(DaqDataType::TRAIN)
-                .commit();
-
-        IMAGEDATA(data).key("data.image")
-                .displayedName("Image")
-                .commit();
-
-        OUTPUT_CHANNEL(expected).key("output")
-                .displayedName("GUI/PP Output")
-                .dataSchema(data)
-                .commit();
-
-        // TODO DAQ Output
 
         FLOAT_ELEMENT(expected).key("frameRate")
                 .displayedName("Frame Rate")
@@ -83,7 +65,7 @@ namespace karabo {
     }
 
 
-    AravisCamera::AravisCamera(const karabo::util::Hash& config) : Device<>(config), m_camera(NULL), m_stream(NULL) {
+    AravisCamera::AravisCamera(const karabo::util::Hash& config) : ImageSource(config), m_camera(NULL), m_stream(NULL) {
         KARABO_SLOT(connect);
         KARABO_SLOT(acquire);
         KARABO_SLOT(stop);
@@ -132,6 +114,8 @@ namespace karabo {
         h.set("cameraId", std::string(arv_camera_get_device_id(m_camera)));
         // TODO more properties...
         this->set(h);
+
+        // TODO: this->updateOutputSchema(shape, encoding, kType)
 
         this->updateState(State::ON);
     }
@@ -267,13 +251,14 @@ namespace karabo {
         // Non-copy NDArray constructor
         karabo::util::NDArray imgArray((T*) data, width*height, karabo::util::NDArray::NullDeleter(), shape);
 
-        karabo::xms::ImageData imageData(imgArray, Encoding::GRAY);
-        // TODO ROI, bpp, binning, ...
+        // TODO bpp, binning, ROI and encoding from camera configuration
+        const unsigned short bpp = 8 * sizeof(T);
+        const karabo::util::Dims binning(0,0), roiOffsets(0, 0);
+        const Timestamp ts;
+        const Hash header;
 
         // Send image and metadata to output channel
-        this->writeChannel("output", Hash("data.image", imageData));
-
-        // TODO DAQ output
+        this->writeChannels(imgArray, binning, bpp, Encoding::GRAY, roiOffsets, ts, header);
 
         m_counter += 1;
         if (m_timer.elapsed() >= 1.) {
