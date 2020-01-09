@@ -50,7 +50,27 @@ namespace karabo {
 
         STRING_ELEMENT(expected).key("cameraId")
                 .displayedName("Camera ID")
-                .readOnly()
+                .readOnly().initialValue("")
+                .commit();
+
+        STRING_ELEMENT(expected).key("vendor")
+                .displayedName("Vendor Name")
+                .readOnly().initialValue("")
+                .commit();
+
+        STRING_ELEMENT(expected).key("model")
+                .displayedName("Model Name")
+                .readOnly().initialValue("")
+                .commit();
+
+        INT32_ELEMENT(expected).key("width")
+                .displayedName("Sensor Width")
+                .readOnly().initialValue(0)
+                .commit();
+
+        INT32_ELEMENT(expected).key("height")
+                .displayedName("Sensor Height")
+                .readOnly().initialValue(0)
                 .commit();
 
         STRING_ELEMENT(expected).key("pixelFormat")
@@ -112,10 +132,19 @@ namespace karabo {
 
         Hash h;
         h.set("cameraId", std::string(arv_camera_get_device_id(m_camera)));
+        h.set("vendor", std::string(arv_camera_get_vendor_name(m_camera)));
+        h.set("model", std::string(arv_camera_get_model_name(m_camera)));
+
+        gint width, height;
+        arv_camera_get_sensor_size(m_camera, &width, &height);
+        h.set("width", width);
+        h.set("height", height);
+
         // TODO more properties...
+
         this->set(h);
 
-        // TODO: this->updateOutputSchema(shape, encoding, kType)
+        this->updateOutputSchema();
 
         this->updateState(State::ON);
     }
@@ -218,7 +247,7 @@ namespace karabo {
                 case ARV_PIXEL_FORMAT_MONO_16:
                     self->writeOutputChannels<unsigned short>(buffer_data, width, height);
                     break;
-                // TODO PACKED formats
+                // TODO PACKED formats, RGB, YUV...
                 default:
                     std::cout << "Format " << pixel_format << " is not supported"  << std::endl;
                     self->execute("stop");
@@ -241,6 +270,78 @@ namespace karabo {
         // TODO proper logging
         std::cout << "Control of the camera is lost" << std::endl;
         self->updateState(State::UNKNOWN);
+    }
+
+
+    void AravisCamera::updateOutputSchema() {
+        gint x,y, width, height;
+        arv_camera_get_region(m_camera, &x, &y, &width, &height);
+        const std::vector<int> shape = {height, width};
+
+        const ArvPixelFormat pixelFormat = arv_camera_get_pixel_format(m_camera);
+        unsigned short bpp;
+        EncodingType encoding;
+        Types::ReferenceType kType;
+        switch(pixelFormat) {
+            case ARV_PIXEL_FORMAT_MONO_8:
+                encoding = Encoding::GRAY;
+                kType = Types::UINT8;
+                bpp = 8;
+                break;
+            case ARV_PIXEL_FORMAT_MONO_10:
+            case ARV_PIXEL_FORMAT_MONO_10_PACKED:
+                encoding = Encoding::GRAY;
+                kType = Types::UINT16;
+                bpp = 10;
+                break;
+            case ARV_PIXEL_FORMAT_MONO_12:
+            case ARV_PIXEL_FORMAT_MONO_12_PACKED:
+                encoding = Encoding::GRAY;
+                kType = Types::UINT16;
+                bpp = 12;
+                break;
+            case ARV_PIXEL_FORMAT_MONO_14:
+                encoding = Encoding::GRAY;
+                kType = Types::UINT16;
+                bpp = 14;
+                break;
+            case ARV_PIXEL_FORMAT_MONO_16:
+                encoding = Encoding::GRAY;
+                kType = Types::UINT16;
+                bpp = 16;
+                break;
+            case ARV_PIXEL_FORMAT_RGB_8_PACKED:
+            case ARV_PIXEL_FORMAT_RGB_8_PLANAR:
+                encoding = Encoding::RGB;
+                kType = Types::UINT8;
+                bpp = 24;
+                break;
+            case ARV_PIXEL_FORMAT_RGB_10_PACKED:
+            case ARV_PIXEL_FORMAT_RGB_10_PLANAR:
+                encoding = Encoding::RGB;
+                kType = Types::UINT16;
+                bpp = 30;
+                break;
+            case ARV_PIXEL_FORMAT_RGB_12_PACKED:
+            case ARV_PIXEL_FORMAT_RGB_12_PLANAR:
+                encoding = Encoding::RGB;
+                kType = Types::UINT16;
+                bpp = 36;
+                break;
+            case ARV_PIXEL_FORMAT_RGB_16_PLANAR:
+                encoding = Encoding::RGB;
+                kType = Types::UINT16;
+                bpp = 48;
+                break;
+            // TODO: YUV
+            default:
+                encoding = Encoding::GRAY;
+                kType = Types::UNKNOWN;
+                bpp = 0;
+                break;
+        }
+
+        ImageSource::updateOutputSchema(shape, encoding, kType);
     }
 
 
