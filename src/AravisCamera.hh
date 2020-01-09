@@ -76,6 +76,7 @@ namespace karabo {
 
     private:
         void connect();
+        void configure(const karabo::util::Hash& configuration);
         void acquire();
         void stop();
 
@@ -97,6 +98,7 @@ namespace karabo {
         karabo::util::Epochstamp m_timer;
         unsigned long m_counter;
 
+        karabo::xms::EncodingType m_encoding;
     };
 }
 
