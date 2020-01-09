@@ -86,6 +86,7 @@ namespace karabo {
         static void new_buffer_cb(ArvStream* stream, void* context);
         static void control_lost_cb(ArvGvDevice* gv_device, void* context);
 
+        void pollOnce(karabo::util::Hash& h);
         void updateOutputSchema();
         template <class T>
         void writeOutputChannels(const void* data, gint width, gint height);
