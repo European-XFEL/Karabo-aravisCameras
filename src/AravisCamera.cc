@@ -159,7 +159,7 @@ namespace karabo {
                 .allowedStates(State::UNKNOWN, State::ON)
                 .commit();
 
-        // TODO more properties
+        // TODO more properties: acquisitionMode, frameCount, triggerMode, triggerSource, gain, packetDelay, packetSize
     }
 
 
@@ -392,7 +392,7 @@ namespace karabo {
                     break;
                 // TODO PACKED formats, RGB, YUV...
                 default:
-                    KARABO_LOG_FRAMEWORK_ERROR << "Format " << pixel_format << " is not supported";
+                    KARABO_LOG_FRAMEWORK_ERROR << "Format " << pixel_format << " is not supported"; // TODO pixel_format as string
                     self->execute("stop");
             }
         }
