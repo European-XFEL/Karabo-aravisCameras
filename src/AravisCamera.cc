@@ -354,11 +354,10 @@ namespace karabo {
     void AravisCamera::stream_cb(void *context, ArvStreamCallbackType type, ArvBuffer *buffer) {
         Self* self = static_cast<Self*>(context);
 
-        // TODO proper logging
         if (type == ARV_STREAM_CALLBACK_TYPE_INIT) {
-            std::cout << "Init stream" << std::endl;
+            KARABO_LOG_FRAMEWORK_DEBUG << "Init stream";
                 if (!arv_make_thread_realtime(10) && !arv_make_thread_high_priority(-10)) {
-                    std::cout << "Failed to make stream thread high priority" << std::endl;
+                    KARABO_LOG_FRAMEWORK_WARN << "Failed to make stream thread high priority";
                 }
         }
     }
@@ -366,8 +365,6 @@ namespace karabo {
 
     void AravisCamera::new_buffer_cb(ArvStream* stream, void* context) {
         Self* self = static_cast<Self*>(context);
-
-        // TODO proper logging
 
         ArvBuffer* arv_buffer = arv_stream_pop_buffer(stream);
 	if (!ARV_IS_BUFFER(arv_buffer))
@@ -381,7 +378,7 @@ namespace karabo {
             arv_buffer_get_image_region(arv_buffer, &x, &y, &width, &height);
             const ArvPixelFormat pixel_format = arv_buffer_get_image_pixel_format(arv_buffer); // e.g. ARV_PIXEL_FORMAT_MONO_8
             const guint32 frame_id = arv_buffer_get_frame_id(arv_buffer);
-            //std::cout << "Got frame " << frame_id << std::endl;
+            //KARABO_LOG_FRAMEWORK_DEBUG << "Got frame " << frame_id;
 
             switch(pixel_format) {
                 case ARV_PIXEL_FORMAT_MONO_8:
@@ -395,7 +392,7 @@ namespace karabo {
                     break;
                 // TODO PACKED formats, RGB, YUV...
                 default:
-                    std::cout << "Format " << pixel_format << " is not supported"  << std::endl;
+                    KARABO_LOG_FRAMEWORK_ERROR << "Format " << pixel_format << " is not supported";
                     self->execute("stop");
             }
         }
@@ -413,8 +410,7 @@ namespace karabo {
         // TODO what happens with multiple cameras on server?
         // Possibly use arv_gv_device_get_device_address (gv_device) to verify IP address
 
-        // TODO proper logging
-        std::cout << "Control of the camera is lost" << std::endl;
+        KARABO_LOG_FRAMEWORK_WARN << "Control of the camera " << self->get<std::string>("cameraIp") << " is lost";
         self->updateState(State::UNKNOWN);
     }
 
