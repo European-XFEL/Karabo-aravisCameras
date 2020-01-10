@@ -12,6 +12,8 @@ using namespace std;
 
 USING_KARABO_NAMESPACES;
 
+#define GET_PATH(hash, path, type) hash.has(path) ? hash.get<type>(path) : this->get<type>(path);
+
 namespace karabo {
 
 
@@ -234,10 +236,10 @@ namespace karabo {
         }
 
         if (configuration.has("roi")) {
-            gint x = configuration.has("roi.x") ? configuration.get<int>("roi.x") : this->get<int>("roi.x");
-            gint y = configuration.has("roi.y") ? configuration.get<int>("roi.y") : this->get<int>("roi.y");
-            gint width = configuration.has("roi.width") ? configuration.get<int>("roi.width") : this->get<int>("roi.width");
-            gint height = configuration.has("roi.height") ? configuration.get<int>("roi.height") : this->get<int>("roi.height");
+            gint x = GET_PATH(configuration, "roi.x", int);
+            gint y = GET_PATH(configuration, "roi.y", int);
+            gint width = GET_PATH(configuration, "roi.width", int);
+            gint height = GET_PATH(configuration, "roi.height", int);
 
             // Get bounds
             gint xmin, xmax, ymin, ymax, wmin, wmax, hmin, hmax;
@@ -260,8 +262,8 @@ namespace karabo {
         }
 
         if (configuration.has("bin") && arv_camera_is_binning_available(m_camera)) {
-            gint x = configuration.has("bin.x") ? configuration.get<int>("bin.x") : this->get<int>("bin.x");
-            gint y = configuration.has("bin.y") ? configuration.get<int>("bin.y") : this->get<int>("bin.y");
+            gint x = GET_PATH(configuration, "bin.x", int);
+            gint y = GET_PATH(configuration, "bin.y", int);
 
             // Get bounds
             gint xmin, xmax, ymin, ymax;
