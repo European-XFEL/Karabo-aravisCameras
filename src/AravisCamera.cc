@@ -17,7 +17,7 @@ USING_KARABO_NAMESPACES;
 namespace karabo {
 
 
-    KARABO_REGISTER_FOR_CONFIGURATION(BaseDevice, Device<>, ImageSource, AravisCamera)
+    KARABO_REGISTER_FOR_CONFIGURATION(BaseDevice, Device<>, ImageSource, CameraImageSource, AravisCamera)
 
     void AravisCamera::expectedParameters(Schema& expected) {
         STRING_ELEMENT(expected).key("cameraIp")
@@ -163,7 +163,7 @@ namespace karabo {
     }
 
 
-    AravisCamera::AravisCamera(const karabo::util::Hash& config) : ImageSource(config), m_camera(NULL), m_stream(NULL) {
+    AravisCamera::AravisCamera(const karabo::util::Hash& config) : CameraImageSource(config), m_camera(NULL), m_stream(NULL) {
         KARABO_SLOT(connect);
         KARABO_SLOT(acquire);
         KARABO_SLOT(stop);
@@ -504,7 +504,7 @@ namespace karabo {
         h.set("bpp", bpp);
 
         this->set(h);
-        ImageSource::updateOutputSchema(shape, m_encoding, kType);
+        CameraImageSource::updateOutputSchema(shape, m_encoding, kType);
     }
 
 

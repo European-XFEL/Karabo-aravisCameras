@@ -22,7 +22,7 @@ extern "C" {
  */
 namespace karabo {
 
-    class AravisCamera : public ImageSource {
+    class AravisCamera : public CameraImageSource {
 
     public:
 
