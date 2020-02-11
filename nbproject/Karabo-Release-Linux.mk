@@ -58,7 +58,7 @@ FFLAGS=
 ASFLAGS=
 
 # Link Libraries and Options
-LDLIBSOPTIONS=-L${KARABO}/lib -L${KARABO}/extern/lib -Wl,-rpath,${KARABO}/lib -Wl,-rpath,${KARABO}/extern/lib -lkarabo -laravis-0.6 `pkg-config --libs karaboDependencies`  
+LDLIBSOPTIONS=-L${KARABO}/lib -L${KARABO}/extern/lib -Wl,-rpath,${KARABO}/lib -Wl,-rpath,${KARABO}/extern/lib -lkarabo -laravis-0.6 -limageSource `pkg-config --libs karaboDependencies`  
 
 # Build Targets
 .build-conf: ${BUILD_SUBPROJECTS}

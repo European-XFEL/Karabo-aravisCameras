@@ -15,12 +15,14 @@ extern "C" {
 
 #include <karabo/karabo.hpp>
 
+#include <image_source/CameraImageSource.hh>
+
 /**
  * The main Karabo namespace
  */
 namespace karabo {
 
-    class AravisCamera : public karabo::core::Device<> {
+    class AravisCamera : public CameraImageSource {
 
     public:
 
@@ -74,6 +76,7 @@ namespace karabo {
 
     private:
         void connect();
+        void configure(const karabo::util::Hash& configuration);
         void acquire();
         void stop();
 
@@ -84,6 +87,8 @@ namespace karabo {
         static void new_buffer_cb(ArvStream* stream, void* context);
         static void control_lost_cb(ArvGvDevice* gv_device, void* context);
 
+        void pollOnce(karabo::util::Hash& h);
+        void updateOutputSchema();
         template <class T>
         void writeOutputChannels(const void* data, gint width, gint height);
 
@@ -93,6 +98,7 @@ namespace karabo {
         karabo::util::Epochstamp m_timer;
         unsigned long m_counter;
 
+        karabo::xms::EncodingType m_encoding;
     };
 }
 
