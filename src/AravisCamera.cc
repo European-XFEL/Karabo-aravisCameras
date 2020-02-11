@@ -12,10 +12,12 @@ using namespace std;
 
 USING_KARABO_NAMESPACES;
 
+#define GET_PATH(hash, path, type) hash.has(path) ? hash.get<type>(path) : this->get<type>(path);
+
 namespace karabo {
 
 
-    KARABO_REGISTER_FOR_CONFIGURATION(BaseDevice, Device<>, AravisCamera)
+    KARABO_REGISTER_FOR_CONFIGURATION(BaseDevice, Device<>, ImageSource, CameraImageSource, AravisCamera)
 
     void AravisCamera::expectedParameters(Schema& expected) {
         STRING_ELEMENT(expected).key("cameraIp")
@@ -40,24 +42,6 @@ namespace karabo {
                 .allowedStates(State::ACQUIRING)
                 .commit();
 
-        Schema data;
-
-        NODE_ELEMENT(data).key("data")
-                .displayedName("Data")
-                .setDaqDataType(DaqDataType::TRAIN)
-                .commit();
-
-        IMAGEDATA(data).key("data.image")
-                .displayedName("Image")
-                .commit();
-
-        OUTPUT_CHANNEL(expected).key("output")
-                .displayedName("GUI/PP Output")
-                .dataSchema(data)
-                .commit();
-
-        // TODO DAQ Output
-
         FLOAT_ELEMENT(expected).key("frameRate")
                 .displayedName("Frame Rate")
                 .description("The actual frame rate.")
@@ -68,7 +52,91 @@ namespace karabo {
 
         STRING_ELEMENT(expected).key("cameraId")
                 .displayedName("Camera ID")
-                .readOnly()
+                .readOnly().initialValue("")
+                .commit();
+
+        STRING_ELEMENT(expected).key("vendor")
+                .displayedName("Vendor Name")
+                .readOnly().initialValue("")
+                .commit();
+
+        STRING_ELEMENT(expected).key("model")
+                .displayedName("Model Name")
+                .readOnly().initialValue("")
+                .commit();
+
+        INT32_ELEMENT(expected).key("width")
+                .displayedName("Sensor Width")
+                .readOnly().initialValue(0)
+                .commit();
+
+        INT32_ELEMENT(expected).key("height")
+                .displayedName("Sensor Height")
+                .readOnly().initialValue(0)
+                .commit();
+
+        NODE_ELEMENT(expected).key("roi")
+                .displayedName("Image ROI")
+                .commit();
+
+        INT32_ELEMENT(expected).key("roi.x")
+                .displayedName("X Offset")
+                .unit(Unit::PIXEL)
+                .assignmentOptional().defaultValue(0)
+                .minInc(0)
+                .reconfigurable()
+                .allowedStates(State::UNKNOWN, State::ON)
+                .commit();
+
+        INT32_ELEMENT(expected).key("roi.y")
+                .displayedName("Y Offset")
+                .unit(Unit::PIXEL)
+                .assignmentOptional().defaultValue(0)
+                .minInc(0)
+                .reconfigurable()
+                .allowedStates(State::UNKNOWN, State::ON)
+                .commit();
+
+        INT32_ELEMENT(expected).key("roi.width")
+                .displayedName("Width")
+                .description("The ROI width. Use '0' for the whole sensor width.")
+                .unit(Unit::PIXEL)
+                .assignmentOptional().defaultValue(0)
+                .minInc(0)
+                .reconfigurable()
+                .allowedStates(State::UNKNOWN, State::ON)
+                .commit();
+
+        INT32_ELEMENT(expected).key("roi.height")
+                .displayedName("Height")
+                .description("The ROI height. Use '0' for the whole sensor height.")
+                .unit(Unit::PIXEL)
+                .assignmentOptional().defaultValue(0)
+                .minInc(0)
+                .reconfigurable()
+                .allowedStates(State::UNKNOWN, State::ON)
+                .commit();
+
+        NODE_ELEMENT(expected).key("bin")
+                .displayedName("Image Binning")
+                .commit();
+
+        INT32_ELEMENT(expected).key("bin.x")
+                .displayedName("X Binning")
+                .unit(Unit::PIXEL)
+                .assignmentOptional().defaultValue(1)
+                .minInc(1)
+                .reconfigurable()
+                .allowedStates(State::UNKNOWN, State::ON)
+                .commit();
+
+        INT32_ELEMENT(expected).key("bin.y")
+                .displayedName("Y Binning")
+                .unit(Unit::PIXEL)
+                .assignmentOptional().defaultValue(1)
+                .minInc(1)
+                .reconfigurable()
+                .allowedStates(State::UNKNOWN, State::ON)
                 .commit();
 
         STRING_ELEMENT(expected).key("pixelFormat")
@@ -76,14 +144,28 @@ namespace karabo {
                 .assignmentOptional().defaultValue("Mono8")
                 .options("Mono8 Mono12 Mono12Packed YUV422Packed YUV422_YUYV_Packed")
                 .reconfigurable()
-                .allowedStates(State::ON)
+                .allowedStates(State::UNKNOWN, State::ON)
                 .commit();
 
-        // TODO more properties
+        UINT16_ELEMENT(expected).key("bpp")
+                .displayedName("Bits-per-pixel")
+                .readOnly().initialValue(0)
+                .commit();
+
+        DOUBLE_ELEMENT(expected).key("exposureTime")
+                .displayedName("Exposure Time")
+                .unit(Unit::SECOND).metricPrefix(MetricPrefix::MICRO)
+                .assignmentOptional().defaultValue(0.)
+                .minInc(0.)
+                .reconfigurable()
+                .allowedStates(State::UNKNOWN, State::ON)
+                .commit();
+
+        // TODO more properties: acquisitionMode, frameCount, triggerMode, triggerSource, gain, packetDelay, packetSize
     }
 
 
-    AravisCamera::AravisCamera(const karabo::util::Hash& config) : Device<>(config), m_camera(NULL), m_stream(NULL) {
+    AravisCamera::AravisCamera(const karabo::util::Hash& config) : CameraImageSource(config), m_camera(NULL), m_stream(NULL) {
         KARABO_SLOT(connect);
         KARABO_SLOT(acquire);
         KARABO_SLOT(stop);
@@ -97,14 +179,12 @@ namespace karabo {
 
 
     void AravisCamera::preReconfigure(karabo::util::Hash& incomingReconfiguration) {
-        if (incomingReconfiguration.has("pixelFormat")) {
-            const char* pixelFormat = incomingReconfiguration.get<std::string>("pixelFormat").c_str();
-            arv_camera_set_pixel_format_from_string(m_camera, pixelFormat);
-        }
+        this->configure(incomingReconfiguration);
     }
 
 
     void AravisCamera::postReconfigure() {
+        this->updateOutputSchema();
     }
 
 
@@ -122,7 +202,7 @@ namespace karabo {
             m_camera = NULL;
             return;
         }
-        
+
         KARABO_LOG_INFO << "Connected to " << cameraIp;
 
         // Connect the control-lost signal
@@ -130,13 +210,104 @@ namespace karabo {
 
         Hash h;
         h.set("cameraId", std::string(arv_camera_get_device_id(m_camera)));
+        h.set("vendor", std::string(arv_camera_get_vendor_name(m_camera)));
+        h.set("model", std::string(arv_camera_get_model_name(m_camera)));
+
+        gint width, height;
+        arv_camera_get_sensor_size(m_camera, &width, &height);
+        h.set("width", width);
+        h.set("height", height);
+
         // TODO more properties...
+
         this->set(h);
+        
+        // Apply configuration
+        this->configure(this->getCurrentConfiguration());
+
+        this->updateOutputSchema();
 
         this->updateState(State::ON);
     }
 
-    
+
+    void AravisCamera::configure(const karabo::util::Hash& configuration) {
+        if (configuration.has("pixelFormat")) {
+            const char* pixelFormat = configuration.get<std::string>("pixelFormat").c_str();
+            arv_camera_set_pixel_format_from_string(m_camera, pixelFormat);
+        }
+
+        if (configuration.has("roi")) {
+            gint x = GET_PATH(configuration, "roi.x", int);
+            gint y = GET_PATH(configuration, "roi.y", int);
+            gint width = GET_PATH(configuration, "roi.width", int);
+            gint height = GET_PATH(configuration, "roi.height", int);
+
+            // Get bounds
+            gint xmin, xmax, ymin, ymax, wmin, wmax, hmin, hmax;
+            arv_camera_get_x_offset_bounds(m_camera, &xmin, &xmax);
+            arv_camera_get_y_offset_bounds(m_camera, &ymin, &ymax);
+            arv_camera_get_width_bounds(m_camera, &wmin, &wmax);
+            arv_camera_get_height_bounds(m_camera, &hmin, &hmax);
+
+            // Apply bounds
+            x = max(x, xmin);
+            x = min(x, xmax);
+            y = max(y, ymin);
+            y = min(y, ymax);
+            if (width == 0) {
+                // Whole sensor width
+                width = wmax;
+            } else {
+                width = max(width, wmin);
+                width = min(width, wmax);
+            }
+            if (height == 0) {
+                // Whole sensor width
+                height = hmax;
+            } else {
+                height = max(height, hmin);
+                height = min(height, hmax);
+            }
+
+            arv_camera_set_region(m_camera, x, y, width, height);
+        }
+
+        if (configuration.has("bin") && arv_camera_is_binning_available(m_camera)) {
+            gint x = GET_PATH(configuration, "bin.x", int);
+            gint y = GET_PATH(configuration, "bin.y", int);
+
+            // Get bounds
+            gint xmin, xmax, ymin, ymax;
+            arv_camera_get_x_binning_bounds(m_camera, &xmin, &xmax);
+            arv_camera_get_y_binning_bounds(m_camera, &ymin, &ymax);
+
+            // Apply bounds
+            x = max(x, xmin);
+            x = min(x, xmax);
+            y = max(y, ymin);
+            y = min(y, ymax);
+
+            arv_camera_set_binning(m_camera, x, y);
+        }
+
+        if (configuration.has("exposureTime") && arv_camera_is_exposure_time_available(m_camera)) {
+            double exposureTime = configuration.get<double>("exposureTime");
+
+            // Get bounds
+            double tmin, tmax;
+            arv_camera_get_exposure_time_bounds(m_camera, &tmin, &tmax);
+
+            // Apply bounds
+            exposureTime = max(exposureTime, tmin);
+            exposureTime = min(exposureTime, tmax);
+
+            arv_camera_set_exposure_time(m_camera, exposureTime);
+        }
+
+    }
+
+
     void AravisCamera::acquire() {
         m_timer.now();
         m_counter = 0;
@@ -195,11 +366,10 @@ namespace karabo {
     void AravisCamera::stream_cb(void *context, ArvStreamCallbackType type, ArvBuffer *buffer) {
         Self* self = static_cast<Self*>(context);
 
-        // TODO proper logging
         if (type == ARV_STREAM_CALLBACK_TYPE_INIT) {
-            std::cout << "Init stream" << std::endl;
+            KARABO_LOG_FRAMEWORK_DEBUG << "Init stream";
                 if (!arv_make_thread_realtime(10) && !arv_make_thread_high_priority(-10)) {
-                    std::cout << "Failed to make stream thread high priority" << std::endl;
+                    KARABO_LOG_FRAMEWORK_WARN << "Failed to make stream thread high priority";
                 }
         }
     }
@@ -207,8 +377,6 @@ namespace karabo {
 
     void AravisCamera::new_buffer_cb(ArvStream* stream, void* context) {
         Self* self = static_cast<Self*>(context);
-
-        // TODO proper logging
 
         ArvBuffer* arv_buffer = arv_stream_pop_buffer(stream);
 	if (!ARV_IS_BUFFER(arv_buffer))
@@ -222,7 +390,7 @@ namespace karabo {
             arv_buffer_get_image_region(arv_buffer, &x, &y, &width, &height);
             const ArvPixelFormat pixel_format = arv_buffer_get_image_pixel_format(arv_buffer); // e.g. ARV_PIXEL_FORMAT_MONO_8
             const guint32 frame_id = arv_buffer_get_frame_id(arv_buffer);
-            //std::cout << "Got frame " << frame_id << std::endl;
+            //KARABO_LOG_FRAMEWORK_DEBUG << "Got frame " << frame_id;
 
             switch(pixel_format) {
                 case ARV_PIXEL_FORMAT_MONO_8:
@@ -234,9 +402,9 @@ namespace karabo {
                 case ARV_PIXEL_FORMAT_MONO_16:
                     self->writeOutputChannels<unsigned short>(buffer_data, width, height);
                     break;
-                // TODO PACKED formats
+                // TODO PACKED formats, RGB, YUV...
                 default:
-                    std::cout << "Format " << pixel_format << " is not supported"  << std::endl;
+                    KARABO_LOG_FRAMEWORK_ERROR << "Format " << pixel_format << " is not supported"; // TODO pixel_format as string
                     self->execute("stop");
             }
         }
@@ -254,9 +422,101 @@ namespace karabo {
         // TODO what happens with multiple cameras on server?
         // Possibly use arv_gv_device_get_device_address (gv_device) to verify IP address
 
-        // TODO proper logging
-        std::cout << "Control of the camera is lost" << std::endl;
+        KARABO_LOG_FRAMEWORK_WARN << "Control of the camera " << self->get<std::string>("cameraIp") << " is lost";
         self->updateState(State::UNKNOWN);
+    }
+
+
+    void AravisCamera::pollOnce(karabo::util::Hash& h) {
+        gint x, y, width, height;
+        arv_camera_get_region(m_camera, &x, &y, &width, &height);
+        h.set("roi.x", x);
+        h.set("roi.y", y);
+        h.set("roi.width", width);
+        h.set("roi.height", height);
+
+        gint dx, dy;
+        arv_camera_get_binning(m_camera, &dx, &dy);
+        h.set("bin.x", dx);
+        h.set("bin.y", dy);
+
+        h.set("pixelFormat", arv_camera_get_pixel_format_as_string(m_camera));
+
+        double exposureTime = arv_camera_get_exposure_time (m_camera);
+        h.set("exposureTime", exposureTime);
+    }
+
+    void AravisCamera::updateOutputSchema() {
+        Hash h;
+        this->pollOnce(h);
+
+        const std::vector<int> shape = {h.get<int>("roi.height"), h.get<int>("roi.width")};
+
+        const ArvPixelFormat pixelFormat = arv_camera_get_pixel_format(m_camera);
+        unsigned short bpp;
+        Types::ReferenceType kType;
+        switch(pixelFormat) {
+            case ARV_PIXEL_FORMAT_MONO_8:
+                m_encoding = Encoding::GRAY;
+                kType = Types::UINT8;
+                bpp = 8;
+                break;
+            case ARV_PIXEL_FORMAT_MONO_10:
+            case ARV_PIXEL_FORMAT_MONO_10_PACKED:
+                m_encoding = Encoding::GRAY;
+                kType = Types::UINT16;
+                bpp = 10;
+                break;
+            case ARV_PIXEL_FORMAT_MONO_12:
+            case ARV_PIXEL_FORMAT_MONO_12_PACKED:
+                m_encoding = Encoding::GRAY;
+                kType = Types::UINT16;
+                bpp = 12;
+                break;
+            case ARV_PIXEL_FORMAT_MONO_14:
+                m_encoding = Encoding::GRAY;
+                kType = Types::UINT16;
+                bpp = 14;
+                break;
+            case ARV_PIXEL_FORMAT_MONO_16:
+                m_encoding = Encoding::GRAY;
+                kType = Types::UINT16;
+                bpp = 16;
+                break;
+            case ARV_PIXEL_FORMAT_RGB_8_PACKED:
+            case ARV_PIXEL_FORMAT_RGB_8_PLANAR:
+                m_encoding = Encoding::RGB;
+                kType = Types::UINT8;
+                bpp = 24;
+                break;
+            case ARV_PIXEL_FORMAT_RGB_10_PACKED:
+            case ARV_PIXEL_FORMAT_RGB_10_PLANAR:
+                m_encoding = Encoding::RGB;
+                kType = Types::UINT16;
+                bpp = 30;
+                break;
+            case ARV_PIXEL_FORMAT_RGB_12_PACKED:
+            case ARV_PIXEL_FORMAT_RGB_12_PLANAR:
+                m_encoding = Encoding::RGB;
+                kType = Types::UINT16;
+                bpp = 36;
+                break;
+            case ARV_PIXEL_FORMAT_RGB_16_PLANAR:
+                m_encoding = Encoding::RGB;
+                kType = Types::UINT16;
+                bpp = 48;
+                break;
+            // TODO: YUV
+            default:
+                m_encoding = Encoding::GRAY;
+                kType = Types::UNKNOWN;
+                bpp = 0;
+                break;
+        }
+        h.set("bpp", bpp);
+
+        this->set(h);
+        CameraImageSource::updateOutputSchema(shape, m_encoding, kType);
     }
 
 
@@ -267,13 +527,14 @@ namespace karabo {
         // Non-copy NDArray constructor
         karabo::util::NDArray imgArray((T*) data, width*height, karabo::util::NDArray::NullDeleter(), shape);
 
-        karabo::xms::ImageData imageData(imgArray, Encoding::GRAY);
-        // TODO ROI, bpp, binning, ...
+        const unsigned short bpp = this->get<unsigned short>("bpp");
+        const Dims binning(this->get<int>("bin.y"), this->get<int>("bin.x"));
+        const Dims roiOffsets(this->get<int>("roi.y"), this->get<int>("roi.x"));
+        const Timestamp ts;
+        const Hash header;
 
         // Send image and metadata to output channel
-        this->writeChannel("output", Hash("data.image", imageData));
-
-        // TODO DAQ output
+        this->writeChannels(imgArray, binning, bpp, m_encoding, roiOffsets, ts, header);
 
         m_counter += 1;
         if (m_timer.elapsed() >= 1.) {
