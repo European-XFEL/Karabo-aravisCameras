@@ -42,9 +42,25 @@ namespace karabo {
                 .allowedStates(State::ACQUIRING)
                 .commit();
 
-        FLOAT_ELEMENT(expected).key("frameRate")
+        NODE_ELEMENT(expected).key("frameRate")
                 .displayedName("Frame Rate")
-                .description("The actual frame rate.")
+                .commit();
+
+        FLOAT_ELEMENT(expected).key("frameRate.target")
+                .displayedName("Target Frame Rate")
+                .description("Sets the 'absolute' value of the acquisition frame rate on the camera. "
+                "The 'absolute' value is a float value that sets the acquisition frame rate in frames per second. "
+                "This parameter will only have an effect if trigger mode is 'Off'.")
+                .assignmentOptional().noDefaultValue()
+                .minExc(0.)
+                .unit(Unit::HERTZ)
+                .reconfigurable()
+                .allowedStates(State::ON)
+                .commit();
+
+        FLOAT_ELEMENT(expected).key("frameRate.actual")
+                .displayedName("Actual Frame Rate")
+                .description("The measured frame rate.")
                 .unit(Unit::HERTZ)
                 .readOnly()
                 .initialValue(0.)
@@ -141,8 +157,10 @@ namespace karabo {
 
         STRING_ELEMENT(expected).key("pixelFormat")
                 .displayedName("Pixel Format")
-                .assignmentOptional().defaultValue("Mono8")
-                .options("Mono8 Mono12 Mono12Packed YUV422Packed YUV422_YUYV_Packed")
+                .description("This enumeration sets the format of the pixel data transmitted for acquired images. "
+                "For example Mono8 means monochromatic, 8 bits-per-pixel.")
+                .assignmentOptional().noDefaultValue()
+                // options will be injected on connection
                 .reconfigurable()
                 .allowedStates(State::UNKNOWN, State::ON)
                 .commit();
@@ -154,6 +172,8 @@ namespace karabo {
 
         DOUBLE_ELEMENT(expected).key("exposureTime")
                 .displayedName("Exposure Time")
+                .description("This float value sets the camera's exposure time. "
+                "It can only be a multiple of the minimum exposure time.")
                 .unit(Unit::SECOND).metricPrefix(MetricPrefix::MICRO)
                 .assignmentOptional().defaultValue(0.)
                 .minInc(0.)
@@ -161,7 +181,26 @@ namespace karabo {
                 .allowedStates(State::UNKNOWN, State::ON)
                 .commit();
 
-        // TODO more properties: acquisitionMode, frameCount, triggerMode, triggerSource, gain, packetDelay, packetSize
+        STRING_ELEMENT(expected).key("triggerMode")
+                .displayedName("Trigger Mode")
+                .description("This enumeration enables or disables the trigger. "
+                "When this is set to 'On', the target frame rate parameter will be ignored.")
+                .assignmentOptional().defaultValue("Off")
+                .options("On,Off")
+                .reconfigurable()
+                .allowedStates(State::UNKNOWN, State::ON)
+                .commit();
+
+        STRING_ELEMENT(expected).key("triggerSource")
+                .displayedName("Trigger Source")
+                .description("This enumeration sets the signal source for the selected trigger.")
+                .assignmentOptional().noDefaultValue()
+                // options will be injected on connection
+                .reconfigurable()
+                .allowedStates(State::UNKNOWN, State::ON)
+                .commit();
+
+        // TODO more properties: acquisitionMode, frameCount, gain, packetDelay, packetSize
     }
 
 
@@ -209,6 +248,8 @@ namespace karabo {
         g_signal_connect(arv_camera_get_device(m_camera), "control-lost", G_CALLBACK(AravisCamera::control_lost_cb), static_cast<void*>(this));
 
         Hash h;
+
+        // Read immutable properties
         h.set("cameraId", std::string(arv_camera_get_device_id(m_camera)));
         h.set("vendor", std::string(arv_camera_get_vendor_name(m_camera)));
         h.set("model", std::string(arv_camera_get_model_name(m_camera)));
@@ -232,6 +273,11 @@ namespace karabo {
 
 
     void AravisCamera::configure(const karabo::util::Hash& configuration) {
+        if (m_camera == NULL) {
+            // cannot configure camera, as we are not connected
+            return;
+        }
+
         if (configuration.has("pixelFormat")) {
             const char* pixelFormat = configuration.get<std::string>("pixelFormat").c_str();
             arv_camera_set_pixel_format_from_string(m_camera, pixelFormat);
@@ -298,6 +344,9 @@ namespace karabo {
             double tmin, tmax;
             arv_camera_get_exposure_time_bounds(m_camera, &tmin, &tmax);
 
+            // exposure time must be multiple of tmin
+            exposureTime = tmin * floor(exposureTime / tmin);
+
             // Apply bounds
             exposureTime = max(exposureTime, tmin);
             exposureTime = min(exposureTime, tmax);
@@ -305,6 +354,33 @@ namespace karabo {
             arv_camera_set_exposure_time(m_camera, exposureTime);
         }
 
+        std::string triggerMode = GET_PATH(configuration, "triggerMode", std::string);
+        if (triggerMode == "On") {
+            std::string triggerSource;
+            try {
+                triggerSource = GET_PATH(configuration, "triggerSource", std::string);
+            } catch (const karabo::util::ParameterException& e) {
+                // key neither in configuration nor on device
+                triggerSource = arv_camera_get_trigger_source(m_camera);
+            }
+
+            arv_camera_set_trigger(m_camera, triggerSource.c_str()); // configures the camera in trigger mode
+        } else {
+            arv_camera_clear_triggers(m_camera); // disable all triggers
+
+            if (arv_camera_is_frame_rate_available(m_camera)) {
+                // set frame rate
+                double frameRate;
+                try {
+                    frameRate = GET_PATH(configuration, "frameRate.target", float);
+                } catch (const karabo::util::ParameterException& e) {
+                    // key neither in configuration nor on device
+                    frameRate = arv_camera_get_frame_rate(m_camera);
+                }
+
+                arv_camera_set_frame_rate(m_camera, frameRate);
+            }
+        }
     }
 
 
@@ -340,7 +416,7 @@ namespace karabo {
 
         arv_camera_stop_acquisition(m_camera);
 
-        this->set("frameRate", 0.);
+        this->set("frameRate.actual", 0.);
         this->updateState(State::ON);
     }
 
@@ -441,17 +517,27 @@ namespace karabo {
         h.set("bin.y", dy);
 
         h.set("pixelFormat", arv_camera_get_pixel_format_as_string(m_camera));
+        h.set("exposureTime", arv_camera_get_exposure_time(m_camera));
 
-        double exposureTime = arv_camera_get_exposure_time (m_camera);
-        h.set("exposureTime", exposureTime);
+        std::string triggerMode = this->get<std::string>("triggerMode");
+        if (triggerMode == "On") {
+            h.set("triggerSource", arv_camera_get_trigger_source(m_camera));
+        } else {
+            h.set("frameRate.target", arv_camera_get_frame_rate(m_camera));
+        }
     }
 
     void AravisCamera::updateOutputSchema() {
+        if (m_camera == NULL) {
+            // cannot query camera, as we are not connected
+            return;
+        }
+
         Hash h;
         this->pollOnce(h);
 
-        unsigned long long height = h.get<int>("roi.height");
-        unsigned long long width = h.get<int>("roi.width");
+        const unsigned long long height = h.get<int>("roi.height");
+        const unsigned long long width = h.get<int>("roi.width");
         const std::vector<unsigned long long> shape = {height, width};
 
         const ArvPixelFormat pixelFormat = arv_camera_get_pixel_format(m_camera);
@@ -519,6 +605,46 @@ namespace karabo {
 
         this->set(h);
         CameraImageSource::updateOutputSchema(shape, m_encoding, kType);
+
+        guint n_values;
+        const char** options;
+
+        // get available pixel formats
+        options= arv_camera_get_available_pixel_formats_as_strings(m_camera, &n_values);
+        std::string pixelFormatOptions;
+        for (unsigned short i = 0; i < n_values; ++i) {
+            if (i > 0) pixelFormatOptions.append(",");
+            pixelFormatOptions.append(options[i]);
+        }
+        g_free(options);
+
+        // get available trigger sources
+        options = arv_camera_get_available_trigger_sources(m_camera, &n_values);
+        std::string triggerSourceOptions;
+        for (unsigned short i = 0; i < n_values; ++i) {
+            if (i > 0) triggerSourceOptions.append(",");
+            triggerSourceOptions.append(options[i]);
+        }
+        g_free(options);
+
+        Schema schemaUpdate;
+        STRING_ELEMENT(schemaUpdate).key("pixelFormat")
+                .displayedName("Pixel Format")
+                .assignmentOptional().noDefaultValue()
+                .options(pixelFormatOptions)
+                .reconfigurable()
+                .allowedStates(State::UNKNOWN, State::ON)
+                .commit();
+
+        STRING_ELEMENT(schemaUpdate).key("triggerSource")
+                .displayedName("Trigger Source")
+                .assignmentOptional().noDefaultValue()
+                .options(triggerSourceOptions)
+                .reconfigurable()
+                .allowedStates(State::UNKNOWN, State::ON)
+                .commit();
+
+        this->appendSchema(schemaUpdate);
     }
 
 
@@ -543,7 +669,7 @@ namespace karabo {
             const float frameRate = m_counter / m_timer.elapsed();
             m_counter = 0;
             m_timer.now();
-            this->set("frameRate", frameRate);
+            this->set("frameRate.actual", frameRate);
         }
     }
 
