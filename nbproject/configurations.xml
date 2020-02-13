@@ -69,6 +69,7 @@
             <linkerLibLibItem>karabo</linkerLibLibItem>
             <linkerLibLibItem>aravis-0.6</linkerLibLibItem>
             <linkerLibLibItem>imageSource</linkerLibLibItem>
+            <linkerLibLibItem>glib-2.0</linkerLibLibItem>
             <linkerOptionItem>`pkg-config --libs karaboDependencies`</linkerOptionItem>
           </linkerLibItems>
         </linkerTool>
@@ -135,6 +136,7 @@
             <linkerLibLibItem>karabo</linkerLibLibItem>
             <linkerLibLibItem>aravis-0.6</linkerLibLibItem>
             <linkerLibLibItem>imageSource</linkerLibLibItem>
+            <linkerLibLibItem>glib-2.0</linkerLibLibItem>
             <linkerOptionItem>`pkg-config --libs karaboDependencies`</linkerOptionItem>
           </linkerLibItems>
         </linkerTool>
