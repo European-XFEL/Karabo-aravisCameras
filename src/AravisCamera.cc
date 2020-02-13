@@ -653,7 +653,7 @@ namespace karabo {
         const Dims shape(height, width);
 
         // Non-copy NDArray constructor
-        karabo::util::NDArray imgArray((T*) data, width*height, karabo::util::NDArray::NullDeleter(), shape);
+        const karabo::util::NDArray imgArray((T*) data, width*height, karabo::util::NDArray::NullDeleter(), shape);
 
         const unsigned short bpp = this->get<unsigned short>("bpp");
         const Dims binning(this->get<int>("bin.y"), this->get<int>("bin.x"));
