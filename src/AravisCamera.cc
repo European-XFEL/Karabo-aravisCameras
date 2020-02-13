@@ -450,7 +450,9 @@ namespace karabo {
         Hash h;
         this->pollOnce(h);
 
-        const std::vector<int> shape = {h.get<int>("roi.height"), h.get<int>("roi.width")};
+        unsigned long long height = h.get<int>("roi.height");
+        unsigned long long width = h.get<int>("roi.width");
+        const std::vector<unsigned long long> shape = {height, width};
 
         const ArvPixelFormat pixelFormat = arv_camera_get_pixel_format(m_camera);
         unsigned short bpp;
