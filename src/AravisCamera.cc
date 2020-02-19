@@ -200,7 +200,24 @@ namespace karabo {
                 .allowedStates(State::UNKNOWN, State::ON)
                 .commit();
 
-        // TODO more properties: acquisitionMode, frameCount, gain, packetDelay, packetSize
+        STRING_ELEMENT(expected).key("autoGain")
+                .displayedName("Auto Gain")
+                .description("Configures automatic gain feature.")
+                .assignmentOptional().defaultValue("Off")
+                .options("Off,Once,Continuous")
+                .reconfigurable()
+                .allowedStates(State::UNKNOWN, State::ON)
+                .commit();
+
+        DOUBLE_ELEMENT(expected).key("gain")
+                .displayedName("Gain")
+                .description("Sets the gain of the ADC converter.")
+                .assignmentOptional().noDefaultValue()
+                .reconfigurable()
+                .allowedStates(State::UNKNOWN, State::ON)
+                .commit();
+
+        // TODO more properties: acquisitionMode, frameCount, packetDelay, packetSize
     }
 
 
@@ -381,6 +398,27 @@ namespace karabo {
                 arv_camera_set_frame_rate(m_camera, frameRate);
             }
         }
+
+        if (configuration.has("autoGain") && arv_camera_is_gain_auto_available(m_camera)) {
+            const std::string autoGainStr = configuration.get<std::string>("autoGain");
+            const ArvAuto autoGain = arv_auto_from_string(autoGainStr.c_str());
+
+            arv_camera_set_gain_auto(m_camera, autoGain);
+        }
+
+        if (configuration.has("gain") && arv_camera_is_gain_available(m_camera)) {
+            double gain = configuration.get<double>("gain");
+
+            // Get bounds
+            double gmin, gmax;
+            arv_camera_get_gain_bounds(m_camera, &gmin, &gmax);
+
+            // Apply bounds
+            gain = max(gain, gmin);
+            gain = min(gain, gmax);
+
+            arv_camera_set_gain(m_camera, gain);
+        }
     }
 
 
@@ -511,13 +549,18 @@ namespace karabo {
         h.set("roi.width", width);
         h.set("roi.height", height);
 
-        gint dx, dy;
-        arv_camera_get_binning(m_camera, &dx, &dy);
-        h.set("bin.x", dx);
-        h.set("bin.y", dy);
+        if (arv_camera_is_binning_available(m_camera)) {
+            gint dx, dy;
+            arv_camera_get_binning(m_camera, &dx, &dy);
+            h.set("bin.x", dx);
+            h.set("bin.y", dy);
+        }
 
         h.set("pixelFormat", arv_camera_get_pixel_format_as_string(m_camera));
-        h.set("exposureTime", arv_camera_get_exposure_time(m_camera));
+
+        if (arv_camera_is_exposure_time_available(m_camera)) {
+            h.set("exposureTime", arv_camera_get_exposure_time(m_camera));
+        }
 
         std::string triggerMode = this->get<std::string>("triggerMode");
         if (triggerMode == "On") {
@@ -525,6 +568,18 @@ namespace karabo {
         } else {
             h.set("frameRate.target", arv_camera_get_frame_rate(m_camera));
         }
+
+        if (arv_camera_is_gain_auto_available(m_camera)) {
+            const ArvAuto autoGain = arv_camera_get_gain_auto(m_camera);
+            const std::string autoGainStr(arv_auto_to_string(autoGain));
+            h.set("autoGain", autoGainStr);
+        }
+
+        if (arv_camera_is_gain_available(m_camera)) {
+            const double gain = arv_camera_get_gain(m_camera);
+            h.set("gain", gain);
+        }
+
     }
 
     void AravisCamera::updateOutputSchema() {
