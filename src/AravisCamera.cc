@@ -27,6 +27,40 @@ namespace karabo {
                 .init() // cannot be changed after device instantiation
                 .commit();
 
+        INT64_ELEMENT(expected).key("packetDelay")
+                .displayedName("Packet Delay")
+                .description("Configure the inter packet delay to insert between each packet for the current stream. "
+                "This can be used as a crude flow-control mechanism if the application or the network "
+                "infrastructure cannot keep up with the packets coming from the device.")
+                .assignmentOptional().noDefaultValue()
+                .minInc(0)
+                .unit(Unit::SECOND).metricPrefix(MetricPrefix::NANO)
+                .reconfigurable()
+                .allowedStates(State::UNKNOWN, State::ON)
+                .commit();
+
+        BOOL_ELEMENT(expected).key("autoPacketSize")
+                .displayedName("Auto Packet Size")
+                .description("Automatically determine the biggest packet size that can be used for data streaming, "
+                "and set its value accordingly. If this functionality is not available, the packet size will be set "
+                "to a default value (1500 bytes).")
+                .assignmentOptional().defaultValue(true)
+                .reconfigurable()
+                .allowedStates(State::UNKNOWN, State::ON)
+                .commit();
+
+        INT32_ELEMENT(expected).key("packetSize")
+                .displayedName("Packet Size")
+                .description("Specifies the packet size to be used by the camera for data streaming. "
+                "This does not include data leader and data trailer and the last data packet which might be "
+                "of smaller size.")
+                .assignmentOptional().noDefaultValue()
+                .minExc(0)
+                .unit(Unit::BYTE)
+                .reconfigurable()
+                .allowedStates(State::UNKNOWN, State::ON)
+                .commit();
+
         SLOT_ELEMENT(expected).key("acquire")
                 .displayedName("Acquire")
                 .allowedStates(State::ON)
@@ -55,7 +89,7 @@ namespace karabo {
                 .minExc(0.)
                 .unit(Unit::HERTZ)
                 .reconfigurable()
-                .allowedStates(State::ON)
+                .allowedStates(State::UNKNOWN, State::ON)
                 .commit();
 
         FLOAT_ELEMENT(expected).key("frameRate.actual")
@@ -217,7 +251,7 @@ namespace karabo {
                 .allowedStates(State::UNKNOWN, State::ON)
                 .commit();
 
-        // TODO more properties: acquisitionMode, frameCount, packetDelay, packetSize
+        // TODO more properties: acquisitionMode, frameCount
     }
 
 
@@ -323,6 +357,23 @@ namespace karabo {
         if (m_camera == NULL) {
             // cannot configure camera, as we are not connected
             return;
+        }
+
+        if (configuration.has("packetDelay")) {
+            arv_camera_gv_set_packet_delay(m_camera, configuration.get<long long>("packetDelay"));
+        }
+
+        bool autoPacketSize = GET_PATH(configuration, "autoPacketSize", bool);
+        if (autoPacketSize) {
+            guint packetSize = arv_camera_gv_auto_packet_size(m_camera);
+            arv_camera_gv_set_packet_size(m_camera, packetSize);
+        } else {
+            try {
+                guint packetSize = GET_PATH(configuration, "packetSize", int);
+                arv_camera_gv_set_packet_size(m_camera, packetSize);
+            } catch (const karabo::util::ParameterException& e) {
+                // key neither in configuration nor on device
+            }
         }
 
         if (configuration.has("pixelFormat")) {
@@ -587,6 +638,12 @@ namespace karabo {
 
 
     void AravisCamera::pollOnce(karabo::util::Hash& h) {
+        long long packetDelay = arv_camera_gv_get_packet_delay(m_camera);
+        h.set("packetDelay", packetDelay);
+
+        guint packetSize = arv_camera_gv_get_packet_size(m_camera);
+        h.set("packetSize", packetSize);
+
         gint x, y, width, height;
         arv_camera_get_region(m_camera, &x, &y, &width, &height);
         h.set("roi.x", x);
