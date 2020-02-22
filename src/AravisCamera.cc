@@ -801,6 +801,71 @@ namespace karabo {
                 .allowedStates(State::UNKNOWN, State::ON)
                 .commit();
 
+        // Disable setting not available properties
+        std::string notAvailable("Not available for this camera.");
+
+        if (!arv_camera_is_binning_available(m_camera)) {
+            NODE_ELEMENT(schemaUpdate).key("bin")
+                    .displayedName("Image Binning")
+                    .commit();
+
+            INT32_ELEMENT(schemaUpdate).key("bin.x")
+                    .displayedName("X Binning")
+                    .description(notAvailable)
+                    .readOnly()
+                    .commit();
+
+            INT32_ELEMENT(schemaUpdate).key("bin.y")
+                    .displayedName("Y Binning")
+                    .description(notAvailable)
+                    .readOnly()
+                    .commit();
+        }
+
+        if (!arv_camera_is_exposure_time_available(m_camera)) {
+            DOUBLE_ELEMENT(schemaUpdate).key("exposureTime")
+                    .displayedName("Exposure Time")
+                    .description(notAvailable)
+                    .readOnly()
+                    .commit();
+        }
+
+        if (!arv_camera_is_frame_rate_available(m_camera)) {
+            NODE_ELEMENT(schemaUpdate).key("frameRate")
+                    .displayedName("Frame Rate")
+                    .commit();
+
+            FLOAT_ELEMENT(schemaUpdate).key("frameRate.target")
+                    .displayedName("Target Frame Rate")
+                    .description(notAvailable)
+                    .readOnly()
+                    .commit();
+
+            FLOAT_ELEMENT(schemaUpdate).key("frameRate.actual")
+                    .displayedName("Actual Frame Rate")
+                    .description("The measured frame rate.")
+                    .unit(Unit::HERTZ)
+                    .readOnly()
+                    .initialValue(0.)
+                    .commit();
+        }
+
+        if (!arv_camera_is_gain_auto_available(m_camera)) {
+            STRING_ELEMENT(schemaUpdate).key("autoGain")
+                    .displayedName("Auto Gain")
+                    .description(notAvailable)
+                    .readOnly()
+                    .commit();
+        }
+
+        if (!arv_camera_is_gain_available(m_camera)) {
+            DOUBLE_ELEMENT(schemaUpdate).key("gain")
+                    .displayedName("Gain")
+                    .description(notAvailable)
+                    .readOnly()
+                    .commit();
+        }
+
         this->appendSchema(schemaUpdate);
     }
 
