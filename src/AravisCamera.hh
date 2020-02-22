@@ -75,7 +75,13 @@ namespace karabo {
 
 
     private:
-        void connect();
+        void initialize();
+
+        bool m_connect;
+        boost::asio::deadline_timer m_reconnect_timer;
+        unsigned short m_failed_connections;
+        void connect(const boost::system::error_code & ec);
+
         void configure(const karabo::util::Hash& configuration);
         void acquire();
         void stop();

@@ -27,11 +27,6 @@ namespace karabo {
                 .init() // cannot be changed after device instantiation
                 .commit();
 
-        SLOT_ELEMENT(expected).key("connect")
-                .displayedName("Connect")
-                .allowedStates(State::UNKNOWN)
-                .commit();
-
         SLOT_ELEMENT(expected).key("acquire")
                 .displayedName("Acquire")
                 .allowedStates(State::ON)
@@ -221,16 +216,22 @@ namespace karabo {
     }
 
 
-    AravisCamera::AravisCamera(const karabo::util::Hash& config) : CameraImageSource(config), m_camera(NULL), m_stream(NULL) {
-        KARABO_SLOT(connect);
+    AravisCamera::AravisCamera(const karabo::util::Hash& config) : CameraImageSource(config),
+            m_connect(true), m_reconnect_timer(EventLoop::getIOService()), m_failed_connections(0u),
+            m_camera(NULL), m_stream(NULL) {
         KARABO_SLOT(acquire);
         KARABO_SLOT(stop);
+
+        KARABO_INITIAL_FUNCTION(initialize);
     }
 
 
     AravisCamera::~AravisCamera() {
         this->clear_stream();
         this->clear_camera();
+
+        m_connect = false;
+        m_reconnect_timer.cancel();
     }
 
 
@@ -244,8 +245,22 @@ namespace karabo {
     }
 
 
-    void AravisCamera::connect() {
-        // TODO connect worker
+    void AravisCamera::initialize() {
+        m_reconnect_timer.expires_from_now(boost::posix_time::milliseconds(1));
+        m_reconnect_timer.async_wait(karabo::util::bind_weak(&AravisCamera::connect, this, boost::asio::placeholders::error));
+    }
+
+
+    void AravisCamera::connect(const boost::system::error_code & ec) {
+        if (ec == boost::asio::error::operation_aborted) return;
+        if (!m_connect) return;
+
+        if (m_camera) {
+            // Already connected
+            m_reconnect_timer.expires_from_now(boost::posix_time::seconds(5l));
+            m_reconnect_timer.async_wait(karabo::util::bind_weak(&AravisCamera::connect, this, boost::asio::placeholders::error));
+            return;
+        }
 
         this->clear_stream();
         this->clear_camera();
@@ -254,8 +269,14 @@ namespace karabo {
         m_camera = arv_camera_new(cameraIp.c_str());
 
         if (!ARV_IS_CAMERA(m_camera)) {
-            KARABO_LOG_ERROR << "Cannot connect to " << cameraIp;
+            if (m_failed_connections < 1) {
+                KARABO_LOG_ERROR << "Cannot connect to " << cameraIp;
+            }
+            ++m_failed_connections;
             m_camera = NULL;
+
+            m_reconnect_timer.expires_from_now(boost::posix_time::seconds(5l));
+            m_reconnect_timer.async_wait(karabo::util::bind_weak(&AravisCamera::connect, this, boost::asio::placeholders::error));
             return;
         }
 
@@ -286,6 +307,9 @@ namespace karabo {
         this->updateOutputSchema();
 
         this->updateState(State::ON);
+        m_failed_connections = 0;
+        m_reconnect_timer.expires_from_now(boost::posix_time::seconds(5l));
+        m_reconnect_timer.async_wait(karabo::util::bind_weak(&AravisCamera::connect, this, boost::asio::placeholders::error));
     }
 
 
@@ -537,6 +561,10 @@ namespace karabo {
         // Possibly use arv_gv_device_get_device_address (gv_device) to verify IP address
 
         KARABO_LOG_FRAMEWORK_WARN << "Control of the camera " << self->get<std::string>("cameraIp") << " is lost";
+        // TODO possibly release resources
+        // NOTE 'self->clear_camera();' will seg fault
+        self->m_camera = NULL;
+
         self->updateState(State::UNKNOWN);
     }
 
