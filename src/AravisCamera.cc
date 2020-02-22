@@ -37,6 +37,11 @@ namespace karabo {
                 .allowedStates(State::ACQUIRING)
                 .commit();
 
+        SLOT_ELEMENT(expected).key("trigger")
+                .displayedName("Software Trigger")
+                .allowedStates(State::ACQUIRING)
+                .commit();
+
         NODE_ELEMENT(expected).key("frameRate")
                 .displayedName("Frame Rate")
                 .commit();
@@ -221,6 +226,7 @@ namespace karabo {
             m_camera(NULL), m_stream(NULL) {
         KARABO_SLOT(acquire);
         KARABO_SLOT(stop);
+        KARABO_SLOT(trigger);
 
         KARABO_INITIAL_FUNCTION(initialize);
     }
@@ -265,7 +271,7 @@ namespace karabo {
         this->clear_stream();
         this->clear_camera();
 
-        const std::string cameraIp = this->get<std::string>("cameraIp");
+        const std::string& cameraIp = this->get<std::string>("cameraIp");
         m_camera = arv_camera_new(cameraIp.c_str());
 
         if (!ARV_IS_CAMERA(m_camera)) {
@@ -424,7 +430,7 @@ namespace karabo {
         }
 
         if (configuration.has("autoGain") && arv_camera_is_gain_auto_available(m_camera)) {
-            const std::string autoGainStr = configuration.get<std::string>("autoGain");
+            const std::string& autoGainStr = configuration.get<std::string>("autoGain");
             const ArvAuto autoGain = arv_auto_from_string(autoGainStr.c_str());
 
             arv_camera_set_gain_auto(m_camera, autoGain);
@@ -480,6 +486,17 @@ namespace karabo {
 
         this->set("frameRate.actual", 0.);
         this->updateState(State::ON);
+    }
+
+
+    void AravisCamera::trigger() {
+        const std::string& triggerMode = this->get<std::string>("triggerMode");
+        if (triggerMode == "On") {
+            const std::string& triggerSource = this->get<std::string>("triggerSource");
+            if (triggerSource == "Software") {
+                arv_camera_software_trigger(m_camera);
+            }
+        }
     }
 
 
@@ -590,7 +607,7 @@ namespace karabo {
             h.set("exposureTime", arv_camera_get_exposure_time(m_camera));
         }
 
-        std::string triggerMode = this->get<std::string>("triggerMode");
+        const std::string& triggerMode = this->get<std::string>("triggerMode");
         if (triggerMode == "On") {
             h.set("triggerSource", arv_camera_get_trigger_source(m_camera));
         } else {

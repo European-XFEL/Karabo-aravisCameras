@@ -85,6 +85,7 @@ namespace karabo {
         void configure(const karabo::util::Hash& configuration);
         void acquire();
         void stop();
+        void trigger();
 
         void clear_camera();
         void clear_stream();
