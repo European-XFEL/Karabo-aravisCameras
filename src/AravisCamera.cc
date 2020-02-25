@@ -251,7 +251,24 @@ namespace karabo {
                 .allowedStates(State::UNKNOWN, State::ON)
                 .commit();
 
-        // TODO more properties: acquisitionMode, frameCount
+        STRING_ELEMENT(expected).key("acquisitionMode")
+                .displayedName("Acquisition Mode")
+                .description("This property sets the image acquisition mode.")
+                .assignmentOptional().defaultValue("Continuous")
+                .options("Continuous,SingleFrame,MultiFrame")
+                .reconfigurable()
+                .allowedStates(State::UNKNOWN, State::ON)
+                .commit();
+
+        INT64_ELEMENT(expected).key("frameCount")
+                .displayedName("Frame Count")
+                .description("This value sets the number of frames acquired in the 'Multiframe' acquisition mode.")
+                .assignmentOptional().noDefaultValue()
+                .minInc(1)
+                .reconfigurable()
+                .allowedStates(State::UNKNOWN, State::ON)
+                .commit();
+
     }
 
 
@@ -363,13 +380,13 @@ namespace karabo {
             arv_camera_gv_set_packet_delay(m_camera, configuration.get<long long>("packetDelay"));
         }
 
-        bool autoPacketSize = GET_PATH(configuration, "autoPacketSize", bool);
+        const bool autoPacketSize = GET_PATH(configuration, "autoPacketSize", bool);
         if (autoPacketSize) {
-            guint packetSize = arv_camera_gv_auto_packet_size(m_camera);
+            const guint packetSize = arv_camera_gv_auto_packet_size(m_camera);
             arv_camera_gv_set_packet_size(m_camera, packetSize);
         } else {
             try {
-                guint packetSize = GET_PATH(configuration, "packetSize", int);
+                const guint packetSize = GET_PATH(configuration, "packetSize", int);
                 arv_camera_gv_set_packet_size(m_camera, packetSize);
             } catch (const karabo::util::ParameterException& e) {
                 // key neither in configuration nor on device
@@ -452,7 +469,7 @@ namespace karabo {
             arv_camera_set_exposure_time(m_camera, exposureTime);
         }
 
-        std::string triggerMode = GET_PATH(configuration, "triggerMode", std::string);
+        const std::string& triggerMode = GET_PATH(configuration, "triggerMode", std::string);
         if (triggerMode == "On") {
             std::string triggerSource;
             try {
@@ -499,6 +516,25 @@ namespace karabo {
             gain = min(gain, gmax);
 
             arv_camera_set_gain(m_camera, gain);
+        }
+
+        if (configuration.has("acquisitionMode")) {
+            const std::string& acquisitionMode = configuration.get<std::string>("acquisitionMode");
+            arv_camera_set_acquisition_mode(m_camera, arv_acquisition_mode_from_string(acquisitionMode.c_str()));
+        }
+
+        if (configuration.has("frameCount")) {
+            gint64 frameCount = configuration.get<long long>("frameCount");
+
+            // Get bounds
+            gint64 fmin, fmax;
+            arv_camera_get_frame_count_bounds(m_camera, &fmin, &fmax);
+
+            // Apply bounds
+            frameCount = max(frameCount, fmin);
+            frameCount = min(frameCount, fmax);
+
+            arv_camera_set_frame_count(m_camera, frameCount);
         }
     }
 
@@ -638,10 +674,10 @@ namespace karabo {
 
 
     void AravisCamera::pollOnce(karabo::util::Hash& h) {
-        long long packetDelay = arv_camera_gv_get_packet_delay(m_camera);
+        const long long packetDelay = arv_camera_gv_get_packet_delay(m_camera);
         h.set("packetDelay", packetDelay);
 
-        guint packetSize = arv_camera_gv_get_packet_size(m_camera);
+        const guint packetSize = arv_camera_gv_get_packet_size(m_camera);
         h.set("packetSize", packetSize);
 
         gint x, y, width, height;
@@ -682,6 +718,12 @@ namespace karabo {
             h.set("gain", gain);
         }
 
+        const ArvAcquisitionMode acquisitionMode = arv_camera_get_acquisition_mode(m_camera);
+        const std::string acquisitionModeStr(arv_acquisition_mode_to_string(acquisitionMode));
+        h.set("acquisitionMode", acquisitionModeStr);
+
+        const long long frameCount = arv_camera_get_frame_count(m_camera);
+        h.set("frameCount", frameCount);
     }
 
     void AravisCamera::updateOutputSchema() {
