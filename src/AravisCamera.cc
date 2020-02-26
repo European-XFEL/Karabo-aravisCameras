@@ -80,11 +80,18 @@ namespace karabo {
                 .displayedName("Frame Rate")
                 .commit();
 
+        BOOL_ELEMENT(expected).key("frameRate.enable")
+                .displayedName("Frame Rate Enable")
+                .description("Enable the frame rate control.")
+                .assignmentOptional().defaultValue(false)
+                .reconfigurable()
+                .allowedStates(State::UNKNOWN, State::ON)
+                .commit();
+
         FLOAT_ELEMENT(expected).key("frameRate.target")
                 .displayedName("Target Frame Rate")
                 .description("Sets the 'absolute' value of the acquisition frame rate on the camera. "
-                "The 'absolute' value is a float value that sets the acquisition frame rate in frames per second. "
-                "This parameter will only have an effect if trigger mode is 'Off'.")
+                "The 'absolute' value is a float value that sets the acquisition frame rate in frames per second.")
                 .assignmentOptional().noDefaultValue()
                 .minExc(0.)
                 .unit(Unit::HERTZ)
@@ -331,11 +338,15 @@ namespace karabo {
             }
             ++m_failed_connections;
             m_camera = NULL;
+            m_device = NULL;
 
             m_reconnect_timer.expires_from_now(boost::posix_time::seconds(5l));
             m_reconnect_timer.async_wait(karabo::util::bind_weak(&AravisCamera::connect, this, boost::asio::placeholders::error));
             return;
         }
+
+        // ArvDevice gives more complete access to camera features
+        m_device = arv_camera_get_device(m_camera);
 
         KARABO_LOG_INFO << "Connected to " << cameraIp;
 
@@ -469,6 +480,21 @@ namespace karabo {
             arv_camera_set_exposure_time(m_camera, exposureTime);
         }
 
+        bool enable = GET_PATH(configuration, "frameRate.enable", bool);
+        if (enable && arv_camera_is_frame_rate_available(m_camera)) {
+            // set frame rate
+            double frameRate;
+            try {
+                frameRate = GET_PATH(configuration, "frameRate.target", float);
+            } catch (const karabo::util::ParameterException& e) {
+                // key neither in configuration nor on device
+                frameRate = arv_camera_get_frame_rate(m_camera);
+            }
+
+            // N.B. this function will set triggerMode to "Off" on the camera
+            arv_camera_set_frame_rate(m_camera, frameRate);
+        }
+
         const std::string& triggerMode = GET_PATH(configuration, "triggerMode", std::string);
         if (triggerMode == "On") {
             std::string triggerSource;
@@ -479,22 +505,15 @@ namespace karabo {
                 triggerSource = arv_camera_get_trigger_source(m_camera);
             }
 
+            // N.B. this function will set "AcquisitionFrameRateEnable" to 0 on Basler
             arv_camera_set_trigger(m_camera, triggerSource.c_str()); // configures the camera in trigger mode
         } else {
             arv_camera_clear_triggers(m_camera); // disable all triggers
+        }
 
-            if (arv_camera_is_frame_rate_available(m_camera)) {
-                // set frame rate
-                double frameRate;
-                try {
-                    frameRate = GET_PATH(configuration, "frameRate.target", float);
-                } catch (const karabo::util::ParameterException& e) {
-                    // key neither in configuration nor on device
-                    frameRate = arv_camera_get_frame_rate(m_camera);
-                }
-
-                arv_camera_set_frame_rate(m_camera, frameRate);
-            }
+        if (this->get<std::string>("vendor") == "Basler") {
+            // Needed to allow frame rate control, in triggerMode "On"
+            arv_device_set_integer_feature_value(m_device, "AcquisitionFrameRateEnable", enable);
         }
 
         if (configuration.has("autoGain") && arv_camera_is_gain_auto_available(m_camera)) {
@@ -668,6 +687,7 @@ namespace karabo {
         // TODO possibly release resources
         // NOTE 'self->clear_camera();' will seg fault
         self->m_camera = NULL;
+        self->m_device = NULL;
 
         self->updateState(State::UNKNOWN);
     }
@@ -872,11 +892,11 @@ namespace karabo {
                     .commit();
         }
 
-        if (!arv_camera_is_frame_rate_available(m_camera)) {
-            NODE_ELEMENT(schemaUpdate).key("frameRate")
-                    .displayedName("Frame Rate")
-                    .commit();
+        NODE_ELEMENT(schemaUpdate).key("frameRate")
+                .displayedName("Frame Rate")
+                .commit();
 
+        if (!arv_camera_is_frame_rate_available(m_camera)) {
             FLOAT_ELEMENT(schemaUpdate).key("frameRate.target")
                     .displayedName("Target Frame Rate")
                     .description(notAvailable)
@@ -889,6 +909,42 @@ namespace karabo {
                     .unit(Unit::HERTZ)
                     .readOnly()
                     .initialValue(0.)
+                    .commit();
+        } else {
+            FLOAT_ELEMENT(schemaUpdate).key("frameRate.target")
+                    .displayedName("Target Frame Rate")
+                    .description("Sets the 'target' value of the acquisition frame rate on the camera. "
+                    "Please be aware that if you enable this feature in combination with external trigger, "
+                    "the resulting 'actual' frame rate will most likely be smaller.")
+                    .assignmentOptional().noDefaultValue()
+                    .minExc(0.)
+                    .unit(Unit::HERTZ)
+                    .reconfigurable()
+                    .allowedStates(State::UNKNOWN, State::ON)
+                    .commit();
+
+            FLOAT_ELEMENT(schemaUpdate).key("frameRate.actual")
+                    .displayedName("Actual Frame Rate")
+                    .description("The measured frame rate.")
+                    .unit(Unit::HERTZ)
+                    .readOnly()
+                    .initialValue(0.)
+                    .commit();
+        }
+
+        if (std::string(arv_camera_get_vendor_name(m_camera)) == "Basler") {
+            BOOL_ELEMENT(schemaUpdate).key("frameRate.enable")
+                    .displayedName("Frame Rate Enable")
+                    .description("Enable frame rate control when camera is in trigger mode.")
+                    .assignmentOptional().defaultValue(false)
+                    .reconfigurable()
+                    .allowedStates(State::UNKNOWN, State::ON)
+                    .commit();
+        } else {
+            BOOL_ELEMENT(schemaUpdate).key("frameRate.enable")
+                    .displayedName("Frame Rate Enable")
+                    .description(notAvailable)
+                    .readOnly()
                     .commit();
         }
 
