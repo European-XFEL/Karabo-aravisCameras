@@ -100,6 +100,7 @@ namespace karabo {
         void writeOutputChannels(const void* data, gint width, gint height);
 
         ArvCamera* m_camera;
+        ArvDevice* m_device;
         ArvStream* m_stream;
 
         karabo::util::Epochstamp m_timer;
