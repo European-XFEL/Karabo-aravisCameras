@@ -245,6 +245,15 @@ namespace karabo {
                 .allowedStates(State::UNKNOWN, State::ON)
                 .commit();
 
+        STRING_ELEMENT(expected).key("triggerActivation")
+                .displayedName("Trigger Activation")
+                .description("This enumeration sets the signal transition needed to activate the selected trigger.")
+                .assignmentOptional().defaultValue("RisingEdge")
+                .options("RisingEdge,FallingEdge")
+                .reconfigurable()
+                .allowedStates(State::UNKNOWN, State::ON)
+                .commit();
+
         STRING_ELEMENT(expected).key("autoGain")
                 .displayedName("Auto Gain")
                 .description("Configures automatic gain feature.")
@@ -572,8 +581,12 @@ namespace karabo {
                 triggerSource = arv_camera_get_trigger_source(m_camera);
             }
 
-            // N.B. this function will set "AcquisitionFrameRateEnable" to 0 on Basler
+            // N.B. This function will internally set "TriggerActivation" to "RisingEdge".
+            //      On Basler it will also set "AcquisitionFrameRateEnable" to 0.
             arv_camera_set_trigger(m_camera, triggerSource.c_str()); // configures the camera in trigger mode
+
+            const std::string& triggerActivation = GET_PATH(configuration, "triggerActivation", std::string);
+            arv_device_set_string_feature_value(m_device, "TriggerActivation", triggerActivation.c_str());
         } else {
             arv_camera_clear_triggers(m_camera); // disable all triggers
         }
