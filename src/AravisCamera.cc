@@ -6,6 +6,8 @@
  * Copyright (c) European XFEL GmbH Hamburg. All rights reserved.
  */
 
+#include <boost/algorithm/string/trim.hpp>
+
 #include "AravisCamera.hh"
 
 using namespace std;
@@ -22,7 +24,9 @@ namespace karabo {
     void AravisCamera::expectedParameters(Schema& expected) {
         STRING_ELEMENT(expected).key("cameraIp")
                 .displayedName("Camera IP")
-                .description("The IP address of the network camera (eg 131.169.140.193).")  // TODO: hostname
+                .description("The IP address of the network camera (e.g. 192.168.1.153 or ip://192.168.1.153)."
+                "Also serial number or MAC address can be used for connecting (e.g. sn://22468791 or "
+                "mac://00:30:53:25:ab:b7).")  // TODO: hostname
                 .assignmentMandatory()
                 .init() // cannot be changed after device instantiation
                 .commit();
@@ -329,7 +333,70 @@ namespace karabo {
         this->clear_stream();
         this->clear_camera();
 
-        const std::string& cameraIp = this->get<std::string>("cameraIp");
+        std::string cameraIp;
+        std::string value = this->get<std::string>("cameraIp");
+        boost::algorithm::trim(value); // Trim spaces
+
+        if (value.find("sn://") == 0) {
+            // Serial number
+            const std::string serialNumber = value.substr(5);
+
+            // Update the internal list of available devices
+            arv_update_device_list();
+
+            for (unsigned int idx=0; idx < arv_get_n_devices(); ++idx) {
+                // Loop over all available cameras, and check their serial numbers
+                if (serialNumber == arv_get_device_serial_nbr(idx)) {
+                    cameraIp = arv_get_device_address(idx);
+                    KARABO_LOG_INFO << "Serial number: " << serialNumber << " matches IP: " <<  cameraIp;
+                    break;
+                }
+            }
+
+            if (cameraIp.size() == 0 && m_failed_connections < 1) {
+                KARABO_LOG_ERROR << "Could not discover any camera with serial (" << serialNumber << ")";
+            }
+
+        } else if (value.find("mac://") == 0) {
+            // MAC address
+            const std::string macAddr = value.substr(6);
+
+            // Update the internal list of available devices
+            arv_update_device_list();
+
+            for (unsigned int idx=0; idx < arv_get_n_devices(); ++idx) {
+                // Loop over all available cameras, and check their MAC addresses
+                if (macAddr == arv_get_device_physical_id(idx)) {
+                    cameraIp = arv_get_device_address(idx);
+                    KARABO_LOG_INFO << "MAC address: " << macAddr << " matches IP: " <<  cameraIp;
+                    break;
+                }
+            }
+
+            if (cameraIp.size() == 0 &&  m_failed_connections < 1) {
+                KARABO_LOG_ERROR << "Could not discover any camera with MAC (" << macAddr << ")";
+            }
+
+        } else if (value.find("ip://") == 0) {
+            // Extract IP address
+            cameraIp = value.substr(5);
+        } else {
+            cameraIp = value;
+        }
+
+        if (cameraIp.size() == 0) {
+            if (m_failed_connections < 1) {
+                KARABO_LOG_ERROR << "Cannot connect to " << value;
+            }
+            ++m_failed_connections;
+            m_camera = NULL;
+            m_device = NULL;
+
+            m_reconnect_timer.expires_from_now(boost::posix_time::seconds(5l));
+            m_reconnect_timer.async_wait(karabo::util::bind_weak(&AravisCamera::connect, this, boost::asio::placeholders::error));
+            return;
+        }
+
         m_camera = arv_camera_new(cameraIp.c_str());
 
         if (!ARV_IS_CAMERA(m_camera)) {
