@@ -17,7 +17,7 @@ CPPUNIT_TEST_SUITE_REGISTRATION(CameraTest);
 
 CameraTest::CameraTest() {
     m_configOk.set("deviceId", "testdevice");
-    m_configOk.set("cameraIp", "1.2.3.4");
+    m_configOk.set("cameraId", "1.2.3.4");
 
     m_configNotOk.set("deviceId", "testdevice");
 }

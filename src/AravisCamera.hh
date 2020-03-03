@@ -99,6 +99,8 @@ namespace karabo {
         template <class T>
         void writeOutputChannels(const void* data, gint width, gint height);
 
+        const std::string resolveHostname(const std::string& hostname);
+
         ArvCamera* m_camera;
         ArvDevice* m_device;
         ArvStream* m_stream;
