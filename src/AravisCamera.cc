@@ -22,11 +22,20 @@ namespace karabo {
     KARABO_REGISTER_FOR_CONFIGURATION(BaseDevice, Device<>, ImageSource, CameraImageSource, AravisCamera)
 
     void AravisCamera::expectedParameters(Schema& expected) {
-        STRING_ELEMENT(expected).key("cameraIp")
-                .displayedName("Camera IP")
-                .description("The IP address of the network camera (e.g. 192.168.1.153 or ip://192.168.1.153)."
-                "Also serial number or MAC address can be used for connecting (e.g. sn://22468791 or "
-                "mac://00:30:53:25:ab:b7).")  // TODO: hostname
+        STRING_ELEMENT(expected).key("idType")
+                .displayedName("ID Type")
+                .description("The type of identifier to be used, to connect to the camera."
+                "Available options are 'IP' (IP address), 'HOST' (IP name), SN (Serial Number), MAC (MAC address).")
+                .assignmentOptional().defaultValue("IP")
+                .options("IP,HOST,SN,MAC")
+                .init()
+                .commit();
+
+        STRING_ELEMENT(expected).key("cameraId")
+                .displayedName("Camera ID")
+                .description("The 'identifier' of the network camera. It can be an IP address (e.g. 192.168.1.153), "
+                "an IP name (e.g. exflqr1234), a serial number or a MAC address (e.g. 00:30:53:25:ab:b7). "
+                "The type must be specified in the 'idType' property.")
                 .assignmentMandatory()
                 .init() // cannot be changed after device instantiation
                 .commit();
@@ -111,7 +120,7 @@ namespace karabo {
                 .initialValue(0.)
                 .commit();
 
-        STRING_ELEMENT(expected).key("cameraId")
+        STRING_ELEMENT(expected).key("camId")
                 .displayedName("Camera ID")
                 .readOnly().initialValue("")
                 .commit();
@@ -339,64 +348,60 @@ namespace karabo {
             return;
         }
 
-        this->clear_stream();
-        this->clear_camera();
-
+        const std::string& idType = this->get<std::string>("idType");
+        const std::string& cameraId = this->get<std::string>("cameraId");
         std::string cameraIp;
-        std::string value = this->get<std::string>("cameraIp");
-        boost::algorithm::trim(value); // Trim spaces
 
-        if (value.find("sn://") == 0) {
-            // Serial number
-            const std::string serialNumber = value.substr(5);
+        if (idType == "IP") { // IP address
+            cameraIp = cameraId;
 
+        } else if (idType == "HOST") { // IP name
+            cameraIp = this->resolveHostname(cameraId);
+            if (cameraIp.size() > 0 && m_failed_connections < 1) {
+                KARABO_LOG_INFO << "IP name resolved: " << cameraId << " -> " <<  cameraIp;
+            }
+
+        } else if (idType == "SN") { // Serial number
             // Update the internal list of available devices
             arv_update_device_list();
 
             for (unsigned int idx=0; idx < arv_get_n_devices(); ++idx) {
-                // Loop over all available cameras, and check their serial numbers
-                if (serialNumber == arv_get_device_serial_nbr(idx)) {
+                // Look for a matching serial number
+                if (cameraId == arv_get_device_serial_nbr(idx)) {
                     cameraIp = arv_get_device_address(idx);
-                    KARABO_LOG_INFO << "Serial number: " << serialNumber << " matches IP: " <<  cameraIp;
+                    if (m_failed_connections < 1) {
+                        KARABO_LOG_INFO << "Serial number resolved: " << cameraId << " -> " <<  cameraIp;
+                    }
                     break;
                 }
             }
 
             if (cameraIp.size() == 0 && m_failed_connections < 1) {
-                KARABO_LOG_ERROR << "Could not discover any camera with serial (" << serialNumber << ")";
+                KARABO_LOG_ERROR << "Could not discover any camera with serial (" << cameraId << ")";
             }
 
-        } else if (value.find("mac://") == 0) {
-            // MAC address
-            const std::string macAddr = value.substr(6);
-
+        } else if (idType == "MAC") { // MAC address
             // Update the internal list of available devices
             arv_update_device_list();
 
             for (unsigned int idx=0; idx < arv_get_n_devices(); ++idx) {
-                // Loop over all available cameras, and check their MAC addresses
-                if (macAddr == arv_get_device_physical_id(idx)) {
+                // Look for a matching MAC address
+                if (cameraId == arv_get_device_physical_id(idx)) {
                     cameraIp = arv_get_device_address(idx);
-                    KARABO_LOG_INFO << "MAC address: " << macAddr << " matches IP: " <<  cameraIp;
+                    if (m_failed_connections < 1) {
+                        KARABO_LOG_INFO << "MAC address resolved: " << cameraId << " -> " <<  cameraIp;
+                    }
                     break;
                 }
             }
 
             if (cameraIp.size() == 0 &&  m_failed_connections < 1) {
-                KARABO_LOG_ERROR << "Could not discover any camera with MAC (" << macAddr << ")";
+                KARABO_LOG_ERROR << "Could not discover any camera with MAC (" << cameraId << ")";
             }
 
-        } else if (value.find("ip://") == 0) {
-            // Extract IP address
-            cameraIp = value.substr(5);
-        } else {
-            cameraIp = value;
         }
 
         if (cameraIp.size() == 0) {
-            if (m_failed_connections < 1) {
-                KARABO_LOG_ERROR << "Cannot connect to " << value;
-            }
             ++m_failed_connections;
             m_camera = NULL;
             m_device = NULL;
@@ -405,6 +410,9 @@ namespace karabo {
             m_reconnect_timer.async_wait(karabo::util::bind_weak(&AravisCamera::connect, this, boost::asio::placeholders::error));
             return;
         }
+
+        this->clear_stream();
+        this->clear_camera();
 
         m_camera = arv_camera_new(cameraIp.c_str());
 
@@ -432,7 +440,7 @@ namespace karabo {
         Hash h;
 
         // Read immutable properties
-        h.set("cameraId", std::string(arv_camera_get_device_id(m_camera)));
+        h.set("camId", std::string(arv_camera_get_device_id(m_camera)));
         h.set("vendor", std::string(arv_camera_get_vendor_name(m_camera)));
         h.set("model", std::string(arv_camera_get_model_name(m_camera)));
 
@@ -440,8 +448,6 @@ namespace karabo {
         arv_camera_get_sensor_size(m_camera, &width, &height);
         h.set("width", width);
         h.set("height", height);
-
-        // TODO more properties...
 
         this->set(h);
         
@@ -763,7 +769,7 @@ namespace karabo {
         // TODO what happens with multiple cameras on server?
         // Possibly use arv_gv_device_get_device_address (gv_device) to verify IP address
 
-        KARABO_LOG_FRAMEWORK_WARN << "Control of the camera " << self->get<std::string>("cameraIp") << " is lost";
+        KARABO_LOG_FRAMEWORK_WARN << "Control of the camera " << self->get<std::string>("cameraId") << " is lost";
         // TODO possibly release resources
         // NOTE 'self->clear_camera();' will seg fault
         self->m_camera = NULL;
@@ -1071,6 +1077,31 @@ namespace karabo {
             m_timer.now();
             this->set("frameRate.actual", frameRate);
         }
+    }
+
+
+    const std::string AravisCamera::resolveHostname(const std::string& hostname) {
+        std::string ipAddress;
+        boost::asio::io_service io_service;
+        boost::asio::ip::tcp::resolver resolver(io_service);
+        const boost::asio::ip::tcp::resolver::query query(hostname, "");
+        const boost::asio::ip::tcp::resolver::iterator end;
+        boost::system::error_code ec;
+        auto it = resolver.resolve(query, ec);
+        if (ec != boost::system::errc::success) {
+            if (m_failed_connections < 1) {
+                KARABO_LOG_ERROR << "Boost error in resolveHostname: " << ec.message();
+            }
+        } else if (it != end) {
+            const boost::asio::ip::tcp::endpoint endpoint = it->endpoint();
+            ipAddress = endpoint.address().to_string();
+        } else {
+            if (m_failed_connections < 1) {
+                KARABO_LOG_ERROR << "Cannot resolve hostname: " << hostname;
+            }
+        }
+
+        return ipAddress;
     }
 
 }
