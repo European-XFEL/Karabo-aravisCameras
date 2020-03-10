@@ -73,7 +73,6 @@ namespace karabo {
          */
         virtual void postReconfigure();
 
-
     private:
         void initialize();
 
@@ -82,10 +81,24 @@ namespace karabo {
         unsigned short m_failed_connections;
         void connect(const boost::system::error_code & ec);
 
-        void configure(const karabo::util::Hash& configuration);
+        boost::asio::deadline_timer m_poll_timer;
+
+        void configure(karabo::util::Hash& configuration);
         void acquire();
         void stop();
         void trigger();
+
+        void getPathsByTag(std::vector<std::string >& paths, const std::string& tags);
+
+        bool getBoolFeature(const std::string& feature, bool& value);
+        bool getStringFeature(const std::string& feature, std::string& value);
+        bool getIntFeature(const std::string& feature, long long& value);
+        bool getFloatFeature(const std::string& feature, double& value);
+
+        bool setBoolFeature(const std::string& feature, bool value);
+        bool setStringFeature(const std::string& feature, const std::string& value);
+        bool setIntFeature(const std::string& feature, long long value);
+        bool setFloatFeature(const std::string& feature, double value);
 
         void clear_camera();
         void clear_stream();
@@ -95,6 +108,8 @@ namespace karabo {
         static void control_lost_cb(ArvGvDevice* gv_device, void* context);
 
         void pollOnce(karabo::util::Hash& h);
+        void pollCamera(const boost::system::error_code & ec);
+        void pollGenicamFeatures(const std::vector<std::string>& paths, karabo::util::Hash& h);
         void updateOutputSchema();
         template <class T>
         void writeOutputChannels(const void* data, gint width, gint height);

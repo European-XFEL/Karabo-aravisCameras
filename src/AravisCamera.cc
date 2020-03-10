@@ -120,6 +120,15 @@ namespace karabo {
                 .initialValue(0.)
                 .commit();
 
+        INT32_ELEMENT(expected).key("pollingInterval")
+                .displayedName("Polling Interval")
+                .description("The interval for polling the camera for read-out values.")
+                .assignmentOptional().defaultValue(20)
+                .unit(Unit::SECOND)
+                .minInc(5).maxInc(60)
+                .reconfigurable()
+                .commit();
+
         STRING_ELEMENT(expected).key("camId")
                 .displayedName("Camera ID")
                 .readOnly().initialValue("")
@@ -303,6 +312,7 @@ namespace karabo {
 
     AravisCamera::AravisCamera(const karabo::util::Hash& config) : CameraImageSource(config),
             m_connect(true), m_reconnect_timer(EventLoop::getIOService()), m_failed_connections(0u),
+            m_poll_timer(EventLoop::getIOService()),
             m_camera(NULL), m_stream(NULL) {
         KARABO_SLOT(acquire);
         KARABO_SLOT(stop);
@@ -318,6 +328,7 @@ namespace karabo {
 
         m_connect = false;
         m_reconnect_timer.cancel();
+        m_poll_timer.cancel();
     }
 
 
@@ -331,9 +342,72 @@ namespace karabo {
     }
 
 
+    void AravisCamera::getPathsByTag(std::vector<std::string>& paths, const std::string& tags) {
+        // N.B. Device::getCurrentConfiguration(tags)) cannot be used, as it
+        // does not return parameters with no value set
+
+        const Schema schema = this->getFullSchema();
+        const Hash& parameters = schema.getParameterHash();
+        const Hash filteredParameters = this->filterByTags(parameters, tags);
+
+        filteredParameters.getPaths(paths);
+    }
+
+
+    bool AravisCamera::getBoolFeature(const std::string& feature, bool& value) {
+        value = arv_device_get_boolean_feature_value(m_device, feature.c_str());
+        return (arv_device_get_status(m_device) == ARV_DEVICE_STATUS_SUCCESS);
+    }
+
+
+    bool AravisCamera::getStringFeature(const std::string& feature, std::string& value) {
+        value = arv_device_get_string_feature_value(m_device, feature.c_str());
+        return (arv_device_get_status(m_device) == ARV_DEVICE_STATUS_SUCCESS);
+    }
+
+
+    bool AravisCamera::getIntFeature(const std::string& feature, long long& value) {
+        value = arv_device_get_integer_feature_value(m_device, feature.c_str());
+        return (arv_device_get_status(m_device) == ARV_DEVICE_STATUS_SUCCESS);
+    }
+
+
+    bool AravisCamera::getFloatFeature(const std::string& feature, double& value) {
+        value = arv_device_get_float_feature_value(m_device, feature.c_str());
+        return (arv_device_get_status(m_device) == ARV_DEVICE_STATUS_SUCCESS);
+    }
+
+
+    bool AravisCamera::setBoolFeature(const std::string& feature, bool value) {
+        arv_device_set_boolean_feature_value(m_device, feature.c_str(), value);
+        return (arv_device_get_status(m_device) == ARV_DEVICE_STATUS_SUCCESS);
+    }
+
+
+    bool AravisCamera::setStringFeature(const std::string& feature, const std::string& value) {
+        arv_device_set_string_feature_value(m_device, feature.c_str(), value.c_str());
+        return (arv_device_get_status(m_device) == ARV_DEVICE_STATUS_SUCCESS);
+    }
+
+
+    bool AravisCamera::setIntFeature(const std::string& feature, long long value) {
+        arv_device_set_integer_feature_value(m_device, feature.c_str(), value);
+        return (arv_device_get_status(m_device) == ARV_DEVICE_STATUS_SUCCESS);
+    }
+
+
+    bool AravisCamera::setFloatFeature(const std::string& feature, double value) {
+        arv_device_set_float_feature_value(m_device, feature.c_str(), value);
+        return (arv_device_get_status(m_device) == ARV_DEVICE_STATUS_SUCCESS);
+    }
+
+
     void AravisCamera::initialize() {
         m_reconnect_timer.expires_from_now(boost::posix_time::milliseconds(1));
         m_reconnect_timer.async_wait(karabo::util::bind_weak(&AravisCamera::connect, this, boost::asio::placeholders::error));
+
+        m_poll_timer.expires_from_now(boost::posix_time::seconds(1l));
+        m_poll_timer.async_wait(karabo::util::bind_weak(&AravisCamera::pollCamera, this, boost::asio::placeholders::error));
     }
 
 
@@ -451,8 +525,9 @@ namespace karabo {
 
         this->set(h);
         
-        // Apply configuration
-        this->configure(this->getCurrentConfiguration());
+        // Apply initial configuration
+        Hash initialConfiguration = this->getCurrentConfiguration();
+        this->configure(initialConfiguration);
 
         this->updateOutputSchema();
 
@@ -463,7 +538,7 @@ namespace karabo {
     }
 
 
-    void AravisCamera::configure(const karabo::util::Hash& configuration) {
+    void AravisCamera::configure(karabo::util::Hash& configuration) {
         if (m_camera == NULL) {
             // cannot configure camera, as we are not connected
             return;
@@ -640,6 +715,41 @@ namespace karabo {
             frameCount = min(frameCount, fmax);
 
             arv_camera_set_frame_count(m_camera, frameCount);
+        }
+
+        // Filter configuration by tag "genicam" and loop over it
+        Hash filtered = this->filterByTags(configuration, "genicam");
+        std::vector<std::string> paths;
+        filtered.getPaths(paths);
+        for (const auto& key : paths) {
+            bool success = false;
+            const auto feature = this->getAliasFromKey<std::string>(key);
+            const auto valueType = this->getValueType(key);
+            switch(valueType) {
+                case Types::BOOL:
+                    success = this->setBoolFeature(feature, configuration.get<bool>(key));
+                    break;
+                case Types::STRING:
+                    success = this->setStringFeature(feature, configuration.get<std::string>(key));
+                    break;
+                case Types::INT64:
+                    success = this->setIntFeature(feature, configuration.get<long long>(key));
+                    break;
+                case Types::FLOAT:
+                    success = this->setFloatFeature(feature, configuration.get<float>(key));
+                    break;
+                case Types::DOUBLE:
+                    success = this->setFloatFeature(feature, configuration.get<double>(key));
+                    break;
+                default:
+                    throw KARABO_NOT_IMPLEMENTED_EXCEPTION(key + " datatype not available in GenICam");
+            }
+
+            if (!success) {
+                // Failed -> erase key from full configuration
+                KARABO_LOG_ERROR << "Could not set value for " << key;
+                configuration.erase(key);
+            }
         }
     }
 
@@ -830,6 +940,72 @@ namespace karabo {
 
         const long long frameCount = arv_camera_get_frame_count(m_camera);
         h.set("frameCount", frameCount);
+
+        // Filter paths by tag "genicam" and poll features
+        std::vector<std::string> paths;
+        this->getPathsByTag(paths, "genicam");
+        this->pollGenicamFeatures(paths, h);
+    }
+
+
+    void AravisCamera::pollCamera(const boost::system::error_code & ec) {
+        if (ec == boost::asio::error::operation_aborted) return;
+
+        if (!m_camera) {
+            // Not connected
+            m_poll_timer.expires_from_now(boost::posix_time::seconds(5l));
+            m_poll_timer.async_wait(karabo::util::bind_weak(&AravisCamera::pollCamera, this, boost::asio::placeholders::error));
+            return;
+        }
+
+        // Filter paths by tag "poll" and poll features
+        std::vector<std::string> paths;
+        this->getPathsByTag(paths, "poll");
+        Hash h;
+        this->pollGenicamFeatures(paths, h);
+
+        this->set(h);
+
+        const int pollingInterval = this->get<int>("pollingInterval");
+        m_poll_timer.expires_from_now(boost::posix_time::seconds(pollingInterval));
+        m_poll_timer.async_wait(karabo::util::bind_weak(&AravisCamera::pollCamera, this, boost::asio::placeholders::error));
+    }
+
+
+    void AravisCamera::pollGenicamFeatures(const std::vector<std::string>& paths, karabo::util::Hash& h) {
+        for (const auto& key : paths) {
+            const auto feature = this->getAliasFromKey<std::string>(key);
+            const auto valueType = this->getValueType(key);
+            bool boolValue;
+            long long intValue;
+            double doubleValue;
+            std::string stringValue;
+            switch(valueType) {
+                case Types::BOOL:
+                    if (this->getBoolFeature(feature, boolValue)) {
+                        h.set(key, boolValue);
+                    }
+                    break;
+                case Types::STRING:
+                    if (this->getStringFeature(feature, stringValue)) {
+                        h.set(key, stringValue);
+                    }
+                    break;
+                case Types::INT64:
+                    if (this->getIntFeature(feature, intValue)) {
+                        h.set(key, intValue);
+                    }
+                    break;
+                case Types::FLOAT:
+                case Types::DOUBLE:
+                    if (this->getFloatFeature(feature, doubleValue)) {
+                        h.set(key, doubleValue);
+                    }
+                    break;
+                default:
+                    throw KARABO_NOT_IMPLEMENTED_EXCEPTION(key + " datatype not available in GenICam");
+            }
+        }
     }
 
     void AravisCamera::updateOutputSchema() {
