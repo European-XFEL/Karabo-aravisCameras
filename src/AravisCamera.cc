@@ -842,7 +842,7 @@ namespace karabo {
         if (arv_buffer_get_status(arv_buffer) == ARV_BUFFER_STATUS_SUCCESS) {
             gint x, y, width, height;
             size_t buffer_size;
-            
+
             const void* buffer_data = arv_buffer_get_data(arv_buffer, &buffer_size);
             arv_buffer_get_image_region(arv_buffer, &x, &y, &width, &height);
             const ArvPixelFormat pixel_format = arv_buffer_get_image_pixel_format(arv_buffer); // e.g. ARV_PIXEL_FORMAT_MONO_8
@@ -859,7 +859,17 @@ namespace karabo {
                 case ARV_PIXEL_FORMAT_MONO_16:
                     self->writeOutputChannels<unsigned short>(buffer_data, width, height);
                     break;
-                // TODO PACKED formats, RGB, YUV...
+                case ARV_PIXEL_FORMAT_MONO_10_PACKED:
+                case ARV_PIXEL_FORMAT_MONO_12_PACKED:
+                {
+                    const uint8_t* data = reinterpret_cast<const uint8_t*>(buffer_data);
+                    uint16_t* unpackedData = new uint16_t[width * height];
+                    unpackMono12Packed(data, width, height, unpackedData);
+                    self->writeOutputChannels<unsigned short>(unpackedData, width, height);
+                    delete[] unpackedData;
+                }
+                    break;
+                // TODO RGB, YUV...
                 default:
                     KARABO_LOG_FRAMEWORK_ERROR << "Format " << pixel_format << " is not supported"; // TODO pixel_format as string
                     self->execute("stop");
