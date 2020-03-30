@@ -786,6 +786,7 @@ namespace karabo {
 
         arv_camera_stop_acquisition(m_camera);
 
+        this->signalEOS(); // End-of-Stream signal
         this->set("frameRate.actual", 0.);
         this->updateState(State::ON);
     }
