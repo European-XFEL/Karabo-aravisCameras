@@ -79,7 +79,8 @@ namespace karabo {
         bool m_connect;
         boost::asio::deadline_timer m_reconnect_timer;
         unsigned short m_failed_connections;
-        void connect(const boost::system::error_code & ec);
+        void connect(const boost::system::error_code& ec);
+        void connection_failed_helper(const std::string& message);
 
         boost::asio::deadline_timer m_poll_timer;
 
@@ -114,7 +115,7 @@ namespace karabo {
         template <class T>
         void writeOutputChannels(const void* data, gint width, gint height);
 
-        const std::string resolveHostname(const std::string& hostname);
+        bool resolveHostname(const std::string& hostname, std::string& ip_address, std::string& message);
 
         ArvCamera* m_camera;
         ArvDevice* m_device;
