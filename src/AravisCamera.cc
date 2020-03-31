@@ -430,9 +430,13 @@ namespace karabo {
             cameraIp = cameraId;
 
         } else if (idType == "HOST") { // IP name
-            cameraIp = this->resolveHostname(cameraId);
-            if (cameraIp.size() > 0 && m_failed_connections < 1) {
-                KARABO_LOG_INFO << "IP name resolved: " << cameraId << " -> " <<  cameraIp;
+            std::string message;
+            bool success = this->resolveHostname(cameraId, cameraIp, message);
+            if (!success) {
+                this->connection_failed_helper(message);
+                return;
+            } else if (m_failed_connections < 1) {
+                KARABO_LOG_INFO << message;
             }
 
         } else if (idType == "SN") { // Serial number
@@ -450,8 +454,10 @@ namespace karabo {
                 }
             }
 
-            if (cameraIp.size() == 0 && m_failed_connections < 1) {
-                KARABO_LOG_ERROR << "Could not discover any camera with serial (" << cameraId << ")";
+            if (cameraIp.size() == 0) {
+                const std::string message("Could not discover any camera with serial: " + cameraId);
+                this->connection_failed_helper(message);
+                return;
             }
 
         } else if (idType == "MAC") { // MAC address
@@ -469,37 +475,20 @@ namespace karabo {
                 }
             }
 
-            if (cameraIp.size() == 0 &&  m_failed_connections < 1) {
-                KARABO_LOG_ERROR << "Could not discover any camera with MAC (" << cameraId << ")";
+            if (cameraIp.size() == 0) {
+                const std::string message("Could not discover any camera with MAC: " + cameraId);
+                this->connection_failed_helper(message);
+                return;
             }
 
-        }
-
-        if (cameraIp.size() == 0) {
-            ++m_failed_connections;
-            m_camera = NULL;
-            m_device = NULL;
-
-            m_reconnect_timer.expires_from_now(boost::posix_time::seconds(5l));
-            m_reconnect_timer.async_wait(karabo::util::bind_weak(&AravisCamera::connect, this, boost::asio::placeholders::error));
-            return;
         }
 
         this->clear_stream();
         this->clear_camera();
-
         m_camera = arv_camera_new(cameraIp.c_str());
 
         if (!ARV_IS_CAMERA(m_camera)) {
-            if (m_failed_connections < 1) {
-                KARABO_LOG_ERROR << "Cannot connect to " << cameraIp;
-            }
-            ++m_failed_connections;
-            m_camera = NULL;
-            m_device = NULL;
-
-            m_reconnect_timer.expires_from_now(boost::posix_time::seconds(5l));
-            m_reconnect_timer.async_wait(karabo::util::bind_weak(&AravisCamera::connect, this, boost::asio::placeholders::error));
+            this->connection_failed_helper("Cannot connect to " + cameraIp);
             return;
         }
 
@@ -514,16 +503,9 @@ namespace karabo {
         // controlling the camera.
         arv_device_execute_command(m_device, "TriggerSoftware");
         if (arv_device_get_status(m_device) != ARV_DEVICE_STATUS_SUCCESS) {
-            if (m_failed_connections < 1) {
-                KARABO_LOG_ERROR << "Cannot connect to " << cameraIp
-                    << ". Another application might be controlling it.";
-            }
-            ++m_failed_connections;
-            m_camera = NULL;
-            m_device = NULL;
-
-            m_reconnect_timer.expires_from_now(boost::posix_time::seconds(5l));
-            m_reconnect_timer.async_wait(karabo::util::bind_weak(&AravisCamera::connect, this, boost::asio::placeholders::error));
+            const std::string message("Cannot connect to " + cameraIp
+                + ". Another application might be controlling it.");
+            this->connection_failed_helper(message);
             return;
 
         }
@@ -556,6 +538,23 @@ namespace karabo {
 
         this->updateState(State::ON);
         m_failed_connections = 0;
+        m_reconnect_timer.expires_from_now(boost::posix_time::seconds(5l));
+        m_reconnect_timer.async_wait(karabo::util::bind_weak(&AravisCamera::connect, this, boost::asio::placeholders::error));
+    }
+
+
+    void AravisCamera::connection_failed_helper(const std::string& message) {
+        if (m_failed_connections < 1) {
+            // Only print first error message
+            KARABO_LOG_ERROR << message;
+        }
+
+        // Increase counter, and reset objects
+        ++m_failed_connections;
+        m_camera = NULL;
+        m_device = NULL;
+
+        // Try reconnecting after some time
         m_reconnect_timer.expires_from_now(boost::posix_time::seconds(5l));
         m_reconnect_timer.async_wait(karabo::util::bind_weak(&AravisCamera::connect, this, boost::asio::placeholders::error));
     }
@@ -1290,8 +1289,8 @@ namespace karabo {
     }
 
 
-    const std::string AravisCamera::resolveHostname(const std::string& hostname) {
-        std::string ipAddress;
+    bool AravisCamera::resolveHostname(const std::string& hostname, std::string&ip_address, std::string& message) {
+        bool success = false;
         boost::asio::io_service io_service;
         boost::asio::ip::tcp::resolver resolver(io_service);
         const boost::asio::ip::tcp::resolver::query query(hostname, "");
@@ -1299,19 +1298,19 @@ namespace karabo {
         boost::system::error_code ec;
         auto it = resolver.resolve(query, ec);
         if (ec != boost::system::errc::success) {
-            if (m_failed_connections < 1) {
-                KARABO_LOG_ERROR << "Boost error in resolveHostname: " << ec.message();
-            }
+            ip_address = "";
+            message = "Boost error in resolveHostname: " + ec.message();
         } else if (it != end) {
             const boost::asio::ip::tcp::endpoint endpoint = it->endpoint();
-            ipAddress = endpoint.address().to_string();
+            success = true;
+            ip_address = endpoint.address().to_string();
+            message = "IP name resolved: " + hostname + " -> " + ip_address;
         } else {
-            if (m_failed_connections < 1) {
-                KARABO_LOG_ERROR << "Cannot resolve hostname: " << hostname;
-            }
+            ip_address = "";
+            message = "Cannot resolve hostname: " + hostname;
         }
 
-        return ipAddress;
+        return success;
     }
 
 }
