@@ -506,6 +506,29 @@ namespace karabo {
         // ArvDevice gives more complete access to camera features
         m_device = arv_camera_get_device(m_camera);
 
+        // The following is a workaround due to the fact that ARAVIS 0.6 does
+        // not decode the AccessStatus from the discovery pong.
+        // Therefore we send a "TriggerSoftware" command, which is listed as
+        // "recommended" in the GenICam standard, and check for status.
+        // If it is not "SUCCESS" we assume it's because of another application
+        // controlling the camera.
+        arv_device_execute_command(m_device, "TriggerSoftware");
+        if (arv_device_get_status(m_device) != ARV_DEVICE_STATUS_SUCCESS) {
+            if (m_failed_connections < 1) {
+                KARABO_LOG_ERROR << "Cannot connect to " << cameraIp
+                    << ". Another application might be controlling it.";
+            }
+            ++m_failed_connections;
+            m_camera = NULL;
+            m_device = NULL;
+
+            m_reconnect_timer.expires_from_now(boost::posix_time::seconds(5l));
+            m_reconnect_timer.async_wait(karabo::util::bind_weak(&AravisCamera::connect, this, boost::asio::placeholders::error));
+            return;
+
+        }
+
+        // Successfully connected!
         KARABO_LOG_INFO << "Connected to " << cameraIp;
 
         // Connect the control-lost signal
