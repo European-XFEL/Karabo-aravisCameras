@@ -5,6 +5,7 @@
                    displayName="Header Files"
                    projectFiles="true">
       <itemPath>src/AravisCamera.hh</itemPath>
+      <itemPath>src/PhotonicScienceCamera.hh</itemPath>
     </logicalFolder>
     <logicalFolder name="ResourceFiles"
                    displayName="Resource Files"
@@ -14,6 +15,7 @@
                    displayName="Source Files"
                    projectFiles="true">
       <itemPath>src/AravisCamera.cc</itemPath>
+      <itemPath>src/PhotonicScienceCamera.cc</itemPath>
     </logicalFolder>
     <logicalFolder name="TestFiles"
                    displayName="Test Files"
@@ -87,6 +89,10 @@
       </item>
       <item path="src/AravisCamera.hh" ex="false" tool="3" flavor2="0">
       </item>
+      <item path="src/PhotonicScienceCamera.cc" ex="false" tool="1" flavor2="0">
+      </item>
+      <item path="src/PhotonicScienceCamera.hh" ex="false" tool="3" flavor2="0">
+      </item>
       <item path="src/tests/CameraTest.cc" ex="false" tool="1" flavor2="0">
       </item>
       <item path="src/tests/CameraTest.hh" ex="false" tool="3" flavor2="0">
@@ -153,6 +159,10 @@
       <item path="src/AravisCamera.cc" ex="false" tool="1" flavor2="0">
       </item>
       <item path="src/AravisCamera.hh" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="src/PhotonicScienceCamera.cc" ex="false" tool="1" flavor2="0">
+      </item>
+      <item path="src/PhotonicScienceCamera.hh" ex="false" tool="3" flavor2="0">
       </item>
       <item path="src/tests/CameraTest.cc" ex="false" tool="1" flavor2="0">
       </item>
