@@ -73,6 +73,11 @@ namespace karabo {
          */
         virtual void postReconfigure();
 
+    protected:
+        bool m_arv_camera_trigger; // Use arv_camera to access trigger
+
+        void configure(karabo::util::Hash& configuration);
+
     private:
         void initialize();
 
@@ -84,7 +89,6 @@ namespace karabo {
 
         boost::asio::deadline_timer m_poll_timer;
 
-        void configure(karabo::util::Hash& configuration);
         void acquire();
         void stop();
         void trigger();

@@ -15,8 +15,12 @@
 class CameraTest : public CPPUNIT_NS::TestFixture {
     CPPUNIT_TEST_SUITE(CameraTest);
 
-    CPPUNIT_TEST(shouldCreateCamera);
-    CPPUNIT_TEST(shouldNotCreateCamera);
+    CPPUNIT_TEST(shouldCreateAravisCamera);
+    CPPUNIT_TEST(shouldNotCreateAravisCamera);
+
+// XXX
+//    CPPUNIT_TEST(shouldCreatePhScienceCamera);
+//    CPPUNIT_TEST(shouldNotCreatePhScienceCamera);
 
     CPPUNIT_TEST_SUITE_END();
 
@@ -27,8 +31,11 @@ public:
     void tearDown();
 
 private:
-    void shouldCreateCamera();
-    void shouldNotCreateCamera();
+    void shouldCreateAravisCamera();
+    void shouldNotCreateAravisCamera();
+
+    void shouldCreatePhScienceCamera();
+    void shouldNotCreatePhScienceCamera();
 
     karabo::util::Hash m_configOk;
     karabo::util::Hash m_configNotOk;
