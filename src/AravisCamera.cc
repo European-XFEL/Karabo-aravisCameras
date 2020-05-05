@@ -1281,7 +1281,7 @@ namespace karabo {
         const unsigned short bpp = this->get<unsigned short>("bpp");
         const Dims binning(this->get<int>("bin.y"), this->get<int>("bin.x"));
         const Dims roiOffsets(this->get<int>("roi.y"), this->get<int>("roi.x"));
-        const Timestamp ts;
+        const Timestamp ts = this->getActualTimestamp();
         const Hash header;
 
         // Send image and metadata to output channel
