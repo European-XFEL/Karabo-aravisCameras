@@ -27,12 +27,6 @@ namespace karabo {
         // Description of not available properties
         const std::string notAvailable("Not available for this camera.");
 
-        SLOT_ELEMENT(expected).key("trigger")
-                .displayedName("Software Trigger")
-                .description(notAvailable)
-                .allowedStates(State::INTERLOCKED) // i.e. never allowed
-                .commit();
-
         // **************************************************************************************************************
         //                                   READ/WRITE HARDWARE PARAMETERS                                             *
         // **************************************************************************************************************
@@ -45,40 +39,52 @@ namespace karabo {
             .readOnly().initialValue("")
             .commit();
 
-
-// XXX verify that ROI can be accessed generically...
         OVERWRITE_ELEMENT(expected).key("roi.width")
                 .setNewDescription("This value sets the width of the area of interest in pixels. "
                 "It must be a multiple of 16. Use '0' for the whole sensor width.")
                 .setNewDefaultValue(1920)
                 .setNewMinInc(16)
                 .commit();
-//
-// and possibly remove the following.
-//        INT32_ELEMENT(expected).key("xOffset")
-//                .alias("OffsetX_in_camera")
-//                .tags("genicam")
-//                .displayedName("X Offset")
-//                .description("This value sets the X offset (left offset) for the area of interest in pixels, "
-//                "i.e., the distance in pixels between the left side of the sensor and the left side of the image area")
-//                .assignmentOptional().defaultValue(0)
-//                .unit(Unit::PIXEL)
-//                .reconfigurable()
-//                .allowedStates(State::UNKNOWN, State::ON)
-//                .commit();
-//
-//        INT32_ELEMENT(expected).key("yOffset")
-//                .alias("OffsetY_in_camera")
-//                .tags("genicam")
-//                .displayedName("Y Offset")
-//                .description("This value sets the Y offset (top offset) for the area of interest in pixels, "
-//                "i.e., the distance in pixels between the top side of the sensor and the top side of the image area")
-//                .assignmentOptional().defaultValue(0)
-//                .unit(Unit::PIXEL)
-//                .reconfigurable()
-//                .allowedStates(State::UNKNOWN, State::ON)
-//                .commit();
-//
+
+        OVERWRITE_ELEMENT(expected).key("roi.x")
+            .setNewDescription(notAvailable + " Use 'xOffset' instead.")
+            .setNowReadOnly()
+            .commit();
+
+        OVERWRITE_ELEMENT(expected).key("roi.y")
+            .setNewDescription(notAvailable + " Use 'yOffset' instead.")
+            .setNowReadOnly()
+            .commit();
+
+        INT32_ELEMENT(expected).key("xOffset")
+                .alias("OffsetX_in_camera")
+                .tags("genicam")
+                .displayedName("X Offset")
+                .description("This value sets the X offset (left offset) for the area of interest in pixels, "
+                "i.e., the distance in pixels between the left side of the sensor and the left side of the image area")
+                .assignmentOptional().defaultValue(0)
+                .unit(Unit::PIXEL)
+                .reconfigurable()
+                .allowedStates(State::UNKNOWN, State::ON)
+                .commit();
+
+        INT32_ELEMENT(expected).key("yOffset")
+                .alias("OffsetY_in_camera")
+                .tags("genicam")
+                .displayedName("Y Offset")
+                .description("This value sets the Y offset (top offset) for the area of interest in pixels, "
+                "i.e., the distance in pixels between the top side of the sensor and the top side of the image area")
+                .assignmentOptional().defaultValue(0)
+                .unit(Unit::PIXEL)
+                .reconfigurable()
+                .allowedStates(State::UNKNOWN, State::ON)
+                .commit();
+
+//// XXX Apparently binning cannot be set neither by arv_camera_set_binning
+//////   nor by accessing BinningHorizontal/BinningVertical GenICam parameters.
+////     No error is reported, but the read-back shows no change.
+////     The same is anyway true for eBUSPlayer too, thus I assume binning
+////     does not work on firmware.
 //        INT32_ELEMENT(expected).key("xBinning")
 //                .alias("BinningHorizontal")
 //                .tags("genicam")
@@ -413,8 +419,10 @@ namespace karabo {
     }
 
     void PhotonicScienceCamera::trigger() {
-        // The camera possibly does not support software trigger
-        // XXX verify
+        const std::string& triggerMode = this->get<std::string>("triggerMode");
+        if (triggerMode == "SW_Trigger") {
+            arv_camera_software_trigger(m_camera);
+        }
     }
 
 } // namespace karabo

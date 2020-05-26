@@ -76,6 +76,8 @@ namespace karabo {
     protected:
         bool m_arv_camera_trigger; // Use arv_camera to access trigger
 
+        ArvCamera* m_camera;
+
         void configure(karabo::util::Hash& configuration);
 
     private:
@@ -91,7 +93,7 @@ namespace karabo {
 
         void acquire();
         void stop();
-        void trigger();
+        virtual void trigger();
 
         void getPathsByTag(std::vector<std::string >& paths, const std::string& tags);
 
@@ -100,10 +102,10 @@ namespace karabo {
         bool getIntFeature(const std::string& feature, long long& value);
         bool getFloatFeature(const std::string& feature, double& value);
 
-        bool setBoolFeature(const std::string& feature, bool value);
-        bool setStringFeature(const std::string& feature, const std::string& value);
-        bool setIntFeature(const std::string& feature, long long value);
-        bool setFloatFeature(const std::string& feature, double value);
+        bool setBoolFeature(const std::string& feature, bool& value);
+        bool setStringFeature(const std::string& feature, std::string& value);
+        bool setIntFeature(const std::string& feature, long long& value);
+        bool setFloatFeature(const std::string& feature, double& value);
 
         void clear_camera();
         void clear_stream();
@@ -121,7 +123,6 @@ namespace karabo {
 
         bool resolveHostname(const std::string& hostname, std::string& ip_address, std::string& message);
 
-        ArvCamera* m_camera;
         ArvDevice* m_device;
         ArvStream* m_stream;
 
