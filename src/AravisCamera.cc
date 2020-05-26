@@ -238,8 +238,8 @@ namespace karabo {
                 .description("This float value sets the camera's exposure time. "
                 "It can only be a multiple of the minimum exposure time.")
                 .unit(Unit::SECOND).metricPrefix(MetricPrefix::MICRO)
-                .assignmentOptional().defaultValue(0.)
-                .minInc(0.)
+                .assignmentOptional().defaultValue(10.)
+                .minExc(0.)
                 .reconfigurable()
                 .allowedStates(State::UNKNOWN, State::ON)
                 .commit();
@@ -379,27 +379,37 @@ namespace karabo {
     }
 
 
-    bool AravisCamera::setBoolFeature(const std::string& feature, bool value) {
+    bool AravisCamera::setBoolFeature(const std::string& feature, bool& value) {
         arv_device_set_boolean_feature_value(m_device, feature.c_str(), value);
-        return (arv_device_get_status(m_device) == ARV_DEVICE_STATUS_SUCCESS);
+        const bool success = (arv_device_get_status(m_device) == ARV_DEVICE_STATUS_SUCCESS);
+        // read back value
+        value = arv_device_get_boolean_feature_value(m_device, feature.c_str());
+        return success;
     }
 
 
-    bool AravisCamera::setStringFeature(const std::string& feature, const std::string& value) {
+    bool AravisCamera::setStringFeature(const std::string& feature, std::string& value) {
         arv_device_set_string_feature_value(m_device, feature.c_str(), value.c_str());
-        return (arv_device_get_status(m_device) == ARV_DEVICE_STATUS_SUCCESS);
+        const bool success = (arv_device_get_status(m_device) == ARV_DEVICE_STATUS_SUCCESS);
+        // read back value
+        value = arv_device_get_string_feature_value(m_device, feature.c_str());
+        return success;
     }
 
 
-    bool AravisCamera::setIntFeature(const std::string& feature, long long value) {
+    bool AravisCamera::setIntFeature(const std::string& feature, long long& value) {
         arv_device_set_integer_feature_value(m_device, feature.c_str(), value);
-        return (arv_device_get_status(m_device) == ARV_DEVICE_STATUS_SUCCESS);
+        const bool success = (arv_device_get_status(m_device) == ARV_DEVICE_STATUS_SUCCESS);
+        value = arv_device_get_integer_feature_value(m_device, feature.c_str());
+        return success;
     }
 
 
-    bool AravisCamera::setFloatFeature(const std::string& feature, double value) {
+    bool AravisCamera::setFloatFeature(const std::string& feature, double& value) {
         arv_device_set_float_feature_value(m_device, feature.c_str(), value);
-        return (arv_device_get_status(m_device) == ARV_DEVICE_STATUS_SUCCESS);
+        const bool success = (arv_device_get_status(m_device) == ARV_DEVICE_STATUS_SUCCESS);
+        value = arv_device_get_float_feature_value(m_device, feature.c_str());
+        return success;
     }
 
 
@@ -650,8 +660,10 @@ namespace karabo {
             double tmin, tmax;
             arv_camera_get_exposure_time_bounds(m_camera, &tmin, &tmax);
 
-            // exposure time must be multiple of tmin
-            exposureTime = tmin * floor(exposureTime / tmin);
+            if (tmin > 0.) {
+                // exposure time must be multiple of tmin
+                exposureTime = tmin * floor(exposureTime / tmin);
+            }
 
             // Apply bounds
             exposureTime = max(exposureTime, tmin);
@@ -744,39 +756,65 @@ namespace karabo {
         }
 
         // Filter configuration by tag "genicam" and loop over it
-        Hash filtered = this->filterByTags(configuration, "genicam");
+        const Hash filtered = this->filterByTags(configuration, "genicam");
+        const Schema schema = this->getFullSchema();
         std::vector<std::string> paths;
         filtered.getPaths(paths);
         for (const auto& key : paths) {
             bool success = false;
             const auto feature = this->getAliasFromKey<std::string>(key);
             const auto valueType = this->getValueType(key);
+            const auto accessMode = schema.getAccessMode(key);
+            bool boolValue;
+            long long intValue;
+            double floatValue;
+            std::string stringValue;
+
+            if (accessMode == AccessType::READ) {
+                // Read-Only parameter
+                continue;
+            }
+
             switch(valueType) {
                 case Types::BOOL:
-                    success = this->setBoolFeature(feature, configuration.get<bool>(key));
+                    boolValue = configuration.get<bool>(key);
+                    success = this->setBoolFeature(feature, boolValue);
+                    configuration.set<bool>(key, boolValue); // set read value
                     break;
                 case Types::STRING:
-                    success = this->setStringFeature(feature, configuration.get<std::string>(key));
+                    stringValue = configuration.get<std::string>(key);
+                    success = this->setStringFeature(feature, stringValue);
+                    configuration.set<std::string>(key, stringValue); // set read value
+                    break;
+                case Types::INT32:
+                    intValue = configuration.get<int>(key);
+                    success = this->setIntFeature(feature, intValue);
+                    configuration.set<int>(key, intValue); // set read value
                     break;
                 case Types::INT64:
-                    success = this->setIntFeature(feature, configuration.get<long long>(key));
+                    intValue = configuration.get<long long>(key);
+                    success = this->setIntFeature(feature, intValue);
+                    configuration.set<long long>(key, intValue); // set read value
                     break;
                 case Types::FLOAT:
-                    success = this->setFloatFeature(feature, configuration.get<float>(key));
+                    floatValue = configuration.get<float>(key);
+                    success = this->setFloatFeature(feature, floatValue);
+                    configuration.set<float>(key, floatValue); // set read value
                     break;
                 case Types::DOUBLE:
-                    success = this->setFloatFeature(feature, configuration.get<double>(key));
+                    floatValue = configuration.get<double>(key);
+                    success = this->setFloatFeature(feature, floatValue);
+                    configuration.set<double>(key, floatValue); // set read value
                     break;
                 default:
                     throw KARABO_NOT_IMPLEMENTED_EXCEPTION(key + " datatype not available in GenICam");
             }
 
             if (!success) {
-                // Failed -> erase key from full configuration
-                KARABO_LOG_ERROR << "Could not set value for " << key;
-                configuration.erase(key);
+                KARABO_LOG_WARN << "Setting value for " << key << " may not have been successful. Value on device updated according to camera.";
             }
         }
+
     }
 
 
@@ -819,6 +857,10 @@ namespace karabo {
 
 
     void AravisCamera::trigger() {
+        if (!m_arv_camera_trigger) {
+            return;
+        }
+
         const std::string& triggerMode = this->get<std::string>("triggerMode");
         if (triggerMode == "On") {
             const std::string& triggerSource = this->get<std::string>("triggerSource");
@@ -957,7 +999,7 @@ namespace karabo {
             const std::string& triggerMode = this->get<std::string>("triggerMode");
             if (triggerMode == "On") {
                 h.set("triggerSource", arv_camera_get_trigger_source(m_camera));
-            } else {
+            } else if (arv_camera_is_frame_rate_available(m_camera)) {
                 h.set("frameRate.target", arv_camera_get_frame_rate(m_camera));
             }
         }
@@ -1030,6 +1072,7 @@ namespace karabo {
                         h.set(key, stringValue);
                     }
                     break;
+                case Types::INT32:
                 case Types::INT64:
                     if (this->getIntFeature(feature, intValue)) {
                         h.set(key, intValue);
@@ -1160,7 +1203,7 @@ namespace karabo {
             }
             g_free(options);
 
-           STRING_ELEMENT(schemaUpdate).key("triggerSource")
+            STRING_ELEMENT(schemaUpdate).key("triggerSource")
                     .displayedName("Trigger Source")
                     .assignmentOptional().noDefaultValue()
                     .options(triggerSourceOptions)

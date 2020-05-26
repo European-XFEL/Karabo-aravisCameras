@@ -31,7 +31,7 @@ namespace karabo {
 
     private:
         void configure(karabo::util::Hash& configuration); // Over-ride parent's method
-        void trigger(); // Over-ride parent's method
+        virtual void trigger(); // Over-ride parent's method
 
     };
 
