@@ -109,6 +109,12 @@ namespace karabo {
 //                .allowedStates(State::UNKNOWN, State::ON)
 //                .commit();
 
+        OVERWRITE_ELEMENT(expected).key("pixelFormat")
+                // Fill-up with some commonly available options. They will be updated on connection.
+                .setNewOptions("Mono8,Mono12,Mono12Packed,Mono16")
+                .setNewDefaultValue("Mono16")
+                .commit();
+
         STRING_ELEMENT(expected).key("displayMode")
                 .alias("Display_mode")
                 .tags("genicam")
