@@ -222,8 +222,9 @@ namespace karabo {
                 .displayedName("Pixel Format")
                 .description("This enumeration sets the format of the pixel data transmitted for acquired images. "
                 "For example Mono8 means monochromatic, 8 bits-per-pixel.")
-                .assignmentOptional().noDefaultValue()
-                // options will be injected on connection
+                .assignmentOptional().defaultValue("Mono12Packed")
+                // Fill-up with some commonly available options. They will be updated on connection.
+                .options("Mono8,Mono12,Mono12Packed")
                 .reconfigurable()
                 .allowedStates(State::UNKNOWN, State::ON)
                 .commit();
@@ -940,8 +941,16 @@ namespace karabo {
                     break;
                 // TODO RGB, YUV...
                 default:
-                    KARABO_LOG_FRAMEWORK_ERROR << "Format " << pixel_format << " is not supported"; // TODO pixel_format as string
-                    self->execute("stop");
+                    if (self->m_pixelFormatOptions.find(pixel_format) != self->m_pixelFormatOptions.end()) {
+                        KARABO_LOG_FRAMEWORK_ERROR << "Format " << self->m_pixelFormatOptions[pixel_format]
+                            << " is not yet supported";
+                    } else {
+                        KARABO_LOG_FRAMEWORK_ERROR << "Format " << pixel_format << " is not yet supported";
+                    }
+
+                    if (self->getState() == State::ACQUIRING) {
+                        self->execute("stop");
+                    }
             }
         }
 
@@ -1104,82 +1113,86 @@ namespace karabo {
         const std::vector<unsigned long long> shape = {height, width};
 
         const ArvPixelFormat pixelFormat = arv_camera_get_pixel_format(m_camera);
-        unsigned short bpp;
         Types::ReferenceType kType;
         switch(pixelFormat) {
             case ARV_PIXEL_FORMAT_MONO_8:
                 m_encoding = Encoding::GRAY;
                 kType = Types::UINT8;
-                bpp = 8;
                 break;
             case ARV_PIXEL_FORMAT_MONO_10:
             case ARV_PIXEL_FORMAT_MONO_10_PACKED:
                 m_encoding = Encoding::GRAY;
                 kType = Types::UINT16;
-                bpp = 10;
                 break;
             case ARV_PIXEL_FORMAT_MONO_12:
             case ARV_PIXEL_FORMAT_MONO_12_PACKED:
                 m_encoding = Encoding::GRAY;
                 kType = Types::UINT16;
-                bpp = 12;
                 break;
             case ARV_PIXEL_FORMAT_MONO_14:
                 m_encoding = Encoding::GRAY;
                 kType = Types::UINT16;
-                bpp = 14;
                 break;
             case ARV_PIXEL_FORMAT_MONO_16:
                 m_encoding = Encoding::GRAY;
                 kType = Types::UINT16;
-                bpp = 16;
                 break;
             case ARV_PIXEL_FORMAT_RGB_8_PACKED:
             case ARV_PIXEL_FORMAT_RGB_8_PLANAR:
                 m_encoding = Encoding::RGB;
                 kType = Types::UINT8;
-                bpp = 24;
                 break;
             case ARV_PIXEL_FORMAT_RGB_10_PACKED:
             case ARV_PIXEL_FORMAT_RGB_10_PLANAR:
                 m_encoding = Encoding::RGB;
                 kType = Types::UINT16;
-                bpp = 30;
                 break;
             case ARV_PIXEL_FORMAT_RGB_12_PACKED:
             case ARV_PIXEL_FORMAT_RGB_12_PLANAR:
                 m_encoding = Encoding::RGB;
                 kType = Types::UINT16;
-                bpp = 36;
                 break;
             case ARV_PIXEL_FORMAT_RGB_16_PLANAR:
                 m_encoding = Encoding::RGB;
                 kType = Types::UINT16;
-                bpp = 48;
                 break;
             // TODO: YUV
             default:
                 m_encoding = Encoding::GRAY;
                 kType = Types::UNKNOWN;
-                bpp = 0;
                 break;
         }
+
+        const unsigned short bpp = ARV_PIXEL_FORMAT_BIT_PER_PIXEL(pixelFormat);
         h.set("bpp", bpp);
 
         this->set(h);
         CameraImageSource::updateOutputSchema(shape, m_encoding, kType);
 
-        guint n_values;
-        const char** options;
+        guint n_int_values, n_str_values;
+        gint64* int_options;
+        const char** str_options;
 
         // get available pixel formats
-        options= arv_camera_get_available_pixel_formats_as_strings(m_camera, &n_values);
-        std::string pixelFormatOptions;
-        for (unsigned short i = 0; i < n_values; ++i) {
-            if (i > 0) pixelFormatOptions.append(",");
-            pixelFormatOptions.append(options[i]);
+        int_options = arv_camera_get_available_pixel_formats(m_camera, &n_int_values);
+        str_options = arv_camera_get_available_pixel_formats_as_strings(m_camera, &n_str_values);
+        if (n_int_values == n_str_values) {
+            // fill-up the pixel_format_options map
+            for (unsigned short i = 0; i < n_int_values; ++i) {
+                m_pixelFormatOptions[int_options[i]] = str_options[i];
+            }
+        } else {
+            KARABO_LOG_WARN << "Could not fill-up pixel_format_options map: different number of "
+                << "int and string options.";
         }
-        g_free(options);
+
+        std::string pixelFormatOptions;
+        for (unsigned short i = 0; i < n_str_values; ++i) {
+            if (i > 0) pixelFormatOptions.append(",");
+            pixelFormatOptions.append(str_options[i]);
+        }
+        g_free(int_options);
+        g_free(str_options);
 
         Schema schemaUpdate;
         STRING_ELEMENT(schemaUpdate).key("pixelFormat")
@@ -1195,13 +1208,14 @@ namespace karabo {
 
         if (m_arv_camera_trigger) {
             // get available trigger sources
-            options = arv_camera_get_available_trigger_sources(m_camera, &n_values);
+            str_options = arv_camera_get_available_trigger_sources(m_camera, &n_str_values);
             std::string triggerSourceOptions;
-            for (unsigned short i = 0; i < n_values; ++i) {
+            for (unsigned short i = 0; i < n_str_values; ++i) {
                 if (i > 0) triggerSourceOptions.append(",");
-                triggerSourceOptions.append(options[i]);
+                triggerSourceOptions.append(str_options[i]);
             }
-            g_free(options);
+            g_free(str_options);
+            
 
             STRING_ELEMENT(schemaUpdate).key("triggerSource")
                     .displayedName("Trigger Source")

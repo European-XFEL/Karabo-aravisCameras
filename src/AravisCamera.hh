@@ -9,6 +9,8 @@
 #ifndef KARABO_ARAVISCAMERA_HH
 #define KARABO_ARAVISCAMERA_HH
 
+#include <unordered_map>
+
 extern "C" {
   #include <arv.h>
 }
@@ -125,6 +127,8 @@ namespace karabo {
 
         ArvDevice* m_device;
         ArvStream* m_stream;
+
+        std::unordered_map<ArvPixelFormat, std::string> m_pixelFormatOptions;
 
         karabo::util::Epochstamp m_timer;
         unsigned long m_counter;
