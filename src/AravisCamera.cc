@@ -89,6 +89,11 @@ namespace karabo {
                 .allowedStates(State::ACQUIRING)
                 .commit();
 
+        SLOT_ELEMENT(expected).key("refresh")
+                .displayedName("Refresh")
+                .allowedStates(State::ON)
+                .commit();
+
         NODE_ELEMENT(expected).key("frameRate")
                 .displayedName("Frame Rate")
                 .commit();
@@ -245,10 +250,20 @@ namespace karabo {
                 .allowedStates(State::UNKNOWN, State::ON)
                 .commit();
 
+        STRING_ELEMENT(expected).key("triggerSelector")
+                .displayedName("Trigger Selector")
+                .description("This enumeration selects the trigger type to configure. "
+                "Once a trigger type has been selected, all changes to the trigger settings will be applied to "
+                "the selected trigger.")
+                .assignmentOptional().defaultValue("FrameStart")
+                // options will be injected on connection
+                .reconfigurable()
+                .allowedStates(State::UNKNOWN, State::ON)
+                .commit();
+
         STRING_ELEMENT(expected).key("triggerMode")
                 .displayedName("Trigger Mode")
-                .description("This enumeration enables or disables the trigger. "
-                "When this is set to 'On', the target frame rate parameter will be ignored.")
+                .description("This enumeration enables or disables the selected trigger.")
                 .assignmentOptional().defaultValue("Off")
                 .options("On,Off")
                 .reconfigurable()
@@ -319,6 +334,7 @@ namespace karabo {
         KARABO_SLOT(acquire);
         KARABO_SLOT(stop);
         KARABO_SLOT(trigger);
+        KARABO_SLOT(refresh);
 
         KARABO_INITIAL_FUNCTION(initialize);
     }
@@ -673,47 +689,73 @@ namespace karabo {
             arv_camera_set_exposure_time(m_camera, exposureTime);
         }
 
-        bool enable = GET_PATH(configuration, "frameRate.enable", bool);
-        if (enable && arv_camera_is_frame_rate_available(m_camera)) {
-            // set frame rate
-            double frameRate;
-            try {
-                frameRate = GET_PATH(configuration, "frameRate.target", float);
-            } catch (const karabo::util::ParameterException& e) {
-                // key neither in configuration nor on device
-                frameRate = arv_camera_get_frame_rate(m_camera);
-            }
+        if (configuration.has("frameRate") && arv_camera_is_frame_rate_available(m_camera)) {
+            const bool enable = GET_PATH(configuration, "frameRate.enable", bool);
 
-            // N.B. this function will set triggerMode to "Off" on the camera
-            arv_camera_set_frame_rate(m_camera, frameRate);
+            if (enable) {
+                // set frame rate
+                double frameRate;
+                try {
+                    frameRate = GET_PATH(configuration, "frameRate.target", float);
+                } catch (const karabo::util::ParameterException& e) {
+                    // key neither in configuration nor on device
+                    frameRate = arv_camera_get_frame_rate(m_camera);
+                }
+
+                // read the current trigger selector
+                const std::string& triggerSelector = arv_device_get_string_feature_value(m_device, "TriggerSelector");
+
+                // read which triggers are "On" in order to restore them later
+                guint n_triggers;
+                const char** triggerSelectorOptions = arv_camera_get_available_triggers(m_camera, &n_triggers);
+                std::vector<std::string> triggerOn;
+                for (unsigned short i = 0; i < n_triggers; ++i) {
+                    arv_device_set_string_feature_value(m_device, "TriggerSelector", triggerSelectorOptions[i]);
+                    const std::string mode(arv_device_get_string_feature_value(m_device, "TriggerMode"));
+                    if (mode == "On") {
+                        triggerOn.push_back(triggerSelectorOptions[i]);
+                    }
+                }
+
+                // N.B. this function will set triggerMode to "Off" on all the selectors
+                arv_camera_set_frame_rate(m_camera, frameRate);
+
+                // restore trigger modes
+                for (const std::string& selector : triggerOn) {
+                    arv_device_set_string_feature_value(m_device, "TriggerSelector", selector.c_str());
+                    arv_device_set_string_feature_value(m_device, "TriggerMode", "On");
+                }
+
+                // restore trigger selector
+                arv_device_set_string_feature_value(m_device, "TriggerSelector", triggerSelector.c_str());
+
+            } else { // enable == false
+                arv_device_set_integer_feature_value(m_device, "AcquisitionFrameRateEnable", 0);
+            }
         }
 
         if (m_arv_camera_trigger) {
             // trigger properties can be accessed with the arv_camera interface
-            const std::string& triggerMode = GET_PATH(configuration, "triggerMode", std::string);
-            if (triggerMode == "On") {
-                std::string triggerSource;
-                try {
-                    triggerSource = GET_PATH(configuration, "triggerSource", std::string);
-                } catch (const karabo::util::ParameterException& e) {
-                    // key neither in configuration nor on device
-                    triggerSource = arv_camera_get_trigger_source(m_camera);
-                }
 
-                // N.B. This function will internally set "TriggerActivation" to "RisingEdge".
-                //      On Basler it will also set "AcquisitionFrameRateEnable" to 0.
-                arv_camera_set_trigger(m_camera, triggerSource.c_str()); // configures the camera in trigger mode
-
-                const std::string& triggerActivation = GET_PATH(configuration, "triggerActivation", std::string);
-                arv_device_set_string_feature_value(m_device, "TriggerActivation", triggerActivation.c_str());
-            } else {
-                arv_camera_clear_triggers(m_camera); // disable all triggers
+            if (configuration.has("triggerSelector")) {
+                const std::string& triggerSelector = configuration.get<std::string>("triggerSelector");
+                arv_device_set_string_feature_value(m_device, "TriggerSelector", triggerSelector.c_str());
             }
-        }
 
-        if (this->get<std::string>("vendor") == "Basler") {
-            // Needed to allow frame rate control, in triggerMode "On"
-            arv_device_set_integer_feature_value(m_device, "AcquisitionFrameRateEnable", enable);
+            if (configuration.has("triggerMode")) {
+                const std::string& triggerMode = configuration.get<std::string>("triggerMode");
+                arv_device_set_string_feature_value(m_device, "TriggerMode", triggerMode.c_str());
+            }
+
+            if (configuration.has("triggerSource")) {
+                const std::string& triggerSource = configuration.get<std::string>("triggerSource");
+                arv_device_set_string_feature_value(m_device, "TriggerSource", triggerSource.c_str());
+            }
+
+            if (configuration.has("triggerActivation")) {
+                const std::string& triggerActivation = configuration.get<std::string>("triggerActivation");
+                arv_device_set_string_feature_value(m_device, "TriggerActivation", triggerActivation.c_str());
+            }
         }
 
         if (configuration.has("autoGain") && arv_camera_is_gain_auto_available(m_camera)) {
@@ -872,6 +914,12 @@ namespace karabo {
     }
 
 
+    void AravisCamera::refresh() {
+        // Poll parameters and update options
+        this->updateOutputSchema();
+    }
+
+
     void AravisCamera::clear_camera() {
         if (ARV_IS_CAMERA(m_camera)) {
             g_clear_object(&m_camera);
@@ -1005,12 +1053,27 @@ namespace karabo {
         }
 
         if (m_arv_camera_trigger) {
-            const std::string& triggerMode = this->get<std::string>("triggerMode");
-            if (triggerMode == "On") {
-                h.set("triggerSource", arv_camera_get_trigger_source(m_camera));
-            } else if (arv_camera_is_frame_rate_available(m_camera)) {
-                h.set("frameRate.target", arv_camera_get_frame_rate(m_camera));
+            h.set("triggerSelector", arv_device_get_string_feature_value(m_device, "TriggerSelector"));
+            h.set("triggerMode", arv_device_get_string_feature_value(m_device, "TriggerMode"));
+
+            // Under certain circumstances, nullptr is returned for "TriggerSource"
+            const char* triggerSourcePtr = arv_device_get_string_feature_value(m_device, "TriggerSource");
+            if (triggerSourcePtr != nullptr) {
+                h.set("triggerSource", triggerSourcePtr);
+            } else {
+                // Ensure that Karabo device and camera are in sync
+                const std::string& triggerSource = this->get<std::string>("triggerSource");
+                arv_device_set_string_feature_value(m_device, "TriggerSource", triggerSource.c_str());
+
+                KARABO_LOG_FRAMEWORK_WARN << this->get<std::string>("deviceId")
+                    << ": cannot get trigger sources from the camera";
             }
+
+            h.set("triggerActivation", arv_device_get_string_feature_value(m_device, "TriggerActivation"));
+        }
+
+        if (arv_camera_is_frame_rate_available(m_camera)) {
+            h.set("frameRate.target", arv_camera_get_frame_rate(m_camera));
         }
 
         if (arv_camera_is_gain_auto_available(m_camera)) {
@@ -1207,6 +1270,27 @@ namespace karabo {
         const std::string notAvailable("Not available for this camera.");
 
         if (m_arv_camera_trigger) {
+            // get available trigger selectors
+            str_options = arv_camera_get_available_triggers(m_camera, &n_str_values);
+            std::string triggerSelectorOptions;
+            for (unsigned short i = 0; i < n_str_values; ++i) {
+                if (i > 0) triggerSelectorOptions.append(",");
+                triggerSelectorOptions.append(str_options[i]);
+            }
+            g_free(str_options);
+
+
+            STRING_ELEMENT(schemaUpdate).key("triggerSelector")
+                    .displayedName("Trigger Selector")
+                    .description("This enumeration selects the trigger type to configure. "
+                    "Once a trigger type has been selected, all changes to the trigger settings will be applied to "
+                    "the selected trigger.")
+                    .assignmentOptional().defaultValue("FrameStart")
+                    .options(triggerSelectorOptions)
+                    .reconfigurable()
+                    .allowedStates(State::UNKNOWN, State::ON)
+                    .commit();
+
             // get available trigger sources
             str_options = arv_camera_get_available_trigger_sources(m_camera, &n_str_values);
             std::string triggerSourceOptions;
@@ -1215,10 +1299,17 @@ namespace karabo {
                 triggerSourceOptions.append(str_options[i]);
             }
             g_free(str_options);
-            
+
+            if (n_str_values == 0) {
+                KARABO_LOG_FRAMEWORK_WARN << this->get<std::string>("deviceId")
+                    << ": could not get available trigger sources from camera. "
+                    << "Using defaults.";
+                triggerSourceOptions = "Software,Line1";
+            }
 
             STRING_ELEMENT(schemaUpdate).key("triggerSource")
                     .displayedName("Trigger Source")
+                    .description("This enumeration sets the signal source for the selected trigger.")
                     .assignmentOptional().noDefaultValue()
                     .options(triggerSourceOptions)
                     .reconfigurable()

@@ -96,6 +96,7 @@ namespace karabo {
         void acquire();
         void stop();
         virtual void trigger();
+        void refresh();
 
         void getPathsByTag(std::vector<std::string >& paths, const std::string& tags);
 
