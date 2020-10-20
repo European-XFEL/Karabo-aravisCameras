@@ -861,6 +861,18 @@ namespace karabo {
     }
 
 
+    bool AravisCamera::isFeatureAvailable(const std::string& feature) {
+        if (ARV_IS_DEVICE(m_device)) {
+            ArvGcNode* node = arv_device_get_feature(m_device, feature.c_str());
+            if (node != nullptr) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+
     void AravisCamera::acquire() {
         m_timer.now();
         m_counter = 0;

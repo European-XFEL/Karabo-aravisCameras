@@ -82,6 +82,8 @@ namespace karabo {
 
         void configure(karabo::util::Hash& configuration);
 
+        bool isFeatureAvailable(const std::string& feature);
+
     private:
         void initialize();
 
