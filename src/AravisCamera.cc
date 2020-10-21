@@ -372,6 +372,18 @@ namespace karabo {
     }
 
 
+    bool AravisCamera::isFeatureAvailable(const std::string& feature) {
+        if (ARV_IS_DEVICE(m_device)) {
+            ArvGcNode* node = arv_device_get_feature(m_device, feature.c_str());
+            if (node != nullptr) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+
     bool AravisCamera::getBoolFeature(const std::string& feature, bool& value) {
         value = arv_device_get_boolean_feature_value(m_device, feature.c_str());
         return (arv_device_get_status(m_device) == ARV_DEVICE_STATUS_SUCCESS);
@@ -860,17 +872,6 @@ namespace karabo {
 
     }
 
-
-    bool AravisCamera::isFeatureAvailable(const std::string& feature) {
-        if (ARV_IS_DEVICE(m_device)) {
-            ArvGcNode* node = arv_device_get_feature(m_device, feature.c_str());
-            if (node != nullptr) {
-                return true;
-            }
-        }
-
-        return false;
-    }
 
 
     void AravisCamera::acquire() {

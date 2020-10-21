@@ -38,6 +38,14 @@ namespace karabo {
         static void expectedParameters(karabo::util::Schema& expected);
 
         /**
+         * The list of additional parameters will be verified before being injected to the
+         * device schema. The parameters not available on the camera will be discarded.
+         *
+         * @param additional Will contain additional parameters for this device
+         */
+        void additionalParameters(karabo::util::Schema& additional) {};
+
+        /**
          * Constructor providing the initial configuration in form of a Hash object.
          * If this class is constructed using the configuration system the Hash object will
          * already be validated using the information of the expectedParameters function.
@@ -82,8 +90,6 @@ namespace karabo {
 
         void configure(karabo::util::Hash& configuration);
 
-        bool isFeatureAvailable(const std::string& feature);
-
     private:
         void initialize();
 
@@ -101,6 +107,8 @@ namespace karabo {
         void refresh();
 
         void getPathsByTag(std::vector<std::string >& paths, const std::string& tags);
+
+        bool isFeatureAvailable(const std::string& feature);
 
         bool getBoolFeature(const std::string& feature, bool& value);
         bool getStringFeature(const std::string& feature, std::string& value);
