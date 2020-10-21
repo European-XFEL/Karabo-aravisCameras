@@ -1428,6 +1428,8 @@ namespace karabo {
                     .commit();
         }
 
+        // XXX call here this->additionalParameters(additional), verify parameters, merge with schemaUpdate
+
         this->appendSchema(schemaUpdate);
     }
 
