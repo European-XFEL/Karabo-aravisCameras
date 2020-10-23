@@ -384,6 +384,15 @@ namespace karabo {
     }
 
 
+    void AravisCamera::disableElement(const std::string& key, const std::string& feature, karabo::util::Schema& schemaUpdate) {
+        STRING_ELEMENT(schemaUpdate).key(key)
+            .displayedName(feature)
+            .description("Not available for this camera.")
+            .readOnly()
+            .commit();
+    }
+
+
     bool AravisCamera::getBoolFeature(const std::string& feature, bool& value) {
         value = arv_device_get_boolean_feature_value(m_device, feature.c_str());
         return (arv_device_get_status(m_device) == ARV_DEVICE_STATUS_SUCCESS);
@@ -1430,15 +1439,12 @@ namespace karabo {
 
         // Disable features which are unavailable on the camera
         std::vector<std::string> paths;
-        this->getPathsByTag(paths, "genicam");
+        this->getPathsByTag(paths, "genicam,poll");
         for (const auto& key : paths) {
             const std::string feature = this->getAliasFromKey<std::string>(key);
             if (!this->isFeatureAvailable(feature)) {
                 // This feature is not available on the camera
-                OVERWRITE_ELEMENT(schemaUpdate).key(key)
-                    .setNewDescription(notAvailable)
-                    .setNowReadOnly()
-                    .commit();
+                this->disableElement(key, feature, schemaUpdate);
             }
         }
 
