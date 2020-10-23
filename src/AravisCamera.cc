@@ -1428,7 +1428,19 @@ namespace karabo {
                     .commit();
         }
 
-        // XXX call here this->additionalParameters(additional), verify parameters, merge with schemaUpdate
+        // Disable features which are unavailable on the camera
+        std::vector<std::string> paths;
+        this->getPathsByTag(paths, "genicam");
+        for (const auto& key : paths) {
+            const std::string feature = this->getAliasFromKey<std::string>(key);
+            if (!this->isFeatureAvailable(feature)) {
+                // This feature is not available on the camera
+                OVERWRITE_ELEMENT(schemaUpdate).key(key)
+                    .setNewDescription(notAvailable)
+                    .setNowReadOnly()
+                    .commit();
+            }
+        }
 
         this->appendSchema(schemaUpdate);
     }
