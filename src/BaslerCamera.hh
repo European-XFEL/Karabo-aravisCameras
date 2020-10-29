@@ -21,7 +21,7 @@ namespace karabo {
     class BaslerCamera : public AravisCamera {
     public:
 
-        KARABO_CLASSINFO(BaslerCamera, "BaslerCamera", "2.9")
+        KARABO_CLASSINFO(BaslerCamera, "AravisBaslerCamera", "2.9")
 
         static void expectedParameters(karabo::util::Schema& expected);
 
