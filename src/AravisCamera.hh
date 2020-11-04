@@ -100,6 +100,9 @@ namespace karabo {
 
         void getPathsByTag(std::vector<std::string >& paths, const std::string& tags);
 
+        bool isFeatureAvailable(const std::string& feature);
+        void disableElement(const std::string& key, const std::string& feature, karabo::util::Schema& schemaUpdate);
+
         bool getBoolFeature(const std::string& feature, bool& value);
         bool getStringFeature(const std::string& feature, std::string& value);
         bool getIntFeature(const std::string& feature, long long& value);
