@@ -372,6 +372,27 @@ namespace karabo {
     }
 
 
+    bool AravisCamera::isFeatureAvailable(const std::string& feature) {
+        if (ARV_IS_DEVICE(m_device)) {
+            ArvGcNode* node = arv_device_get_feature(m_device, feature.c_str());
+            if (node != nullptr) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+
+    void AravisCamera::disableElement(const std::string& key, const std::string& feature, karabo::util::Schema& schemaUpdate) {
+        STRING_ELEMENT(schemaUpdate).key(key)
+            .displayedName(feature)
+            .description("Not available for this camera.")
+            .readOnly()
+            .commit();
+    }
+
+
     bool AravisCamera::getBoolFeature(const std::string& feature, bool& value) {
         value = arv_device_get_boolean_feature_value(m_device, feature.c_str());
         return (arv_device_get_status(m_device) == ARV_DEVICE_STATUS_SUCCESS);
@@ -859,6 +880,7 @@ namespace karabo {
         }
 
     }
+
 
 
     void AravisCamera::acquire() {
@@ -1413,6 +1435,17 @@ namespace karabo {
                     .description(notAvailable)
                     .readOnly()
                     .commit();
+        }
+
+        // Disable features which are unavailable on the camera
+        std::vector<std::string> paths;
+        this->getPathsByTag(paths, "genicam,poll");
+        for (const auto& key : paths) {
+            const std::string feature = this->getAliasFromKey<std::string>(key);
+            if (!this->isFeatureAvailable(feature)) {
+                // This feature is not available on the camera
+                this->disableElement(key, feature, schemaUpdate);
+            }
         }
 
         this->appendSchema(schemaUpdate);
