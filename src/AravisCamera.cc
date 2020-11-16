@@ -110,7 +110,7 @@ namespace karabo {
                 .displayedName("Target Frame Rate")
                 .description("Sets the 'absolute' value of the acquisition frame rate on the camera. "
                 "The 'absolute' value is a float value that sets the acquisition frame rate in frames per second.")
-                .assignmentOptional().noDefaultValue()
+                .assignmentOptional().defaultValue(10.)
                 .minExc(0.)
                 .unit(Unit::HERTZ)
                 .reconfigurable()
@@ -1389,7 +1389,7 @@ namespace karabo {
                     .description("Sets the 'target' value of the acquisition frame rate on the camera. "
                     "Please be aware that if you enable this feature in combination with external trigger, "
                     "the resulting 'actual' frame rate will most likely be smaller.")
-                    .assignmentOptional().noDefaultValue()
+                    .assignmentOptional().defaultValue(10.)
                     .minExc(0.)
                     .unit(Unit::HERTZ)
                     .reconfigurable()
