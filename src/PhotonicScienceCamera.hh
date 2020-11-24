@@ -12,6 +12,7 @@
 #include <karabo/karabo.hpp>
 
 #include "AravisCamera.hh"
+#include "version.hh"  // provides PACKAGE_VERSION
 
 /**
  * The main Karabo namespace
@@ -21,7 +22,7 @@ namespace karabo {
     class PhotonicScienceCamera : public AravisCamera {
     public:
 
-        KARABO_CLASSINFO(PhotonicScienceCamera, "PhotonicScienceCamera", "2.8")
+        KARABO_CLASSINFO(PhotonicScienceCamera, "PhotonicScienceCamera", PACKAGE_VERSION)
 
         static void expectedParameters(karabo::util::Schema& expected);
 

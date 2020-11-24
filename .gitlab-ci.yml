@@ -5,6 +5,9 @@ before_script:
     - export REL_OS_NAME=$(lsb_release -is)
     - >
       if [ "$REL_OS_NAME" = "CentOS" ]; then
+        if [ -x "/opt/rh/devtoolset-7/enable" ]; then
+            source /opt/rh/devtoolset-7/enable
+        fi
         yum install -y intltool glib2-devel
       elif [ "$REL_OS_NAME" = "Ubuntu" ]; then
         apt-get update
@@ -76,7 +79,7 @@ release:ubuntu18:
   <<: *release_build
 
 release:centos7:
-  image: europeanxfel/karabo-ci:centos-7
+  image: europeanxfel/karabo-ci:centos-7gcc7
   <<: *release_build
 
 ##### Test build #####
@@ -89,6 +92,6 @@ test:ubuntu18:
   <<: *test_build
 
 test:centos7:
-  image: europeanxfel/karabo-ci:centos-7
+  image: europeanxfel/karabo-ci:centos-7gcc7
   <<: *test_build
 
