@@ -18,6 +18,10 @@ extern "C" {
 #include <karabo/karabo.hpp>
 
 #include <image_source/CameraImageSource.hh>
+#ifdef PACKAGE_VERSION
+#undef PACKAGE_VERSION // To avoid that imageSource version is picked-up
+#endif
+
 #include "version.hh"  // provides PACKAGE_VERSION
 
 /**
