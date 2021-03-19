@@ -56,6 +56,33 @@ namespace karabo {
                 .allowedStates(State::UNKNOWN, State::ON)
                 .commit();
 
+        INT32_ELEMENT(expected).key("gevSCFTD")
+                .alias("GevSCFTD")
+                .tags("genicam")
+                .displayedName("Frame Transmission Delay")
+                .description("The GevSCFTD parameter sets a delay in ticks between when a camera "
+                "would normally begin transmitting an acquired frame and when it actually begins "
+                "transmission. In most cases, this parameter should be set to zero. However, if "
+                "your network hardware can't handle spikes in network traffic (e.g., if you are "
+                "triggering multiple cameras simultaneously), you can use the frame transmission "
+                "delay parameter to stagger the start of image data transmissions from each "
+                "camera.")
+                .assignmentOptional().defaultValue(0)
+                .minInc(0).maxInc(50000000)
+                .unit(Unit::NUMBER)
+                .reconfigurable()
+                .allowedStates(State::UNKNOWN, State::ON)
+                .commit();
+
+        INT32_ELEMENT(expected).key("gevTimestampTickFrequency")
+                .alias("GevTimestampTickFrequency")
+                .tags("genicam")
+                .displayedName("Tick Frequency")
+                .description("This value indicates the number of clock ticks per second.")
+                .unit(Unit::HERTZ)
+                .readOnly()
+                .commit();
+
         // **************************************************************************************************************
         //                                   READ ONLY HARDWARE PARAMETERS                                              *
         // **************************************************************************************************************
