@@ -111,7 +111,7 @@ namespace karabo {
                 .description("Sets the 'absolute' value of the acquisition frame rate on the camera. "
                 "The 'absolute' value is a float value that sets the acquisition frame rate in frames per second.")
                 .assignmentOptional().defaultValue(10.)
-                .minExc(0.)
+                .minInc(0.)
                 .unit(Unit::HERTZ)
                 .reconfigurable()
                 .allowedStates(State::UNKNOWN, State::ON)
