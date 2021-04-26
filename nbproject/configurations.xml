@@ -53,11 +53,8 @@
           <incDir>
             <pElem>${KARABO}/include</pElem>
             <pElem>${KARABO}/extern/include</pElem>
-            <pElem>${KARABO}/extern/include/aravis-0.6</pElem>
-            <pElem>/usr/lib/x86_64-linux-gnu/glib-2.0/include</pElem>
-            <pElem>/usr/lib64/glib-2.0/include</pElem>
-            <pElem>/usr/include/glib-2.0</pElem>
           </incDir>
+          <commandLine>`pkg-config --cflags aravis-0.8`</commandLine>
         </ccTool>
         <linkerTool>
           <output>${CND_DISTDIR}/${CND_CONF}/${CND_PLATFORM}/libaravisCameras.${CND_DLIB_EXT}</output>
@@ -71,19 +68,24 @@
           </linkerDynSerch>
           <linkerLibItems>
             <linkerLibLibItem>karabo</linkerLibLibItem>
-            <linkerLibLibItem>aravis-0.6</linkerLibLibItem>
             <linkerLibLibItem>imageSource</linkerLibLibItem>
-            <linkerLibLibItem>glib-2.0</linkerLibLibItem>
             <linkerOptionItem>`pkg-config --libs karaboDependencies`</linkerOptionItem>
           </linkerLibItems>
+          <commandLine>`pkg-config --libs aravis-0.8`</commandLine>
         </linkerTool>
       </compileType>
+      <folder path="TestFiles">
+        <linkerTool>
+          <linkerLibItems>
+            <linkerOptionItem>`pkg-config --libs aravis-0.8`</linkerOptionItem>
+          </linkerLibItems>
+        </linkerTool>
+      </folder>
       <folder path="TestFiles/f1">
         <linkerTool>
           <output>${TESTDIR}/TestFiles/f1</output>
           <linkerLibItems>
             <linkerOptionItem>`pkg-config cppunit --libs`</linkerOptionItem>
-            <linkerLibLibItem>gobject-2.0</linkerLibLibItem>
           </linkerLibItems>
         </linkerTool>
       </folder>
@@ -127,6 +129,7 @@
             <pElem>/usr/lib64/glib-2.0/include</pElem>
             <pElem>/usr/include/glib-2.0</pElem>
           </incDir>
+          <commandLine>`pkg-config --cflags aravis-0.8`</commandLine>
         </ccTool>
         <fortranCompilerTool>
           <developmentMode>5</developmentMode>
@@ -146,19 +149,24 @@
           </linkerDynSerch>
           <linkerLibItems>
             <linkerLibLibItem>karabo</linkerLibLibItem>
-            <linkerLibLibItem>aravis-0.6</linkerLibLibItem>
             <linkerLibLibItem>imageSource</linkerLibLibItem>
-            <linkerLibLibItem>glib-2.0</linkerLibLibItem>
             <linkerOptionItem>`pkg-config --libs karaboDependencies`</linkerOptionItem>
           </linkerLibItems>
+          <commandLine>`pkg-config --libs aravis-0.8`</commandLine>
         </linkerTool>
       </compileType>
+      <folder path="TestFiles">
+        <linkerTool>
+          <linkerLibItems>
+            <linkerOptionItem>`pkg-config --libs aravis-0.8`</linkerOptionItem>
+          </linkerLibItems>
+        </linkerTool>
+      </folder>
       <folder path="TestFiles/f1">
         <linkerTool>
           <output>${TESTDIR}/TestFiles/f1</output>
           <linkerLibItems>
             <linkerOptionItem>`pkg-config cppunit --libs`</linkerOptionItem>
-            <linkerLibLibItem>gobject-2.0</linkerLibLibItem>
           </linkerLibItems>
         </linkerTool>
       </folder>
