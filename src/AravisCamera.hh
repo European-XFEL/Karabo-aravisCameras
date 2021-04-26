@@ -94,14 +94,24 @@ namespace karabo {
         boost::asio::deadline_timer m_reconnect_timer;
         unsigned short m_failed_connections;
         void connect(const boost::system::error_code& ec);
-        void connection_failed_helper(const std::string& message);
+        void connection_failed_helper(const std::string& message, const std::string& detailed_msg="");
+
+        bool set_auto_packet_size();
+        bool set_region(int x, int y, int width, int height);
+        bool set_binning(int bin_x, int bin_y);
+        bool set_exposure_time(double exposure_time);
+        bool set_frame_rate(bool enable, double frame_rate=0.);
+        bool set_gain(double gain);
+        bool set_frame_count(gint64 frame_count);
 
         boost::asio::deadline_timer m_poll_timer;
 
         void acquire();
+        void acquire_failed_helper(const std::string& detailed_msg);
         void stop();
         virtual void trigger();
         void refresh();
+        void reset();
 
         void getPathsByTag(std::vector<std::string >& paths, const std::string& tags);
 
@@ -128,7 +138,7 @@ namespace karabo {
         void pollOnce(karabo::util::Hash& h);
         void pollCamera(const boost::system::error_code & ec);
         void pollGenicamFeatures(const std::vector<std::string>& paths, karabo::util::Hash& h);
-        void updateOutputSchema();
+        bool updateOutputSchema();
         template <class T>
         void writeOutputChannels(const void* data, gint width, gint height);
 
@@ -136,6 +146,12 @@ namespace karabo {
 
         ArvDevice* m_device;
         ArvStream* m_stream;
+
+        bool m_is_binning_available;
+        bool m_is_exposure_time_available;
+        bool m_is_frame_rate_available;
+        bool m_is_gain_available;
+        bool m_is_gain_auto_available;
 
         std::unordered_map<ArvPixelFormat, std::string> m_pixelFormatOptions;
 

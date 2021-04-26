@@ -427,7 +427,13 @@ namespace karabo {
     void PhotonicScienceCamera::trigger() {
         const std::string& triggerMode = this->get<std::string>("triggerMode");
         if (triggerMode == "SW_Trigger") {
-            arv_camera_software_trigger(m_camera);
+            GError* error = nullptr;
+            arv_camera_software_trigger(m_camera, &error);
+
+            if (error != nullptr) {
+                KARABO_LOG_FRAMEWORK_ERROR << "arv_camera_software_trigger failed: " << error->message;
+                g_clear_error(&error);
+            }
         }
     }
 
