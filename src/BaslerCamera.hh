@@ -30,6 +30,20 @@ namespace karabo {
 
         virtual ~BaslerCamera();
 
+        virtual bool synchronize_timestamp();
+
+        virtual bool configure_timestamp_chunk();
+
+        virtual bool get_shape_and_format(ArvBuffer* buffer, gint& width, gint& height, ArvPixelFormat& format) const;
+
+        virtual bool get_timestamp(ArvBuffer* buffer, karabo::util::Timestamp& ts) const;
+
+    private:
+        bool m_ptp_enabled;
+        int m_tick_frequency;
+        gint64 m_reference_camera_timestamp;
+        mutable boost::mutex m_sync_lock;
+
     };
 
 } // namespace karabo

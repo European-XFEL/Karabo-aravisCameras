@@ -26,6 +26,15 @@ namespace karabo {
                 .setNewOptions(State::UNKNOWN, State::ERROR, State::ON, State::ACQUIRING)
                 .commit();
 
+        // XXX Replace it with min, max and mean latency.
+        FLOAT_ELEMENT(expected).key("imageLatency")
+                .displayedName("Image Latency")
+                .description("If the image is time stamped on the camera, this represents the delay after which "
+                "the Karabo device receives it.")
+                .unit(Unit::SECOND).metricPrefix(MetricPrefix::MILLI)
+                .readOnly().initialValue(0.)
+                .commit();
+
         STRING_ELEMENT(expected).key("idType")
                 .displayedName("ID Type")
                 .description("The type of identifier to be used, to connect to the camera."
@@ -340,7 +349,7 @@ namespace karabo {
     AravisCamera::AravisCamera(const karabo::util::Hash& config) : CameraImageSource(config),
             m_connect(true), m_reconnect_timer(EventLoop::getIOService()), m_failed_connections(0u),
             m_poll_timer(EventLoop::getIOService()),
-            m_camera(nullptr), m_stream(nullptr),
+            m_camera(nullptr), m_stream(nullptr), m_parser(nullptr),
             m_arv_camera_trigger(true), m_is_binning_available(false), m_is_exposure_time_available(false),
             m_is_frame_rate_available(false), m_is_gain_available(false), m_is_gain_auto_available(false) {
         KARABO_SLOT(acquire);
@@ -662,6 +671,12 @@ namespace karabo {
         // ArvDevice gives more complete access to camera features
         m_device = arv_camera_get_device(m_camera);
 
+        // Instantiation of a chunk parser
+        m_parser = arv_camera_create_chunk_parser(m_camera);
+
+        // Enable chunk data, if available on the camera
+        this->configure_timestamp_chunk();
+
         // The following is a workaround due to the fact that ARAVIS 0.6 does
         // not decode the AccessStatus from the discovery pong.
         // Therefore we send a "TriggerSoftware" command, which is listed as
@@ -749,6 +764,7 @@ namespace karabo {
         ++m_failed_connections;
         m_camera = nullptr;
         m_device = nullptr;
+        m_parser = nullptr;
 
         // Try reconnecting after some time
         m_reconnect_timer.expires_from_now(boost::posix_time::seconds(5l));
@@ -1280,6 +1296,47 @@ namespace karabo {
     }
 
 
+    bool AravisCamera::synchronize_timestamp() {
+        // If the camera can provide HW timestamping, then synchronize it with the timeserver
+        return true;
+    }
+
+
+    bool AravisCamera::configure_timestamp_chunk() {
+        // By default chunk mode is disabled.
+        // It can be enabled in the derived class, if the camera provides HW timestamping.
+        arv_camera_set_chunk_mode(m_camera, false, nullptr);
+        m_chunk_mode = false;
+
+        return true;
+    }
+
+
+    bool AravisCamera::get_shape_and_format(ArvBuffer* buffer, gint& width, gint& height, ArvPixelFormat& format) const {
+        if (m_chunk_mode) {
+            // If chunk mode is enabled, shape and format must be read from data chunks;
+            // arv_buffer_get_image_region and arv_buffer_get_image_pixel_format does not work
+            // in this case; specific code shall be implemented in the derived class
+            throw KARABO_LOGIC_EXCEPTION("Camera specific code for get_shape_and_format needs "
+                                        "to be implemented.");
+        }
+
+        gint x, y;
+        arv_buffer_get_image_region(buffer, &x, &y, &width, &height);
+        format = arv_buffer_get_image_pixel_format(buffer); // e.g. ARV_PIXEL_FORMAT_MONO_8
+        // const guint32 frame_id = arv_buffer_get_frame_id(buffer);
+        // KARABO_LOG_FRAMEWORK_DEBUG << "Got frame " << frame_id;
+
+        return true;
+    }
+
+
+    bool AravisCamera::get_timestamp(ArvBuffer* buffer, karabo::util::Timestamp& ts) const {
+        // If the camera provides HW timestamping in chunk data, this function shall be overridden
+        return false;
+    }
+
+
     void AravisCamera::acquire() {
         const std::string error_msg("Could not start acquisition");
         GError* error = nullptr;
@@ -1300,7 +1357,7 @@ namespace karabo {
         arv_stream_set_emit_signals(m_stream, TRUE);
 
         // Create and push buffers to the stream
-	const gint payload = arv_camera_get_payload(m_camera, &error);
+        const gint payload = arv_camera_get_payload(m_camera, &error);
         if (error != nullptr) {
             std::stringstream ss;
             ss << "arv_camera_get_payload failed: " << error->message;
@@ -1308,8 +1365,14 @@ namespace karabo {
             g_clear_error(&error);
             return;
         }
-	for (size_t i = 0; i < 10; i++)
+
+        for (size_t i = 0; i < 10; i++) {
             arv_stream_push_buffer(m_stream, arv_buffer_new(payload, NULL));
+        }
+
+        // Synchronize timestamp.
+        // This will be repeated periodically in pollCamera.
+        this->synchronize_timestamp();
 
         arv_camera_start_acquisition(m_camera, &error);
         if (error != nullptr) {
@@ -1429,30 +1492,51 @@ namespace karabo {
     void AravisCamera::new_buffer_cb(ArvStream* stream, void* context) {
         Self* self = static_cast<Self*>(context);
 
+        const karabo::util::Timestamp dev_ts = self->getActualTimestamp();
+
         ArvBuffer* arv_buffer = arv_stream_pop_buffer(stream);
-	if (arv_buffer == nullptr) {
+        if (arv_buffer == nullptr) {
             return;
         }
 
         if (arv_buffer_get_status(arv_buffer) == ARV_BUFFER_STATUS_SUCCESS) {
             gint x, y, width, height;
             size_t buffer_size;
+            ArvPixelFormat pixel_format;
 
             const void* buffer_data = arv_buffer_get_data(arv_buffer, &buffer_size);
-            arv_buffer_get_image_region(arv_buffer, &x, &y, &width, &height);
-            const ArvPixelFormat pixel_format = arv_buffer_get_image_pixel_format(arv_buffer); // e.g. ARV_PIXEL_FORMAT_MONO_8
-            const guint32 frame_id = arv_buffer_get_frame_id(arv_buffer);
-            //KARABO_LOG_FRAMEWORK_DEBUG << "Got frame " << frame_id;
+            try {
+                const bool success = self->get_shape_and_format(arv_buffer, width, height, pixel_format);
+                if (!success) {
+                    // XXX Possibly stop the acqisition if the error persists...
+                    return;
+                }
+            } catch (const karabo::util::LogicException& e) {
+                KARABO_LOG_FRAMEWORK_ERROR << e.what();
+                if (self->getState() == State::ACQUIRING) {
+                    self->execute("stop");
+                }
+            }
+
+            bool has_hw_timestamp;
+            karabo::util::Timestamp ts;
+            if (self->get_timestamp(arv_buffer, ts)) {
+                has_hw_timestamp = true;
+            } else {
+                // HW timestamp not available: use actual one from device
+                ts = dev_ts;
+                has_hw_timestamp = false;
+            }
 
             switch(pixel_format) {
                 case ARV_PIXEL_FORMAT_MONO_8:
-                    self->writeOutputChannels<unsigned char>(buffer_data, width, height);
+                    self->writeOutputChannels<unsigned char>(buffer_data, width, height, ts);
                     break;
                 case ARV_PIXEL_FORMAT_MONO_10:
                 case ARV_PIXEL_FORMAT_MONO_12:
                 case ARV_PIXEL_FORMAT_MONO_14:
                 case ARV_PIXEL_FORMAT_MONO_16:
-                    self->writeOutputChannels<unsigned short>(buffer_data, width, height);
+                    self->writeOutputChannels<unsigned short>(buffer_data, width, height, ts);
                     break;
                 case ARV_PIXEL_FORMAT_MONO_10_PACKED:
                 case ARV_PIXEL_FORMAT_MONO_12_PACKED:
@@ -1460,7 +1544,7 @@ namespace karabo {
                     const uint8_t* data = reinterpret_cast<const uint8_t*>(buffer_data);
                     uint16_t* unpackedData = new uint16_t[width * height];
                     unpackMono12Packed(data, width, height, unpackedData);
-                    self->writeOutputChannels<unsigned short>(unpackedData, width, height);
+                    self->writeOutputChannels<unsigned short>(unpackedData, width, height, ts);
                     delete[] unpackedData;
                 }
                     break;
@@ -1476,6 +1560,11 @@ namespace karabo {
                     if (self->getState() == State::ACQUIRING) {
                         self->execute("stop");
                     }
+            }
+
+            if (has_hw_timestamp) {
+                const double latency = dev_ts.getEpochstamp() - ts.getEpochstamp();
+                self->set("imageLatency", 1000 * latency);
             }
         }
 
@@ -1497,6 +1586,7 @@ namespace karabo {
         // NOTE 'self->clear_camera();' will seg fault
         self->m_camera = nullptr;
         self->m_device = nullptr;
+        self->m_parser = nullptr;
 
         self->updateState(State::UNKNOWN);
     }
@@ -1682,6 +1772,10 @@ namespace karabo {
         this->pollGenicamFeatures(paths, h);
 
         this->set(h);
+
+        // Synchronize camera timestamp with timeserver
+        // This shall be repetead regularly, also during an acquisition
+        this->synchronize_timestamp();
 
         const int pollingInterval = this->get<int>("pollingInterval");
         m_poll_timer.expires_from_now(boost::posix_time::seconds(pollingInterval));
@@ -2037,7 +2131,8 @@ namespace karabo {
 
 
     template <class T>
-    void AravisCamera::writeOutputChannels(const void* data, gint width, gint height) {
+    void AravisCamera::writeOutputChannels(const void* data, gint width, gint height,
+            const karabo::util::Timestamp& ts) {
         const Dims shape(height, width);
 
         // Non-copy NDArray constructor
@@ -2046,7 +2141,6 @@ namespace karabo {
         const unsigned short bpp = this->get<unsigned short>("bpp");
         const Dims binning(this->get<int>("bin.y"), this->get<int>("bin.x"));
         const Dims roiOffsets(this->get<int>("roi.y"), this->get<int>("roi.x"));
-        const Timestamp ts = this->getActualTimestamp();
         const Hash header;
 
         // Send image and metadata to output channel
