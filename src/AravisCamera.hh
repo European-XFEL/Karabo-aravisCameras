@@ -84,8 +84,17 @@ namespace karabo {
         bool m_arv_camera_trigger; // Use arv_camera to access trigger
 
         ArvCamera* m_camera;
+        ArvChunkParser* m_parser;
 
         void configure(karabo::util::Hash& configuration);
+
+        virtual bool synchronize_timestamp();
+        virtual bool configure_timestamp_chunk();
+        bool m_chunk_mode;
+        karabo::util::Timestamp m_reference_karabo_time;
+
+        virtual bool get_shape_and_format(ArvBuffer* buffer, gint& width, gint& height, ArvPixelFormat& format) const;
+        virtual bool get_timestamp(ArvBuffer* buffer, karabo::util::Timestamp& ts) const;
 
     private:
         void initialize();
@@ -140,7 +149,7 @@ namespace karabo {
         void pollGenicamFeatures(const std::vector<std::string>& paths, karabo::util::Hash& h);
         bool updateOutputSchema();
         template <class T>
-        void writeOutputChannels(const void* data, gint width, gint height);
+        void writeOutputChannels(const void* data, gint width, gint height, const karabo::util::Timestamp& timestamp);
 
         bool resolveHostname(const std::string& hostname, std::string& ip_address, std::string& message);
 
