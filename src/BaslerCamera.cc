@@ -28,6 +28,38 @@ namespace karabo {
         //                                   READ/WRITE HARDWARE PARAMETERS                                             *
         // **************************************************************************************************************
 
+        NODE_ELEMENT(expected).key("flip")
+                .displayedName("Image Flip")
+                .description("Enables mirroring of the image.")
+                .commit();
+
+        BOOL_ELEMENT(expected).key("flip.X")
+                .alias("ReverseX")
+                .tags("genicam")
+                .displayedName("Reverse X")
+                .description("Enables horizontal mirroring of the image. The pixel values of every "
+                "line in a captured image will be swapped along the line's center. You can use the "
+                "ROI feature when using the Reverse X feature. The position of the ROI relative to "
+                "the sensor remains the same.")
+                .assignmentOptional().defaultValue(false)
+                .reconfigurable()
+                .allowedStates(State::UNKNOWN, State::ON)
+                .commit();
+
+        BOOL_ELEMENT(expected).key("flip.Y")
+                .alias("ReverseY")
+                .tags("genicam")
+                .displayedName("Reverse Y")
+                .description("Enables vertical mirroring of the image. The pixel values of every "
+                "column in a captured image will be swapped along the column's center. You can "
+                "use the ROI feature when using the Reverse Y feature. The position of the ROI "
+                "relative to the sensor remains the same. "
+                "This feature is not available on all models.")
+                .assignmentOptional().defaultValue(false)
+                .reconfigurable()
+                .allowedStates(State::UNKNOWN, State::ON)
+                .commit();
+
         INT32_ELEMENT(expected).key("gevSCBWR")
                 .alias("GevSCBWR")
                 .tags("genicam")
