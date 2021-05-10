@@ -22,7 +22,7 @@ namespace karabo {
     class PhotonicScienceCamera : public AravisCamera {
     public:
 
-        KARABO_CLASSINFO(PhotonicScienceCamera, "PhotonicScienceCamera", PACKAGE_VERSION)
+        KARABO_CLASSINFO(PhotonicScienceCamera, "AravisPhotonicScienceCamera", PACKAGE_VERSION)
 
         static void expectedParameters(karabo::util::Schema& expected);
 
