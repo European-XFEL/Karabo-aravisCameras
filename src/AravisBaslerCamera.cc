@@ -6,7 +6,7 @@
  * Copyright (c) European XFEL GmbH Hamburg. All rights reserved.
  */
 
-#include "BaslerCamera.hh"
+#include "AravisBaslerCamera.hh"
 
 using namespace std;
 USING_KARABO_NAMESPACES
@@ -14,12 +14,12 @@ USING_KARABO_NAMESPACES
 namespace karabo {
 
     // XXX The following does not compile in Karabo 2.8.1 - too many parameters
-    // KARABO_REGISTER_FOR_CONFIGURATION(BaseDevice, Device<>, ImageSource, CameraImageSource, AravisCamera, BaslerCamera)
+    // KARABO_REGISTER_FOR_CONFIGURATION(BaseDevice, Device<>, ImageSource, CameraImageSource, AravisCamera, AravisBaslerCamera)
     // XXX Work-around: do not register the base class parameters here,
-    //     do it in BaslerCamera::expectedParameters
-    KARABO_REGISTER_FOR_CONFIGURATION(BaseDevice, Device<>, ImageSource, CameraImageSource, BaslerCamera)
+    //     do it in AravisAravisBaslerCamera::expectedParameters
+    KARABO_REGISTER_FOR_CONFIGURATION(BaseDevice, Device<>, ImageSource, CameraImageSource, AravisBaslerCamera)
 
-    void BaslerCamera::expectedParameters(Schema& expected) {
+    void AravisBaslerCamera::expectedParameters(Schema& expected) {
         // Call parent's method, as KARABO_REGISTER_FOR_CONFIGURATION
         // does not compile with too many parameters
         AravisCamera::expectedParameters(expected);
@@ -169,13 +169,13 @@ namespace karabo {
 
     }
 
-    BaslerCamera::BaslerCamera(const karabo::util::Hash& config) : AravisCamera(config) {
+    AravisBaslerCamera::AravisBaslerCamera(const karabo::util::Hash& config) : AravisCamera(config) {
     }
 
-    BaslerCamera::~BaslerCamera() {
+    AravisBaslerCamera::~AravisBaslerCamera() {
     }
 
-    bool BaslerCamera::synchronize_timestamp() {
+    bool AravisBaslerCamera::synchronize_timestamp() {
         GError* error = nullptr;
         boost::mutex::scoped_lock(m_sync_lock); // Avoid conflicts with get_timestamp
 
@@ -202,7 +202,7 @@ namespace karabo {
         return true; // success
     }
 
-    bool BaslerCamera::configure_timestamp_chunk() {
+    bool AravisBaslerCamera::configure_timestamp_chunk() {
         GError* error = nullptr;
 
         // Enable chunk data
@@ -226,7 +226,7 @@ namespace karabo {
         return true; // success
     }
 
-    bool BaslerCamera::get_shape_and_format(ArvBuffer* buffer, gint& width, gint& height, ArvPixelFormat& format) const {
+    bool AravisBaslerCamera::get_shape_and_format(ArvBuffer* buffer, gint& width, gint& height, ArvPixelFormat& format) const {
         GError* error = nullptr;
 
         width = arv_chunk_parser_get_integer_value(m_parser, buffer, "ChunkWidth", &error);
@@ -242,7 +242,7 @@ namespace karabo {
         return true; // success
     }
 
-    bool BaslerCamera::get_timestamp(ArvBuffer* buffer, karabo::util::Timestamp& ts) const {
+    bool AravisBaslerCamera::get_timestamp(ArvBuffer* buffer, karabo::util::Timestamp& ts) const {
         // XXX Possibly use PTP in the future
 
         GError* error = nullptr;

@@ -6,29 +6,29 @@
  * Copyright (c) European XFEL GmbH Hamburg. All rights reserved.
  */
 
-#ifndef KARABO_PHOTONICSCIENCECAMERA_HH
-#define KARABO_PHOTONICSCIENCECAMERA_HH
+#ifndef KARABO_ARAVISPHOTONICSCIENCECAMERA_HH
+#define KARABO_ARAVISPHOTONICSCIENCECAMERA_HH
 
 #include <karabo/karabo.hpp>
 
 #include "AravisCamera.hh"
-#include "version.hh"  // provides PACKAGE_VERSION
+#include "version.hh"  // provides ARAVISCAMERAS_PACKAGE_VERSION
 
 /**
  * The main Karabo namespace
  */
 namespace karabo {
 
-    class PhotonicScienceCamera : public AravisCamera {
+    class AravisPhotonicScienceCamera : public AravisCamera {
     public:
 
-        KARABO_CLASSINFO(PhotonicScienceCamera, "AravisPhotonicScienceCamera", PACKAGE_VERSION)
+        KARABO_CLASSINFO(AravisPhotonicScienceCamera, "AravisPhotonicScienceCamera", ARAVISCAMERAS_PACKAGE_VERSION)
 
         static void expectedParameters(karabo::util::Schema& expected);
 
-        PhotonicScienceCamera(const karabo::util::Hash& config);
+        AravisPhotonicScienceCamera(const karabo::util::Hash& config);
 
-        virtual ~PhotonicScienceCamera();
+        virtual ~AravisPhotonicScienceCamera();
 
     private:
         void configure(karabo::util::Hash& configuration); // Over-ride parent's method
@@ -38,4 +38,4 @@ namespace karabo {
 
 } // namespace karabo
 
-#endif // KARABO_PHOTONICSCIENCECAMERA_HH
+#endif // KARABO_ARAVISPHOTONICSCIENCECAMERA_HH
