@@ -674,9 +674,6 @@ namespace karabo {
         // Instantiation of a chunk parser
         m_parser = arv_camera_create_chunk_parser(m_camera);
 
-        // Enable chunk data, if available on the camera
-        this->configure_timestamp_chunk();
-
         // The following is a workaround due to the fact that ARAVIS 0.6 does
         // not decode the AccessStatus from the discovery pong.
         // Therefore we send a "TriggerSoftware" command, which is listed as
@@ -693,6 +690,9 @@ namespace karabo {
             g_clear_error(&error);
             return;
         }
+
+        // Enable chunk data, if available on the camera
+        this->configure_timestamp_chunk();
 
         // Successfully connected!
         KARABO_LOG_INFO << "Connected to " << cameraIp;
