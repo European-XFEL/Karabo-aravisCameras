@@ -6,7 +6,7 @@
  * Copyright (c) European XFEL GmbH Hamburg. All rights reserved.
  */
 
-#include "PhotonicScienceCamera.hh"
+#include "AravisPhotonicScienceCamera.hh"
 
 using namespace std;
 USING_KARABO_NAMESPACES
@@ -14,12 +14,12 @@ USING_KARABO_NAMESPACES
 namespace karabo {
 
     // XXX The following does not compile in Karabo 2.8.1 - too many parameters
-    // KARABO_REGISTER_FOR_CONFIGURATION(BaseDevice, Device<>, ImageSource, CameraImageSource, AravisCamera, PhotonicScienceCamera)
+    // KARABO_REGISTER_FOR_CONFIGURATION(BaseDevice, Device<>, ImageSource, CameraImageSource, AravisCamera, AravisPhotonicScienceCamera)
     // XXX Work-around: do not register the base class parameters here,
-    //     do it in PhotonicScienceCamera::expectedParameters
-    KARABO_REGISTER_FOR_CONFIGURATION(BaseDevice, Device<>, ImageSource, CameraImageSource, PhotonicScienceCamera)
+    //     do it in AravisPhotonicScienceCamera::expectedParameters
+    KARABO_REGISTER_FOR_CONFIGURATION(BaseDevice, Device<>, ImageSource, CameraImageSource, AravisPhotonicScienceCamera)
 
-    void PhotonicScienceCamera::expectedParameters(Schema& expected) {
+    void AravisPhotonicScienceCamera::expectedParameters(Schema& expected) {
         // Call parent's method, as KARABO_REGISTER_FOR_CONFIGURATION
         // does not compile with too many parameters
         AravisCamera::expectedParameters(expected);
@@ -403,14 +403,14 @@ namespace karabo {
 
     }
 
-    PhotonicScienceCamera::PhotonicScienceCamera(const karabo::util::Hash& config) : AravisCamera(config) {
+    AravisPhotonicScienceCamera::AravisPhotonicScienceCamera(const karabo::util::Hash& config) : AravisCamera(config) {
         m_arv_camera_trigger = false; // Trigger properties to be accessed from non-standard paths
     }
 
-    PhotonicScienceCamera::~PhotonicScienceCamera() {
+    AravisPhotonicScienceCamera::~AravisPhotonicScienceCamera() {
     }
 
-    void PhotonicScienceCamera::configure(karabo::util::Hash& configuration) {
+    void AravisPhotonicScienceCamera::configure(karabo::util::Hash& configuration) {
         if (configuration.has("roi.width")) {
             // width must be multiple of 16
             int width = configuration.get<int>("roi.width");
@@ -424,7 +424,7 @@ namespace karabo {
         AravisCamera::configure(configuration);
     }
 
-    void PhotonicScienceCamera::trigger() {
+    void AravisPhotonicScienceCamera::trigger() {
         const std::string& triggerMode = this->get<std::string>("triggerMode");
         if (triggerMode == "SW_Trigger") {
             GError* error = nullptr;

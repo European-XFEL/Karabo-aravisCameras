@@ -18,11 +18,8 @@ extern "C" {
 #include <karabo/karabo.hpp>
 
 #include <image_source/CameraImageSource.hh>
-#ifdef PACKAGE_VERSION
-#undef PACKAGE_VERSION // To avoid that imageSource version is picked-up
-#endif
 
-#include "version.hh"  // provides PACKAGE_VERSION
+#include "version.hh"  // provides ARAVISCAMERAS_PACKAGE_VERSION
 
 /**
  * The main Karabo namespace
@@ -34,7 +31,7 @@ namespace karabo {
     public:
 
         // Add reflection information and Karabo framework compatibility to this class
-        KARABO_CLASSINFO(AravisCamera, "AravisCamera", PACKAGE_VERSION)
+        KARABO_CLASSINFO(AravisCamera, "AravisCamera", ARAVISCAMERAS_PACKAGE_VERSION)
 
         /**
          * Necessary method as part of the factory/configuration system
