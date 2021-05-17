@@ -42,7 +42,6 @@ namespace karabo {
         bool m_ptp_enabled;
         int m_tick_frequency;
         gint64 m_reference_camera_timestamp;
-        mutable boost::mutex m_sync_lock;
 
     };
 

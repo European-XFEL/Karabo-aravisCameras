@@ -177,7 +177,6 @@ namespace karabo {
 
     bool AravisBaslerCamera::synchronize_timestamp() {
         GError* error = nullptr;
-        boost::mutex::scoped_lock(m_sync_lock); // Avoid conflicts with get_timestamp
 
         // XXX Possibly use PTP in the future
         m_ptp_enabled = false;
@@ -255,22 +254,28 @@ namespace karabo {
             return false; // failure
         }
 
-        boost::mutex::scoped_lock(m_sync_lock); // Avoid conflicts with synchronize_timestamp
-
-        // Elapsed time since last synchronization
+        // Elapsed time since last synchronization.
+        // NB This can be negative, if the image acquisition started before
+        //    synchronization, but finished after.
         const double elapsed_t = double(timestamp - m_reference_camera_timestamp) / m_tick_frequency;
-
 
         // Split elapsed time in seconds and attoseconds, then convert to TimeDuration.
         // elapsed_t is in seconds and TimeDuration expects fractions in attoseconds,
         // hence we multiply with 1e18.
+        // A TimeDuration can only be positive, thus save sign and invert if negative.
         double intpart;
-        const unsigned long long fractions = 1.e+18 * modf(elapsed_t, &intpart);
+        const char sign = (elapsed_t >= 0.) ? 1 : -1;
+        const unsigned long long fractions = 1.e+18 * modf(sign * elapsed_t, &intpart);
         const unsigned long long seconds = rint(intpart);
         const TimeDuration duration(seconds, fractions);
 
         // Calculate frame epochstamp from refrence time and elapsed time
-        const Epochstamp epoch(m_reference_karabo_time.getEpochstamp() + duration);
+        Epochstamp epoch(m_reference_karabo_time.getEpochstamp());
+        if (sign >= 0) {
+            epoch += duration;
+        } else {
+            epoch -= duration;
+        }
 
         // Calculate timestamp from epochstamp
         ts = this->getTimestamp(epoch);
