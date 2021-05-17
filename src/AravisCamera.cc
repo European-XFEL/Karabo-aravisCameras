@@ -26,15 +26,6 @@ namespace karabo {
                 .setNewOptions(State::UNKNOWN, State::ERROR, State::ON, State::ACQUIRING)
                 .commit();
 
-        // XXX Replace it with min, max and mean latency.
-        FLOAT_ELEMENT(expected).key("imageLatency")
-                .displayedName("Image Latency")
-                .description("If the image is time stamped on the camera, this represents the delay after which "
-                "the Karabo device receives it.")
-                .unit(Unit::SECOND).metricPrefix(MetricPrefix::MILLI)
-                .readOnly().initialValue(0.)
-                .commit();
-
         STRING_ELEMENT(expected).key("idType")
                 .displayedName("ID Type")
                 .description("The type of identifier to be used, to connect to the camera."
@@ -143,6 +134,33 @@ namespace karabo {
                 .unit(Unit::HERTZ)
                 .readOnly()
                 .initialValue(0.)
+                .commit();
+
+        NODE_ELEMENT(expected).key("latency")
+                .displayedName("Image Latency")
+                .description("The latency between the image timestamp - if available - and the "
+                "reception time. The reference interval is 1 s.")
+                .commit();
+
+        FLOAT_ELEMENT(expected).key("latency.mean")
+                .displayedName("Mean Latency")
+                .description("Mean image latency.")
+                .unit(Unit::SECOND).metricPrefix(MetricPrefix::MILLI)
+                .readOnly().initialValue(0.)
+                .commit();
+
+        FLOAT_ELEMENT(expected).key("latency.min")
+                .displayedName("Min Latency")
+                .description("Minimum image latency.")
+                .unit(Unit::SECOND).metricPrefix(MetricPrefix::MILLI)
+                .readOnly().initialValue(0.)
+                .commit();
+
+        FLOAT_ELEMENT(expected).key("latency.max")
+                .displayedName("Max Latency")
+                .description("Maximum image latency.")
+                .unit(Unit::SECOND).metricPrefix(MetricPrefix::MILLI)
+                .readOnly().initialValue(0.)
                 .commit();
 
         INT32_ELEMENT(expected).key("pollingInterval")
@@ -1343,6 +1361,7 @@ namespace karabo {
 
         m_timer.now();
         m_counter = 0;
+        m_sum_latency = 0.;
         m_stream = arv_camera_create_stream(m_camera, AravisCamera::stream_cb, static_cast<void*>(this), &error);
 
         if (error != nullptr) {
@@ -1371,7 +1390,7 @@ namespace karabo {
         }
 
         // Synchronize timestamp.
-        // This will be repeated periodically in pollCamera.
+        // This will be repeated periodically during acquisition
         this->synchronize_timestamp();
 
         arv_camera_start_acquisition(m_camera, &error);
@@ -1402,6 +1421,12 @@ namespace karabo {
     void AravisCamera::stop() {
         this->clear_stream();
 
+        Hash h;
+        h.set("frameRate.actual", 0.);
+        h.set("latency.mean", 0.);
+        h.set("latency.min", 0.);
+        h.set("latency.max", 0.);
+
         GError* error = nullptr;
         arv_camera_stop_acquisition(m_camera, &error);
 
@@ -1409,13 +1434,13 @@ namespace karabo {
             KARABO_LOG_ERROR << "Could not stop acquisition";
             KARABO_LOG_FRAMEWORK_ERROR << "arv_camera_stop_acquisition failed: " << error->message;
             g_clear_error(&error);
-            this->set("frameRate.actual", 0.);
+            this->set(h);
             this->updateState(State::ERROR);
             return;
         }
 
         this->signalEOS(); // End-of-Stream signal
-        this->set("frameRate.actual", 0.);
+        this->set(h);
         this->updateState(State::ON);
     }
 
@@ -1518,14 +1543,22 @@ namespace karabo {
                 }
             }
 
-            bool has_hw_timestamp;
             karabo::util::Timestamp ts;
             if (self->get_timestamp(arv_buffer, ts)) {
-                has_hw_timestamp = true;
+                // Latency between the image timestamp and the reception time
+                const double latency = dev_ts.getEpochstamp() - ts.getEpochstamp();
+                if (self->m_counter == 0) {
+                    self->m_min_latency = latency;
+                    self->m_max_latency = latency;
+                    self->m_sum_latency = latency; 
+                } else {
+                    self->m_min_latency = std::min(latency, self->m_min_latency);
+                    self->m_max_latency = std::max(latency, self->m_max_latency);
+                    self->m_sum_latency += latency;
+                }
             } else {
                 // HW timestamp not available: use actual one from device
                 ts = dev_ts;
-                has_hw_timestamp = false;
             }
 
             switch(pixel_format) {
@@ -1560,11 +1593,6 @@ namespace karabo {
                     if (self->getState() == State::ACQUIRING) {
                         self->execute("stop");
                     }
-            }
-
-            if (has_hw_timestamp) {
-                const double latency = dev_ts.getEpochstamp() - ts.getEpochstamp();
-                self->set("imageLatency", 1000 * latency);
             }
         }
 
@@ -1772,10 +1800,6 @@ namespace karabo {
         this->pollGenicamFeatures(paths, h);
 
         this->set(h);
-
-        // Synchronize camera timestamp with timeserver
-        // This shall be repetead regularly, also during an acquisition
-        this->synchronize_timestamp();
 
         const int pollingInterval = this->get<int>("pollingInterval");
         m_poll_timer.expires_from_now(boost::posix_time::seconds(pollingInterval));
@@ -2148,10 +2172,26 @@ namespace karabo {
 
         m_counter += 1;
         if (m_timer.elapsed() >= 1.) {
+            Hash h;
+
+            if (m_sum_latency > 0.) { // Only update if available
+                // Convert latency to ms
+                h.set("latency.min", 1000. * m_min_latency);
+                h.set("latency.max", 1000. * m_max_latency);
+                h.set("latency.mean", 1000. * m_sum_latency / m_counter);
+            }
+
+            // Calculate frame rate
             const float frameRate = m_counter / m_timer.elapsed();
-            m_counter = 0;
+            h.set("frameRate.actual", frameRate);
+
+            // Synchronize camera timestamp with timeserver.
+            // This shall be repetead regularly to correct for drift.
+            this->synchronize_timestamp();
+
             m_timer.now();
-            this->set("frameRate.actual", frameRate);
+            m_counter = 0;
+            this->set(h);
         }
     }
 
