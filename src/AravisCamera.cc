@@ -361,6 +361,11 @@ namespace karabo {
                 .allowedStates(State::UNKNOWN, State::ON)
                 .commit();
 
+        const std::vector<std::string> interfaces = {"Camera"};
+        VECTOR_STRING_ELEMENT(expected).key("interfaces")
+                .expertAccess()
+                .readOnly().initialValue(interfaces)
+                .commit();
     }
 
 
@@ -746,7 +751,7 @@ namespace karabo {
         }
 
         this->set(h);
-        
+
         // Apply initial configuration
         Hash initialConfiguration = this->getCurrentConfiguration();
         this->configure(initialConfiguration);
@@ -1550,7 +1555,7 @@ namespace karabo {
                 if (self->m_counter == 0) {
                     self->m_min_latency = latency;
                     self->m_max_latency = latency;
-                    self->m_sum_latency = latency; 
+                    self->m_sum_latency = latency;
                 } else {
                     self->m_min_latency = std::min(latency, self->m_min_latency);
                     self->m_max_latency = std::max(latency, self->m_max_latency);
