@@ -1335,6 +1335,21 @@ namespace karabo {
     }
 
 
+    bool AravisCamera::get_region(gint& x, gint& y, gint& width, gint& height) const {
+        GError* error = nullptr;
+
+        arv_camera_get_region(m_camera, &x, &y, &width, &height, &error);
+
+        if (error != nullptr) {
+            KARABO_LOG_FRAMEWORK_WARN << "arv_camera_get_region failed: " << error->message;
+            g_clear_error(&error);
+            return false; // failure
+        }
+
+        return true; // success
+    }
+
+
     bool AravisCamera::get_shape_and_format(ArvBuffer* buffer, gint& width, gint& height, ArvPixelFormat& format) const {
         if (m_chunk_mode) {
             // If chunk mode is enabled, shape and format must be read from data chunks;
@@ -1626,6 +1641,7 @@ namespace karabo {
 
 
     void AravisCamera::pollOnce(karabo::util::Hash& h) {
+        bool success;
         GError* error = nullptr;
 
         const long long packetDelay = arv_camera_gv_get_packet_delay(m_camera, &error);
@@ -1645,15 +1661,12 @@ namespace karabo {
         }
 
         gint x, y, width, height;
-        arv_camera_get_region(m_camera, &x, &y, &width, &height, &error);
-        if (error == nullptr) {
+        success = this->get_region(x, y, width, height);
+        if (success) {
             h.set("roi.x", x);
             h.set("roi.y", y);
             h.set("roi.width", width);
             h.set("roi.height", height);
-        } else {
-            KARABO_LOG_FRAMEWORK_WARN << "arv_camera_get_region failed: " << error->message;
-            g_clear_error(&error);
         }
 
         if (m_is_binning_available) {

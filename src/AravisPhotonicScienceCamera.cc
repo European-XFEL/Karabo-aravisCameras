@@ -46,6 +46,10 @@ namespace karabo {
                 .setNewMinInc(16)
                 .commit();
 
+        OVERWRITE_ELEMENT(expected).key("roi.height")
+                .setNewDefaultValue(1080)
+                .commit();
+
         OVERWRITE_ELEMENT(expected).key("roi.x")
             .setNewDescription(notAvailable + " Use 'xOffset' instead.")
             .setNowReadOnly()
@@ -401,6 +405,15 @@ namespace karabo {
                 .readOnly()
                 .commit();
 
+        INT32_ELEMENT(expected).key("gevTimestampTickFrequency")
+                .alias("GevTimestampTickFrequency")
+                .tags("genicam")
+                .displayedName("Tick Frequency")
+                .description("This value indicates the number of clock ticks per second.")
+                .unit(Unit::HERTZ)
+                .readOnly()
+                .commit();
+
     }
 
     AravisPhotonicScienceCamera::AravisPhotonicScienceCamera(const karabo::util::Hash& config) : AravisCamera(config) {
@@ -408,6 +421,109 @@ namespace karabo {
     }
 
     AravisPhotonicScienceCamera::~AravisPhotonicScienceCamera() {
+    }
+
+    bool AravisPhotonicScienceCamera::synchronize_timestamp() {
+        GError* error = nullptr;
+        double camera_timestamp;
+
+        const int tick_frequency = this->get<int>("gevTimestampTickFrequency");
+
+        // Get current timestamp on the camera (GevTimestampValue).
+        // GevTimestampValue counts the number of ticks since the last reset of the counter.
+        // It has been verified on sCMOS camera that reading the counter takes < 1 ms,
+        // thus this is the precision we can aim to in the synchronization.
+        arv_camera_execute_command(m_camera, "GevTimestampControlLatch", &error);
+        if (error == nullptr) camera_timestamp = arv_camera_get_integer(m_camera, "GevTimestampValue", &error);
+
+        if (error != nullptr) {
+            KARABO_LOG_FRAMEWORK_ERROR << "Could not synchronize timestamp: " << error->message;
+            g_clear_error(&error);
+            return false; // failure
+        }
+
+        // Karabo current timestamp
+        m_reference_karabo_time = this->getActualTimestamp();
+
+        // Camera current timestamp (s)
+        m_reference_camera_timestamp = camera_timestamp / tick_frequency;
+
+        return true; // success
+    }
+
+    bool AravisPhotonicScienceCamera::configure_timestamp_chunk() {
+        GError* error = nullptr;
+
+        arv_device_set_string_feature_value(m_device, "GevTimestampCounterSelector", "GevTimestamp", &error);
+
+        if (error != nullptr) {
+            KARABO_LOG_FRAMEWORK_ERROR << "Could not configure timestamp: " << error->message;
+            g_clear_error(&error);
+            return false; // failure
+        }
+
+        return true; // success
+    }
+
+    bool AravisPhotonicScienceCamera::get_region(gint& x, gint& y, gint& width, gint& height) const {
+        GError* error = nullptr;
+
+        x = arv_device_get_integer_feature_value(m_device, "OffsetX_in_camera", &error);
+        if (error == nullptr) y = arv_device_get_integer_feature_value(m_device, "OffsetY_in_camera", &error);
+        if (error == nullptr) width = arv_device_get_integer_feature_value(m_device, "Width", &error);
+        if (error == nullptr) height = arv_device_get_integer_feature_value(m_device, "Height", &error);
+
+        if (error != nullptr) {
+            KARABO_LOG_FRAMEWORK_ERROR << "Could not get region: " << error->message;
+            g_clear_error(&error);
+            return false; // failure
+        }
+
+        return true; // success
+    }
+
+    bool AravisPhotonicScienceCamera::get_shape_and_format(ArvBuffer* buffer, gint& width, gint& height, ArvPixelFormat& format) const {
+        gint x, y;
+        arv_buffer_get_image_region(buffer, &x, &y, &width, &height);
+        format = arv_buffer_get_image_pixel_format(buffer); // e.g. ARV_PIXEL_FORMAT_MONO_8
+        // const guint32 frame_id = arv_buffer_get_frame_id(buffer);
+        // KARABO_LOG_FRAMEWORK_DEBUG << "Got frame " << frame_id;
+
+        return true;
+    }
+
+    bool AravisPhotonicScienceCamera::get_timestamp(ArvBuffer* buffer, karabo::util::Timestamp& ts) const {
+        // Get timestamp from buffer.
+        // The timestamp is provided in ns, thus convert it to s.
+        const double timestamp = arv_buffer_get_timestamp(buffer) / 1e+9;
+
+        // Elapsed time since last synchronization.
+        // NB This can be negative, if the image acquisition started before
+        //    synchronization, but finished after.
+        const double elapsed_t = timestamp - m_reference_camera_timestamp;
+
+        // Split elapsed time in seconds and attoseconds, then convert to TimeDuration.
+        // elapsed_t is in seconds and TimeDuration expects fractions in attoseconds,
+        // hence we multiply with 1e18.
+        // A TimeDuration can only be positive, thus save sign and invert if negative.
+        double intpart;
+        const char sign = (elapsed_t >= 0.) ? 1 : -1;
+        const unsigned long long fractions = 1.e+18 * modf(sign * elapsed_t, &intpart);
+        const unsigned long long seconds = rint(intpart);
+        const TimeDuration duration(seconds, fractions);
+
+        // Calculate frame epochstamp from reference time and elapsed time
+        Epochstamp epoch(m_reference_karabo_time.getEpochstamp());
+        if (sign >= 0) {
+            epoch += duration;
+        } else {
+            epoch -= duration;
+        }
+
+        // Calculate timestamp from epochstamp
+        ts = this->getTimestamp(epoch);
+
+        return true;
     }
 
     void AravisPhotonicScienceCamera::configure(karabo::util::Hash& configuration) {

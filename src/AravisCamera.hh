@@ -81,6 +81,7 @@ namespace karabo {
         bool m_arv_camera_trigger; // Use arv_camera to access trigger
 
         ArvCamera* m_camera;
+        ArvDevice* m_device;
         ArvChunkParser* m_parser;
 
         void configure(karabo::util::Hash& configuration);
@@ -90,6 +91,7 @@ namespace karabo {
         bool m_chunk_mode;
         karabo::util::Timestamp m_reference_karabo_time;
 
+        virtual bool get_region(gint& x, gint& y, gint& width, gint& height) const;
         virtual bool get_shape_and_format(ArvBuffer* buffer, gint& width, gint& height, ArvPixelFormat& format) const;
         virtual bool get_timestamp(ArvBuffer* buffer, karabo::util::Timestamp& ts) const;
 
@@ -150,7 +152,6 @@ namespace karabo {
 
         bool resolveHostname(const std::string& hostname, std::string& ip_address, std::string& message);
 
-        ArvDevice* m_device;
         ArvStream* m_stream;
 
         bool m_is_binning_available;
