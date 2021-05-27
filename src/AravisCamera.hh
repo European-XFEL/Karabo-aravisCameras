@@ -79,6 +79,7 @@ namespace karabo {
 
     protected:
         bool m_arv_camera_trigger; // Use arv_camera to access trigger
+        bool m_is_device_reset_available;
 
         ArvCamera* m_camera;
         ArvDevice* m_device;
@@ -120,6 +121,7 @@ namespace karabo {
         virtual void trigger();
         void refresh();
         void reset();
+        virtual void resetCamera();
 
         void getPathsByTag(std::vector<std::string >& paths, const std::string& tags);
 

@@ -170,9 +170,21 @@ namespace karabo {
     }
 
     AravisBaslerCamera::AravisBaslerCamera(const karabo::util::Hash& config) : AravisCamera(config) {
+        m_is_device_reset_available = true; // "DeviceReset" command is available
     }
 
     AravisBaslerCamera::~AravisBaslerCamera() {
+    }
+
+    void AravisBaslerCamera::resetCamera() {
+        GError* error = nullptr;
+
+        arv_camera_execute_command(m_camera, "DeviceReset", &error);
+
+        if (error != nullptr) {
+            KARABO_LOG_FRAMEWORK_ERROR << "Could not reset camera: " << error->message;
+            g_clear_error(&error);
+        }
     }
 
     bool AravisBaslerCamera::synchronize_timestamp() {
