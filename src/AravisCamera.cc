@@ -101,7 +101,7 @@ namespace karabo {
 
         SLOT_ELEMENT(expected).key("reset")
                 .displayedName("Reset")
-                .description("Reset error state.")
+                .description("'Software' reset, i.e. just reset the error state.")
                 .allowedStates(State::ERROR)
                 .commit();
 
@@ -372,14 +372,15 @@ namespace karabo {
     AravisCamera::AravisCamera(const karabo::util::Hash& config) : CameraImageSource(config),
             m_connect(true), m_reconnect_timer(EventLoop::getIOService()), m_failed_connections(0u),
             m_poll_timer(EventLoop::getIOService()),
-            m_camera(nullptr), m_stream(nullptr), m_parser(nullptr),
-            m_arv_camera_trigger(true), m_is_binning_available(false), m_is_exposure_time_available(false),
+            m_camera(nullptr), m_stream(nullptr), m_parser(nullptr), m_arv_camera_trigger(true),
+            m_is_device_reset_available(false), m_is_binning_available(false), m_is_exposure_time_available(false),
             m_is_frame_rate_available(false), m_is_gain_available(false), m_is_gain_auto_available(false) {
         KARABO_SLOT(acquire);
         KARABO_SLOT(stop);
         KARABO_SLOT(trigger);
         KARABO_SLOT(refresh);
         KARABO_SLOT(reset);
+        KARABO_SLOT(resetCamera);
 
         KARABO_INITIAL_FUNCTION(initialize);
     }
@@ -1504,6 +1505,11 @@ namespace karabo {
     }
 
 
+    void AravisCamera::resetCamera() {
+        // To be implemented in the derived class, if the feature is available.
+    }
+
+
     void AravisCamera::clear_camera() {
         if (m_camera != nullptr) {
             g_clear_object(&m_camera);
@@ -1988,6 +1994,15 @@ namespace karabo {
                 .reconfigurable()
                 .allowedStates(State::UNKNOWN, State::ON)
                 .commit();
+
+        if (m_is_device_reset_available) {
+            // Make "resetCamera" slot visible in the GUI
+            SLOT_ELEMENT(schemaUpdate).key("resetCamera")
+                    .displayedName("Reset Camera")
+                    .description("'Hardware' reset, i.e. send a 'reset' command to the camera.")
+                    .allowedStates(State::ERROR, State::ON)
+                    .commit();
+        }
 
         // Disable setting not available properties
         const std::string notAvailable("Not available for this camera.");

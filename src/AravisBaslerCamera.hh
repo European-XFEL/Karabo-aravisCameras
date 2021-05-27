@@ -39,6 +39,8 @@ namespace karabo {
         virtual bool get_timestamp(ArvBuffer* buffer, karabo::util::Timestamp& ts) const;
 
     private:
+        virtual void resetCamera();
+
         bool m_ptp_enabled;
         int m_tick_frequency;
         gint64 m_reference_camera_timestamp;
