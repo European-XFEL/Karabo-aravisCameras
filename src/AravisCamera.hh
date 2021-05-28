@@ -80,6 +80,7 @@ namespace karabo {
     protected:
         bool m_arv_camera_trigger; // Use arv_camera to access trigger
         bool m_is_device_reset_available;
+        bool m_is_frame_count_available;
 
         ArvCamera* m_camera;
         ArvDevice* m_device;
