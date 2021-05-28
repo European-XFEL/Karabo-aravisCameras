@@ -40,11 +40,17 @@ void CameraTest::shouldNotCreateAravisCamera() {
     CPPUNIT_ASSERT_THROW(BaseDevice::create("AravisCamera", m_configNotOk), karabo::util::ParameterException);
 }
 
+void CameraTest::shouldCreateBaslerCamera() {
+    BaseDevice::Pointer device = BaseDevice::create("AravisBaslerCamera", m_configOk);
+    CPPUNIT_ASSERT_EQUAL(string("AravisBaslerCamera"), (device->getClassInfo()).getClassName());
+}
+
+void CameraTest::shouldCreateBasler2Camera() {
+    BaseDevice::Pointer device = BaseDevice::create("AravisBasler2Camera", m_configOk);
+    CPPUNIT_ASSERT_EQUAL(string("AravisBasler2Camera"), (device->getClassInfo()).getClassName());
+}
+
 void CameraTest::shouldCreatePhScienceCamera() {
     BaseDevice::Pointer device = BaseDevice::create("AravisPhotonicScienceCamera", m_configOk);
     CPPUNIT_ASSERT_EQUAL(string("AravisPhotonicScienceCamera"), (device->getClassInfo()).getClassName());
-}
-
-void CameraTest::shouldNotCreatePhScienceCamera() {
-    CPPUNIT_ASSERT_THROW(BaseDevice::create("AravisPhotonicScienceCamera", m_configNotOk), karabo::util::ParameterException);
 }

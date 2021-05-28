@@ -14,6 +14,10 @@ using namespace std;
 
 USING_KARABO_NAMESPACES;
 
+// Used by Basler ACE 2, but not (yet?) available in aravis
+#define ARV_PIXEL_FORMAT_MONO_10_P              ((ArvPixelFormat) 0x010a0046u)
+#define ARV_PIXEL_FORMAT_MONO_12_P              ((ArvPixelFormat) 0x010c0047u)
+
 #define GET_PATH(hash, path, type) hash.has(path) ? hash.get<type>(path) : this->get<type>(path);
 
 namespace karabo {
@@ -372,7 +376,7 @@ namespace karabo {
     AravisCamera::AravisCamera(const karabo::util::Hash& config) : CameraImageSource(config),
             m_connect(true), m_reconnect_timer(EventLoop::getIOService()), m_failed_connections(0u),
             m_poll_timer(EventLoop::getIOService()),
-            m_camera(nullptr), m_stream(nullptr), m_parser(nullptr), m_arv_camera_trigger(true),
+            m_camera(nullptr), m_device(nullptr), m_stream(nullptr), m_parser(nullptr), m_arv_camera_trigger(true),
             m_is_device_reset_available(false), m_is_binning_available(false), m_is_exposure_time_available(false),
             m_is_frame_rate_available(false), m_is_gain_available(false), m_is_gain_auto_available(false) {
         KARABO_SLOT(acquire);
@@ -1248,7 +1252,7 @@ namespace karabo {
             }
         }
 
-        if (configuration.has("frameCount")) {
+        if (configuration.has("frameCount") && m_is_frame_count_available) {
             gint64 frameCount = configuration.get<long long>("frameCount");
 
             const bool success = this->set_frame_count(frameCount);
@@ -1353,9 +1357,8 @@ namespace karabo {
 
     bool AravisCamera::get_shape_and_format(ArvBuffer* buffer, gint& width, gint& height, ArvPixelFormat& format) const {
         if (m_chunk_mode) {
-            // If chunk mode is enabled, shape and format must be read from data chunks;
-            // arv_buffer_get_image_region and arv_buffer_get_image_pixel_format does not work
-            // in this case; specific code shall be implemented in the derived class
+            // arv_buffer_get_image_region and arv_buffer_get_image_pixel_format does not always work
+            // in this case; e.g. for Basler shape and format must be read from data chunks.
             throw KARABO_LOGIC_EXCEPTION("Camera specific code for get_shape_and_format needs "
                                         "to be implemented.");
         }
@@ -1607,6 +1610,24 @@ namespace karabo {
                     delete[] unpackedData;
                 }
                     break;
+                case ARV_PIXEL_FORMAT_MONO_10_P:
+                {
+                    const uint8_t* data = reinterpret_cast<const uint8_t*>(buffer_data);
+                    uint16_t* unpackedData = new uint16_t[width * height];
+                    unpackMono10p(data, width, height, unpackedData);
+                    self->writeOutputChannels<unsigned short>(unpackedData, width, height, ts);
+                    delete[] unpackedData;
+                }
+                    break;
+               case ARV_PIXEL_FORMAT_MONO_12_P:
+                {
+                    const uint8_t* data = reinterpret_cast<const uint8_t*>(buffer_data);
+                    uint16_t* unpackedData = new uint16_t[width * height];
+                    unpackMono12p(data, width, height, unpackedData);
+                    self->writeOutputChannels<unsigned short>(unpackedData, width, height, ts);
+                    delete[] unpackedData;
+                }
+                    break;
                 // TODO RGB, YUV...
                 default:
                     if (self->m_pixelFormatOptions.find(pixel_format) != self->m_pixelFormatOptions.end()) {
@@ -1791,12 +1812,14 @@ namespace karabo {
             g_clear_error(&error);
         }
 
-        const long long frameCount = arv_camera_get_frame_count(m_camera, &error);
-        if (error == nullptr) {
-            h.set("frameCount", frameCount);
-        } else {
-            KARABO_LOG_FRAMEWORK_WARN << "arv_camera_get_frame_count failed: " << error->message;
-            g_clear_error(&error);
+        if (m_is_frame_count_available) {
+            const long long frameCount = arv_camera_get_frame_count(m_camera, &error);
+            if (error == nullptr) {
+                h.set("frameCount", frameCount);
+            } else {
+                KARABO_LOG_FRAMEWORK_WARN << "arv_camera_get_frame_count failed: " << error->message;
+                g_clear_error(&error);
+            }
         }
 
         // Filter paths by tag "genicam" and poll features
@@ -1899,11 +1922,13 @@ namespace karabo {
                 break;
             case ARV_PIXEL_FORMAT_MONO_10:
             case ARV_PIXEL_FORMAT_MONO_10_PACKED:
+            case ARV_PIXEL_FORMAT_MONO_10_P:
                 m_encoding = Encoding::GRAY;
                 kType = Types::UINT16;
                 break;
             case ARV_PIXEL_FORMAT_MONO_12:
             case ARV_PIXEL_FORMAT_MONO_12_PACKED:
+            case ARV_PIXEL_FORMAT_MONO_12_P:
                 m_encoding = Encoding::GRAY;
                 kType = Types::UINT16;
                 break;
@@ -2166,6 +2191,23 @@ namespace karabo {
         if (!m_is_gain_available) {
             DOUBLE_ELEMENT(schemaUpdate).key("gain")
                     .displayedName("Gain")
+                    .description(notAvailable)
+                    .readOnly()
+                    .commit();
+        }
+
+        if (!m_is_frame_count_available) {
+            STRING_ELEMENT(schemaUpdate).key("acquisitionMode")
+                    .displayedName("Acquisition Mode")
+                    .description("This property sets the image acquisition mode.")
+                    .assignmentOptional().defaultValue("Continuous")
+                    .options("Continuous,SingleFrame")
+                    .reconfigurable()
+                    .allowedStates(State::UNKNOWN, State::ON)
+                    .commit();
+
+            INT64_ELEMENT(schemaUpdate).key("frameCount")
+                    .displayedName("Frame Count")
                     .description(notAvailable)
                     .readOnly()
                     .commit();
