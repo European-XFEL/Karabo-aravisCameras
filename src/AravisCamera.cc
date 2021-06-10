@@ -297,7 +297,7 @@ namespace karabo {
                 .description("This enumeration selects the trigger type to configure. "
                 "Once a trigger type has been selected, all changes to the trigger settings will be applied to "
                 "the selected trigger.")
-                .assignmentOptional().defaultValue("FrameStart")
+                .assignmentOptional().noDefaultValue()
                 // options will be injected on connection
                 .reconfigurable()
                 .allowedStates(State::UNKNOWN, State::ON)
@@ -2054,7 +2054,7 @@ namespace karabo {
                     .description("This enumeration selects the trigger type to configure. "
                     "Once a trigger type has been selected, all changes to the trigger settings will be applied to "
                     "the selected trigger.")
-                    .assignmentOptional().defaultValue("FrameStart")
+                    .assignmentOptional().noDefaultValue()
                     .options(triggerSelectorOptions)
                     .reconfigurable()
                     .allowedStates(State::UNKNOWN, State::ON)
