@@ -14,6 +14,9 @@
 #include "AravisCamera.hh"
 #include "version.hh"  // provides ARAVISCAMERAS_PACKAGE_VERSION
 
+// maximum correction in either direction in seconds
+#define MAX_CORRECTION_TIME 600 // seconds
+
 /**
  * The main Karabo namespace
  */
