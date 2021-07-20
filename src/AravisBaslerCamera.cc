@@ -283,10 +283,12 @@ namespace karabo {
 
         // Calculate frame epochstamp from refrence time and elapsed time
         Epochstamp epoch(m_reference_karabo_time.getEpochstamp());
-        if (sign >= 0) {
-            epoch += duration;
-        } else {
-            epoch -= duration;
+        if (seconds <= MAX_CORRECTION_TIME) {
+            if (sign >= 0) {
+                epoch += duration;
+            } else {
+                epoch -= duration;
+            }
         }
 
         // Calculate timestamp from epochstamp
