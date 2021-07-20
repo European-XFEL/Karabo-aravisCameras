@@ -14,8 +14,6 @@
 #include "AravisCamera.hh"
 #include "version.hh"  // provides ARAVISCAMERAS_PACKAGE_VERSION
 
-// maximum correction in either direction in seconds
-#define MAX_CORRECTION_TIME 600 // seconds
 
 /**
  * The main Karabo namespace
@@ -39,7 +37,7 @@ namespace karabo {
 
         virtual bool get_shape_and_format(ArvBuffer* buffer, gint& width, gint& height, ArvPixelFormat& format) const;
 
-        virtual bool get_timestamp(ArvBuffer* buffer, karabo::util::Timestamp& ts) const;
+        virtual bool get_timestamp(ArvBuffer* buffer, karabo::util::Timestamp& ts);
 
     private:
         virtual void resetCamera();
@@ -47,6 +45,7 @@ namespace karabo {
         bool m_ptp_enabled;
         int m_tick_frequency;
         gint64 m_reference_camera_timestamp;
+        unsigned int m_max_correction_time;
 
     };
 
