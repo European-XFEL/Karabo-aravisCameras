@@ -196,6 +196,16 @@ namespace karabo {
     void AravisBaslerCamera::resetCamera() {
         GError* error = nullptr;
 
+        // set a post connection helper such that we reset rois and binning. Reset cameras messes these up
+        m_post_connection_cb = boost::bind(&AravisBaslerCamera::reset_roi_and_binning,
+                                           this, 
+                                           this->get<int>("roi.x"),
+                                           this->get<int>("roi.y"),
+                                           this->get<int>("roi.width"),
+                                           this->get<int>("roi.height"),
+                                           this->get<int>("bin.x"),
+                                           this->get<int>("bin.y"));
+
         arv_camera_execute_command(m_camera, "DeviceReset", &error);
 
         if (error != nullptr) {
@@ -317,6 +327,26 @@ namespace karabo {
         ts = this->getTimestamp(epoch);
 
         return true;
+    }
+
+    void AravisBaslerCamera::reset_roi_and_binning(int x, int y, int width, int height, int bin_x, int bin_y) {
+        Hash h;
+        h.set("roi.x", x);
+        h.set("roi.y", y);
+        h.set("roi.height", height);
+        h.set("roi.width", width);
+        h.set("bin.x", bin_x);
+        h.set("bin.y", bin_y);
+        this->set(h);
+
+        bool success = this->set_region(x, y, width, height);
+        if (!success) {
+            KARABO_LOG_ERROR << "Could not set ROI after resetting camera!";
+        }
+        success = this->set_binning(bin_x, bin_y);
+       	if (!success) {
+       	    KARABO_LOG_ERROR <<	"Could not set binning after resetting camera!";
+       	}
     }
 
 } // namespace karabo
