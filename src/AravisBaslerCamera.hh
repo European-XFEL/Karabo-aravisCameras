@@ -41,6 +41,7 @@ namespace karabo {
 
     private:
         virtual void resetCamera();
+        virtual void reset_roi_and_binning(int x, int y, int width, int height, int bin_x, int bin_y);
 
         bool m_ptp_enabled;
         int m_tick_frequency;

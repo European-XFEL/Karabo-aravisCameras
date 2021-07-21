@@ -378,7 +378,7 @@ namespace karabo {
             m_poll_timer(EventLoop::getIOService()),
             m_camera(nullptr), m_device(nullptr), m_stream(nullptr), m_parser(nullptr), m_arv_camera_trigger(true),
             m_is_device_reset_available(false), m_is_binning_available(false), m_is_exposure_time_available(false),
-            m_is_frame_rate_available(false), m_is_gain_available(false), m_is_gain_auto_available(false) {
+            m_is_frame_rate_available(false), m_is_gain_available(false), m_is_gain_auto_available(false), m_post_connection_cb(0) {
         KARABO_SLOT(acquire);
         KARABO_SLOT(stop);
         KARABO_SLOT(trigger);
@@ -767,6 +767,10 @@ namespace karabo {
             return;
         }
 
+        if (m_post_connection_cb) {
+           m_post_connection_cb();
+           m_post_connection_cb = 0;
+        }
         this->updateState(State::ON);
         m_failed_connections = 0;
         m_reconnect_timer.expires_from_now(boost::posix_time::seconds(5l));

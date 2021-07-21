@@ -97,6 +97,12 @@ namespace karabo {
         virtual bool get_shape_and_format(ArvBuffer* buffer, gint& width, gint& height, ArvPixelFormat& format) const;
         virtual bool get_timestamp(ArvBuffer* buffer, karabo::util::Timestamp& ts) const;
 
+        boost::function<void()> m_post_connection_cb;
+
+        bool set_region(int x, int y, int width, int height);
+        bool set_binning(int bin_x, int bin_y);
+ 
+
     private:
         void initialize();
 
@@ -107,8 +113,6 @@ namespace karabo {
         void connection_failed_helper(const std::string& message, const std::string& detailed_msg="");
 
         bool set_auto_packet_size();
-        bool set_region(int x, int y, int width, int height);
-        bool set_binning(int bin_x, int bin_y);
         bool set_exposure_time(double exposure_time);
         bool set_frame_rate(bool enable, double frame_rate=0.);
         bool set_gain(double gain);
