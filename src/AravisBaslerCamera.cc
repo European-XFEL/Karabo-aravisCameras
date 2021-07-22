@@ -282,7 +282,6 @@ namespace karabo {
 
     bool AravisBaslerCamera::get_timestamp(ArvBuffer* buffer, karabo::util::Timestamp& ts) {
         // XXX Possibly use PTP in the future
-
         GError* error = nullptr;
 
         // Get timestamp from buffer
@@ -325,7 +324,6 @@ namespace karabo {
 
         // Calculate timestamp from epochstamp
         ts = this->getTimestamp(epoch);
-
         return true;
     }
 

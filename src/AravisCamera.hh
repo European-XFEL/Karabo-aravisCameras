@@ -95,7 +95,7 @@ namespace karabo {
 
         virtual bool get_region(gint& x, gint& y, gint& width, gint& height) const;
         virtual bool get_shape_and_format(ArvBuffer* buffer, gint& width, gint& height, ArvPixelFormat& format) const;
-        virtual bool get_timestamp(ArvBuffer* buffer, karabo::util::Timestamp& ts) const;
+        virtual bool get_timestamp(ArvBuffer* buffer, karabo::util::Timestamp& ts);
 
         boost::function<void()> m_post_connection_cb;
 

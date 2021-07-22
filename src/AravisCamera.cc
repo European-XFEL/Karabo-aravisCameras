@@ -1377,7 +1377,7 @@ namespace karabo {
     }
 
 
-    bool AravisCamera::get_timestamp(ArvBuffer* buffer, karabo::util::Timestamp& ts) const {
+    bool AravisCamera::get_timestamp(ArvBuffer* buffer, karabo::util::Timestamp& ts) {
         // If the camera provides HW timestamping in chunk data, this function shall be overridden
         return false;
     }
