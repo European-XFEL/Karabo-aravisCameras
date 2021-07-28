@@ -201,7 +201,7 @@ namespace karabo {
         return true; // success
     }
 
-    bool AravisBasler2Camera::get_timestamp(ArvBuffer* buffer, karabo::util::Timestamp& ts) const {
+    bool AravisBasler2Camera::get_timestamp(ArvBuffer* buffer, karabo::util::Timestamp& ts) {
         // XXX Possibly use PTP in the future
 
         GError* error = nullptr;
@@ -231,15 +231,22 @@ namespace karabo {
 
         // Calculate frame epochstamp from refrence time and elapsed time
         Epochstamp epoch(m_reference_karabo_time.getEpochstamp());
-        if (sign >= 0) {
-            epoch += duration;
-        } else {
-            epoch -= duration;
+        if (seconds <= m_max_correction_time) {
+            if (this->get<bool>("wouldCorrectAboveMaxTime")) {
+                this->set("wouldCorrectAboveMaxTime", false);
+            }
+            if (sign >= 0) {
+                epoch += duration;
+            } else {
+                epoch -= duration;
+            }
+        } else if (!this->get<bool>("wouldCorrectAboveMaxTime")) {
+            this->set("wouldCorrectAboveMaxTime", true);
+            return false;
         }
 
         // Calculate timestamp from epochstamp
         ts = this->getTimestamp(epoch);
-
         return true;
     }
 

@@ -492,7 +492,7 @@ namespace karabo {
         return true;
     }
 
-    bool AravisPhotonicScienceCamera::get_timestamp(ArvBuffer* buffer, karabo::util::Timestamp& ts) const {
+    bool AravisPhotonicScienceCamera::get_timestamp(ArvBuffer* buffer, karabo::util::Timestamp& ts) {
         // Get timestamp from buffer.
         // The timestamp is provided in ns, thus convert it to s.
         const double timestamp = arv_buffer_get_timestamp(buffer) / 1e+9;
@@ -514,15 +514,22 @@ namespace karabo {
 
         // Calculate frame epochstamp from reference time and elapsed time
         Epochstamp epoch(m_reference_karabo_time.getEpochstamp());
-        if (sign >= 0) {
-            epoch += duration;
-        } else {
-            epoch -= duration;
+        if (seconds <= m_max_correction_time) {
+            if (this->get<bool>("wouldCorrectAboveMaxTime")) {
+                this->set("wouldCorrectAboveMaxTime", false);
+            }
+            if (sign >= 0) {
+                epoch += duration;
+            } else {
+                epoch -= duration;
+            }
+        } else if (!this->get<bool>("wouldCorrectAboveMaxTime")) {
+            this->set("wouldCorrectAboveMaxTime", true);
+            return false;
         }
 
         // Calculate timestamp from epochstamp
         ts = this->getTimestamp(epoch);
-
         return true;
     }
 
