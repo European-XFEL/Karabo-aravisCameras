@@ -370,6 +370,22 @@ namespace karabo {
                 .expertAccess()
                 .readOnly().initialValue(interfaces)
                 .commit();
+
+        UINT32_ELEMENT(expected).key("maxCorrectionTime")
+                .displayedName("Max. Train Correction Time")
+                .description("Maximum time the clock based train Id correction will correct. If the delay "
+                "is outside this time, no correction will be performed.")
+                .unit(Unit::SECOND)
+                .assignmentOptional().defaultValue(5)
+                .minInc(1).maxInc(600)
+                .init()
+                .commit();
+
+        BOOL_ELEMENT(expected).key("wouldCorrectAboveMaxTime")
+                .displayedName("Would Correct Above Max. Time")
+                .description("True if a correction above maxCorrectionTime would happen.")
+                .readOnly()
+                .commit();
     }
 
 
@@ -379,6 +395,9 @@ namespace karabo {
             m_camera(nullptr), m_device(nullptr), m_stream(nullptr), m_parser(nullptr), m_arv_camera_trigger(true),
             m_is_device_reset_available(false), m_is_binning_available(false), m_is_exposure_time_available(false),
             m_is_frame_rate_available(false), m_is_gain_available(false), m_is_gain_auto_available(false), m_post_connection_cb(0) {
+
+        m_max_correction_time = config.get<unsigned int>("maxCorrectionTime");
+
         KARABO_SLOT(acquire);
         KARABO_SLOT(stop);
         KARABO_SLOT(trigger);

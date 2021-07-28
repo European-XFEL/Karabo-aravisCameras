@@ -46,8 +46,6 @@ namespace karabo {
         bool m_ptp_enabled;
         int m_tick_frequency;
         gint64 m_reference_camera_timestamp;
-        unsigned int m_max_correction_time;
-
     };
 
 } // namespace karabo

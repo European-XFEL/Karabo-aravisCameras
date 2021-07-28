@@ -167,27 +167,10 @@ namespace karabo {
                 .readOnly()
                 .commit();
 
-        UINT32_ELEMENT(expected).key("maxCorrectionTime")
-                .displayedName("Max. Train Correction Time")
-                .description("Maximum time the clock based train Id correction will correct. If the delay "
-                "is outside this time, no correction will be performed.")
-                .unit(Unit::SECOND)
-                .assignmentOptional().defaultValue(5)
-                .minInc(1).maxInc(600)
-                .init()
-                .commit();
-
-        BOOL_ELEMENT(expected).key("wouldCorrectAboveMaxTime")
-                .displayedName("Would Correct Above Max. Time")
-                .description("True if a correction above maxCorrectionTime would happen.")
-                .readOnly()
-                .commit();
-
     }
 
     AravisBaslerCamera::AravisBaslerCamera(const karabo::util::Hash& config) : AravisCamera(config) {
         m_is_device_reset_available = true; // "DeviceReset" command is available
-        m_max_correction_time = config.get<unsigned int>("maxCorrectionTime");
     }
 
     AravisBaslerCamera::~AravisBaslerCamera() {
@@ -310,16 +293,17 @@ namespace karabo {
         // Calculate frame epochstamp from refrence time and elapsed time
         Epochstamp epoch(m_reference_karabo_time.getEpochstamp());
         if (seconds <= m_max_correction_time) {
-            if (get<bool>("wouldCorrectAboveMaxTime")) {
-                set("wouldCorrectAboveMaxTime", false);
+            if (this->get<bool>("wouldCorrectAboveMaxTime")) {
+                this->set("wouldCorrectAboveMaxTime", false);
             }
             if (sign >= 0) {
                 epoch += duration;
             } else {
                 epoch -= duration;
             }
-        } else if (!get<bool>("wouldCorrectAboveMaxTime")) {
-            set("wouldCorrectAboveMaxTime", true);
+        } else if (!this->get<bool>("wouldCorrectAboveMaxTime")) {
+            this->set("wouldCorrectAboveMaxTime", true);
+            return false;
         }
 
         // Calculate timestamp from epochstamp

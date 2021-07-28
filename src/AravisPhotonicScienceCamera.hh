@@ -38,7 +38,7 @@ namespace karabo {
 
         virtual bool get_shape_and_format(ArvBuffer* buffer, gint& width, gint& height, ArvPixelFormat& format) const;
 
-        virtual bool get_timestamp(ArvBuffer* buffer, karabo::util::Timestamp& ts) const;
+        virtual bool get_timestamp(ArvBuffer* buffer, karabo::util::Timestamp& ts);
 
     private:
         void configure(karabo::util::Hash& configuration); // Over-ride parent's method
