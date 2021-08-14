@@ -7,6 +7,8 @@
  */
 
 #include <boost/algorithm/string/trim.hpp>
+#include <boost/interprocess/sync/named_mutex.hpp>
+#include <boost/interprocess/sync/scoped_lock.hpp>
 
 #include "AravisCamera.hh"
 
@@ -631,6 +633,9 @@ namespace karabo {
 
 
     void AravisCamera::connect(const boost::system::error_code & ec) {
+        using namespace boost::interprocess;
+        using namespace boost::posix_time;
+
         if (ec == boost::asio::error::operation_aborted) return;
         if (!m_connect) return;
 
@@ -639,6 +644,16 @@ namespace karabo {
             m_reconnect_timer.expires_from_now(boost::posix_time::seconds(5l));
             m_reconnect_timer.async_wait(karabo::util::bind_weak(&AravisCamera::connect, this, boost::asio::placeholders::error));
             return;
+        }
+
+        const int processId = this->get<int>("pid");
+        const std::string mtxName("arv_mtx_" + toString(processId));
+        named_mutex arv_mtx{open_or_create, mtxName.c_str()};
+        scoped_lock<named_mutex> lock(arv_mtx, ptime() + seconds(1l));
+
+        if (!lock) {
+            // Could not take lock within 1 second
+            // XXX try again later...
         }
 
         const std::string& idType = this->get<std::string>("idType");
