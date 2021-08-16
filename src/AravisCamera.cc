@@ -634,7 +634,6 @@ namespace karabo {
 
     void AravisCamera::connect(const boost::system::error_code & ec) {
         using namespace boost::interprocess;
-        using namespace boost::posix_time;
 
         if (ec == boost::asio::error::operation_aborted) return;
         if (!m_connect) return;
@@ -649,11 +648,13 @@ namespace karabo {
         const int processId = this->get<int>("pid");
         const std::string mtxName("arv_mtx_" + toString(processId));
         named_mutex arv_mtx{open_or_create, mtxName.c_str()};
-        scoped_lock<named_mutex> lock(arv_mtx, ptime() + seconds(1l));
+        scoped_lock<named_mutex> lock(arv_mtx, boost::interprocess::try_to_lock);
 
         if (!lock) {
-            // Could not take lock within 1 second
-            // XXX try again later...
+            // Process lock is busy... retry later
+            m_reconnect_timer.expires_from_now(boost::posix_time::milliseconds(100l));
+            m_reconnect_timer.async_wait(karabo::util::bind_weak(&AravisCamera::connect, this, boost::asio::placeholders::error));
+            return;
         }
 
         const std::string& idType = this->get<std::string>("idType");
