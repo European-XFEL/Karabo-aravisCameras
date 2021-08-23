@@ -35,9 +35,10 @@ OBJECTDIR=${CND_BUILDDIR}/${CND_CONF}/${CND_PLATFORM}
 
 # Object Files
 OBJECTFILES= \
-	${OBJECTDIR}/src/AravisCamera.o \
-	${OBJECTDIR}/src/AravisBaslerCamera.o \
 	${OBJECTDIR}/src/AravisBasler2Camera.o \
+	${OBJECTDIR}/src/AravisBaslerCamera.o \
+	${OBJECTDIR}/src/AravisBaslerCameraScene.o \
+	${OBJECTDIR}/src/AravisCamera.o \
 	${OBJECTDIR}/src/AravisPhotonicScienceCamera.o
 
 # Test Directory
@@ -71,20 +72,25 @@ ${CND_DISTDIR}/${CND_CONF}/${CND_PLATFORM}/libaravisCameras.${CND_DLIB_EXT}: ${O
 	${MKDIR} -p ${CND_DISTDIR}/${CND_CONF}/${CND_PLATFORM}
 	${LINK.cc} -o ${CND_DISTDIR}/${CND_CONF}/${CND_PLATFORM}/libaravisCameras.${CND_DLIB_EXT} ${OBJECTFILES} ${LDLIBSOPTIONS} `pkg-config --libs aravis-0.8` -shared -fPIC
 
-${OBJECTDIR}/src/AravisCamera.o: src/AravisCamera.cc 
+${OBJECTDIR}/src/AravisBasler2Camera.o: src/AravisBasler2Camera.cc 
 	${MKDIR} -p ${OBJECTDIR}/src
 	${RM} "$@.d"
-	$(COMPILE.cc) -g -I${KARABO}/include -I${KARABO}/extern/include `pkg-config --cflags karaboDependencies` -std=c++11  -fPIC  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/src/AravisCamera.o src/AravisCamera.cc
+	$(COMPILE.cc) -g -I${KARABO}/include -I${KARABO}/extern/include `pkg-config --cflags karaboDependencies` -std=c++11  -fPIC  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/src/AravisBasler2Camera.o src/AravisBasler2Camera.cc
 
 ${OBJECTDIR}/src/AravisBaslerCamera.o: src/AravisBaslerCamera.cc 
 	${MKDIR} -p ${OBJECTDIR}/src
 	${RM} "$@.d"
 	$(COMPILE.cc) -g -I${KARABO}/include -I${KARABO}/extern/include `pkg-config --cflags karaboDependencies` -std=c++11  -fPIC  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/src/AravisBaslerCamera.o src/AravisBaslerCamera.cc
 
-${OBJECTDIR}/src/AravisBasler2Camera.o: src/AravisBasler2Camera.cc 
+${OBJECTDIR}/src/AravisBaslerCameraScene.o: src/AravisBaslerCameraScene.cc 
 	${MKDIR} -p ${OBJECTDIR}/src
 	${RM} "$@.d"
-	$(COMPILE.cc) -g -I${KARABO}/include -I${KARABO}/extern/include `pkg-config --cflags karaboDependencies` -std=c++11  -fPIC  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/src/AravisBasler2Camera.o src/AravisBasler2Camera.cc
+	$(COMPILE.cc) -g -I${KARABO}/include -I${KARABO}/extern/include `pkg-config --cflags karaboDependencies` -std=c++11  -fPIC  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/src/AravisBaslerCameraScene.o src/AravisBaslerCameraScene.cc
+
+${OBJECTDIR}/src/AravisCamera.o: src/AravisCamera.cc 
+	${MKDIR} -p ${OBJECTDIR}/src
+	${RM} "$@.d"
+	$(COMPILE.cc) -g -I${KARABO}/include -I${KARABO}/extern/include `pkg-config --cflags karaboDependencies` -std=c++11  -fPIC  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/src/AravisCamera.o src/AravisCamera.cc
 
 ${OBJECTDIR}/src/AravisPhotonicScienceCamera.o: src/AravisPhotonicScienceCamera.cc 
 	${MKDIR} -p ${OBJECTDIR}/src
@@ -113,17 +119,17 @@ ${TESTDIR}/src/tests/test_runner.o: src/tests/test_runner.cc
 	$(COMPILE.cc) -g -I${KARABO}/include -I${KARABO}/extern/include `pkg-config --cflags karaboDependencies` -std=c++11  -MMD -MP -MF "$@.d" -o ${TESTDIR}/src/tests/test_runner.o src/tests/test_runner.cc
 
 
-${OBJECTDIR}/src/AravisCamera_nomain.o: ${OBJECTDIR}/src/AravisCamera.o src/AravisCamera.cc 
+${OBJECTDIR}/src/AravisBasler2Camera_nomain.o: ${OBJECTDIR}/src/AravisBasler2Camera.o src/AravisBasler2Camera.cc 
 	${MKDIR} -p ${OBJECTDIR}/src
-	@NMOUTPUT=`${NM} ${OBJECTDIR}/src/AravisCamera.o`; \
+	@NMOUTPUT=`${NM} ${OBJECTDIR}/src/AravisBasler2Camera.o`; \
 	if (echo "$$NMOUTPUT" | ${GREP} '|main$$') || \
 	   (echo "$$NMOUTPUT" | ${GREP} 'T main$$') || \
 	   (echo "$$NMOUTPUT" | ${GREP} 'T _main$$'); \
 	then  \
 	    ${RM} "$@.d";\
-	    $(COMPILE.cc) -g -I${KARABO}/include -I${KARABO}/extern/include `pkg-config --cflags karaboDependencies` -std=c++11  -fPIC  -Dmain=__nomain -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/src/AravisCamera_nomain.o src/AravisCamera.cc;\
+	    $(COMPILE.cc) -g -I${KARABO}/include -I${KARABO}/extern/include `pkg-config --cflags karaboDependencies` -std=c++11  -fPIC  -Dmain=__nomain -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/src/AravisBasler2Camera_nomain.o src/AravisBasler2Camera.cc;\
 	else  \
-	    ${CP} ${OBJECTDIR}/src/AravisCamera.o ${OBJECTDIR}/src/AravisCamera_nomain.o;\
+	    ${CP} ${OBJECTDIR}/src/AravisBasler2Camera.o ${OBJECTDIR}/src/AravisBasler2Camera_nomain.o;\
 	fi
 
 ${OBJECTDIR}/src/AravisBaslerCamera_nomain.o: ${OBJECTDIR}/src/AravisBaslerCamera.o src/AravisBaslerCamera.cc 
@@ -139,17 +145,30 @@ ${OBJECTDIR}/src/AravisBaslerCamera_nomain.o: ${OBJECTDIR}/src/AravisBaslerCamer
 	    ${CP} ${OBJECTDIR}/src/AravisBaslerCamera.o ${OBJECTDIR}/src/AravisBaslerCamera_nomain.o;\
 	fi
 
-${OBJECTDIR}/src/AravisBasler2Camera_nomain.o: ${OBJECTDIR}/src/AravisBasler2Camera.o src/AravisBasler2Camera.cc 
+${OBJECTDIR}/src/AravisBaslerCameraScene_nomain.o: ${OBJECTDIR}/src/AravisBaslerCameraScene.o src/AravisBaslerCameraScene.cc 
 	${MKDIR} -p ${OBJECTDIR}/src
-	@NMOUTPUT=`${NM} ${OBJECTDIR}/src/AravisBasler2Camera.o`; \
+	@NMOUTPUT=`${NM} ${OBJECTDIR}/src/AravisBaslerCameraScene.o`; \
 	if (echo "$$NMOUTPUT" | ${GREP} '|main$$') || \
 	   (echo "$$NMOUTPUT" | ${GREP} 'T main$$') || \
 	   (echo "$$NMOUTPUT" | ${GREP} 'T _main$$'); \
 	then  \
 	    ${RM} "$@.d";\
-	    $(COMPILE.cc) -g -I${KARABO}/include -I${KARABO}/extern/include `pkg-config --cflags karaboDependencies` -std=c++11  -fPIC  -Dmain=__nomain -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/src/AravisBasler2Camera_nomain.o src/AravisBasler2Camera.cc;\
+	    $(COMPILE.cc) -g -I${KARABO}/include -I${KARABO}/extern/include `pkg-config --cflags karaboDependencies` -std=c++11  -fPIC  -Dmain=__nomain -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/src/AravisBaslerCameraScene_nomain.o src/AravisBaslerCameraScene.cc;\
 	else  \
-	    ${CP} ${OBJECTDIR}/src/AravisBasler2Camera.o ${OBJECTDIR}/src/AravisBasler2Camera_nomain.o;\
+	    ${CP} ${OBJECTDIR}/src/AravisBaslerCameraScene.o ${OBJECTDIR}/src/AravisBaslerCameraScene_nomain.o;\
+	fi
+
+${OBJECTDIR}/src/AravisCamera_nomain.o: ${OBJECTDIR}/src/AravisCamera.o src/AravisCamera.cc 
+	${MKDIR} -p ${OBJECTDIR}/src
+	@NMOUTPUT=`${NM} ${OBJECTDIR}/src/AravisCamera.o`; \
+	if (echo "$$NMOUTPUT" | ${GREP} '|main$$') || \
+	   (echo "$$NMOUTPUT" | ${GREP} 'T main$$') || \
+	   (echo "$$NMOUTPUT" | ${GREP} 'T _main$$'); \
+	then  \
+	    ${RM} "$@.d";\
+	    $(COMPILE.cc) -g -I${KARABO}/include -I${KARABO}/extern/include `pkg-config --cflags karaboDependencies` -std=c++11  -fPIC  -Dmain=__nomain -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/src/AravisCamera_nomain.o src/AravisCamera.cc;\
+	else  \
+	    ${CP} ${OBJECTDIR}/src/AravisCamera.o ${OBJECTDIR}/src/AravisCamera_nomain.o;\
 	fi
 
 ${OBJECTDIR}/src/AravisPhotonicScienceCamera_nomain.o: ${OBJECTDIR}/src/AravisPhotonicScienceCamera.o src/AravisPhotonicScienceCamera.cc 
