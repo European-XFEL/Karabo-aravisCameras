@@ -171,6 +171,7 @@ namespace karabo {
 
     AravisBaslerCamera::AravisBaslerCamera(const karabo::util::Hash& config) : AravisCamera(config) {
         m_is_device_reset_available = true; // "DeviceReset" command is available
+        this->registerScene(boost::bind(&Self::aravisBaslerScene, this), "scene");
     }
 
     AravisBaslerCamera::~AravisBaslerCamera() {

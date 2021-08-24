@@ -39,6 +39,8 @@ namespace karabo {
 
         virtual bool get_timestamp(ArvBuffer* buffer, karabo::util::Timestamp& ts);
 
+        std::string aravisBaslerScene();
+        
     private:
         virtual void resetCamera();
         virtual void reset_roi_and_binning(int x, int y, int width, int height, int bin_x, int bin_y);
