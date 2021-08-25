@@ -29,8 +29,6 @@ class CameraTest : public CPPUNIT_NS::TestFixture {
 public:
     CameraTest();
     virtual ~CameraTest();
-    void setUp();
-    void tearDown();
 
 private:
     void shouldCreateAravisCamera();

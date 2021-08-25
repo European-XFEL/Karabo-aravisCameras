@@ -25,12 +25,6 @@ CameraTest::CameraTest() {
 CameraTest::~CameraTest() {
 }
 
-void CameraTest::setUp() {
-}
-
-void CameraTest::tearDown() {
-}
-
 void CameraTest::shouldCreateAravisCamera() {
     BaseDevice::Pointer device = BaseDevice::create("AravisCamera", m_configOk);
     CPPUNIT_ASSERT_EQUAL(string("AravisCamera"), (device->getClassInfo()).getClassName());
