@@ -169,7 +169,8 @@ namespace karabo {
 
     }
 
-    AravisBaslerCamera::AravisBaslerCamera(const karabo::util::Hash& config) : AravisCamera(config) {
+    AravisBaslerCamera::AravisBaslerCamera(const karabo::util::Hash& config) : AravisCamera(config),
+            m_ptp_enabled(false), m_tick_frequency(0) {
         m_is_device_reset_available = true; // "DeviceReset" command is available
         this->registerScene(boost::bind(&Self::aravisBaslerScene, this), "scene");
     }
@@ -212,7 +213,7 @@ namespace karabo {
         // Get current timestamp on the camera.
         // It has been verified on an acA640-120gm that this takes 1 ms ca.,
         // thus this is the precision we can aim to in the synchronization.
-        if (error == nullptr) arv_camera_execute_command(m_camera, "GevTimestampControlLatch", &error);
+        arv_camera_execute_command(m_camera, "GevTimestampControlLatch", &error);
         if (error == nullptr) m_reference_camera_timestamp = arv_camera_get_integer(m_camera, "GevTimestampValue", &error);
 
         if (error != nullptr) {

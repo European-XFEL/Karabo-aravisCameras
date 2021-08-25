@@ -416,7 +416,8 @@ namespace karabo {
 
     }
 
-    AravisPhotonicScienceCamera::AravisPhotonicScienceCamera(const karabo::util::Hash& config) : AravisCamera(config) {
+    AravisPhotonicScienceCamera::AravisPhotonicScienceCamera(const karabo::util::Hash& config) : AravisCamera(config),
+            m_reference_camera_timestamp(0.) {
         m_arv_camera_trigger = false; // Trigger properties to be accessed from non-standard paths
     }
 

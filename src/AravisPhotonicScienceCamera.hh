@@ -30,19 +30,19 @@ namespace karabo {
 
         virtual ~AravisPhotonicScienceCamera();
 
-        virtual bool synchronize_timestamp();
+        virtual bool synchronize_timestamp() override;
 
-        virtual bool configure_timestamp_chunk();
+        virtual bool configure_timestamp_chunk() override;
 
-        virtual bool get_region(gint& x, gint& y, gint& width, gint& height) const;
+        virtual bool get_region(gint& x, gint& y, gint& width, gint& height) const override;
 
-        virtual bool get_shape_and_format(ArvBuffer* buffer, gint& width, gint& height, ArvPixelFormat& format) const;
+        virtual bool get_shape_and_format(ArvBuffer* buffer, gint& width, gint& height, ArvPixelFormat& format) const override;
 
-        virtual bool get_timestamp(ArvBuffer* buffer, karabo::util::Timestamp& ts);
+        virtual bool get_timestamp(ArvBuffer* buffer, karabo::util::Timestamp& ts) override;
 
     private:
         void configure(karabo::util::Hash& configuration); // Over-ride parent's method
-        virtual void trigger(); // Over-ride parent's method
+        virtual void trigger() override; // Over-ride parent's method
 
         double m_reference_camera_timestamp;
 

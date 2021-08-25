@@ -122,7 +122,8 @@ namespace karabo {
 
     }
 
-    AravisBasler2Camera::AravisBasler2Camera(const karabo::util::Hash& config) : AravisCamera(config) {
+    AravisBasler2Camera::AravisBasler2Camera(const karabo::util::Hash& config) : AravisCamera(config),
+            m_ptp_enabled(false), m_tick_frequency(0) {
         m_is_device_reset_available = true; // "DeviceReset" command is available
         m_is_frame_count_available = false;
     }
@@ -155,7 +156,7 @@ namespace karabo {
         // Get current timestamp on the camera.
         // It has been verified on an a2A2590-22gmPRO that this takes 4 ms ca.,
         // thus this is the precision we can aim to in the synchronization.
-        if (error == nullptr) arv_camera_execute_command(m_camera, "TimestampLatch", &error);
+        arv_camera_execute_command(m_camera, "TimestampLatch", &error);
         if (error == nullptr) m_reference_camera_timestamp = arv_camera_get_integer(m_camera, "TimestampLatchValue", &error);
 
         if (error != nullptr) {

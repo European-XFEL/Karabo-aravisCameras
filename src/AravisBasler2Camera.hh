@@ -30,16 +30,16 @@ namespace karabo {
 
         virtual ~AravisBasler2Camera();
 
-        virtual bool synchronize_timestamp();
+        virtual bool synchronize_timestamp() override;
 
-        virtual bool configure_timestamp_chunk();
+        virtual bool configure_timestamp_chunk() override;
 
-        virtual bool get_shape_and_format(ArvBuffer* buffer, gint& width, gint& height, ArvPixelFormat& format) const;
+        virtual bool get_shape_and_format(ArvBuffer* buffer, gint& width, gint& height, ArvPixelFormat& format) const override;
 
-        virtual bool get_timestamp(ArvBuffer* buffer, karabo::util::Timestamp& ts);
+        virtual bool get_timestamp(ArvBuffer* buffer, karabo::util::Timestamp& ts) override;
 
     private:
-        virtual void resetCamera();
+        virtual void resetCamera() override;
 
         bool m_ptp_enabled;
         int m_tick_frequency;

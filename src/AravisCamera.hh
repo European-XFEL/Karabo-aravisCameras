@@ -64,7 +64,7 @@ namespace karabo {
          *           The reconfiguration will automatically be applied to the current state.
          * @param incomingReconfiguration The reconfiguration information as was triggered externally
          */
-        virtual void preReconfigure(karabo::util::Hash& incomingReconfiguration);
+        virtual void preReconfigure(karabo::util::Hash& incomingReconfiguration) override;
 
 
         /**
@@ -75,7 +75,7 @@ namespace karabo {
          * int i = get<int>("myParam");
          * @endcode
          */
-        virtual void postReconfigure();
+        virtual void postReconfigure() override;
 
     protected:
         bool m_arv_camera_trigger; // Use arv_camera to access trigger
@@ -156,7 +156,7 @@ namespace karabo {
         void pollGenicamFeatures(const std::vector<std::string>& paths, karabo::util::Hash& h);
         bool updateOutputSchema();
         template <class T>
-        void writeOutputChannels(const void* data, gint width, gint height, const karabo::util::Timestamp& timestamp);
+        void writeOutputChannels(const void* data, gint width, gint height, const karabo::util::Timestamp& ts);
 
         bool resolveHostname(const std::string& hostname, std::string& ip_address, std::string& message);
 
