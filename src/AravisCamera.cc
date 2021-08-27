@@ -1405,7 +1405,6 @@ namespace karabo {
 
 
     void AravisCamera::acquire() {
-        const std::string error_msg("Could not start acquisition");
         GError* error = nullptr;
 
         m_timer.now();
