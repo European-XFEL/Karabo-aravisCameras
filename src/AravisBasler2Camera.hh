@@ -26,7 +26,7 @@ namespace karabo {
 
         static void expectedParameters(karabo::util::Schema& expected);
 
-        AravisBasler2Camera(const karabo::util::Hash& config);
+        explicit AravisBasler2Camera(const karabo::util::Hash& config);
 
         virtual ~AravisBasler2Camera();
 
