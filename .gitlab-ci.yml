@@ -78,7 +78,16 @@ lint:
   stage: lint
   image: europeanxfel/karabo-ci:miniconda-3lint
   script:
-    - source ci/lint-cppcheck
+    - git clone https://$XFEL_TOKEN@git.xfel.eu/gitlab/Karabo/linter-tools.git ci
+    - source ci/lint-cppcheck.sh
+
+##### Static source code analysis #####
+lint-clang-tidy:
+  stage: lint
+  image: europeanxfel/karabo-ci:miniconda-3lint
+  script:
+    - git clone https://$XFEL_TOKEN@git.xfel.eu/gitlab/Karabo/linter-tools.git ci
+    - source ci/lint-clang-tidy.sh
 
 ##### Release build #####
 release:ubuntu18:
