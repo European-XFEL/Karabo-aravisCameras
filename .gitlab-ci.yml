@@ -1,7 +1,5 @@
 before_script:
     - echo '*** Install packages needed by aravis ***'
-    - export http_proxy="http://exflwgs06.desy.de:3128/"
-    - export https_proxy="http://exflwgs06.desy.de:3128/"
     - export REL_OS_NAME=$(lsb_release -is)
     - >
       if [ "$REL_OS_NAME" = "CentOS" ]; then
@@ -13,8 +11,6 @@ before_script:
         apt-get update
         apt-get install -y intltool libglib2.0-dev
       fi
-    - unset http_proxy
-    - unset https_proxy
 
 stages:
   - lint
