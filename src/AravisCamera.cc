@@ -2166,7 +2166,7 @@ namespace karabo {
                     "Please be aware that if you enable this feature in combination with external trigger, "
                     "the resulting 'actual' frame rate will most likely be smaller.")
                     .assignmentOptional().defaultValue(10.)
-                    .minExc(0.)
+                    .minInc(0.)
                     .unit(Unit::HERTZ)
                     .reconfigurable()
                     .allowedStates(State::UNKNOWN, State::ON)
