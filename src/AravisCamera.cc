@@ -265,6 +265,16 @@ namespace karabo {
                 .allowedStates(State::UNKNOWN, State::ON)
                 .commit();
 
+        UINT32_ELEMENT(expected).key("rotation")
+                .displayedName("Image Rotation")
+                .description("The image rotation.")
+                .assignmentOptional().defaultValue(0)
+                .options("0,90,180,270")
+                .unit(Unit::DEGREE)
+                .allowedStates(State::UNKNOWN, State::ON)
+                .reconfigurable()
+                .commit();
+
         STRING_ELEMENT(expected).key("pixelFormat")
                 .displayedName("Pixel Format")
                 .description("This enumeration sets the format of the pixel data transmitted for acquired images. "
@@ -1924,7 +1934,16 @@ namespace karabo {
 
         const unsigned long long height = h.get<int>("roi.height");
         const unsigned long long width = h.get<int>("roi.width");
-        const std::vector<unsigned long long> shape = {height, width};
+        const unsigned int rotation = this->get<unsigned int>("rotation");
+        std::vector<unsigned long long> shape;
+        switch (rotation) {
+            case 90:
+            case 270:
+                shape = {width, height};
+                break;
+            default:
+                shape = {height, width};
+        }
 
         GError* error = nullptr;
 
@@ -2257,12 +2276,28 @@ namespace karabo {
         const Dims shape(height, width);
 
         // Non-copy NDArray constructor
-        const karabo::util::NDArray imgArray((T*) data, width*height, karabo::util::NDArray::NullDeleter(), shape);
+        karabo::util::NDArray imgArray((T*) data, width*height, karabo::util::NDArray::NullDeleter(), shape);
 
         const unsigned short bpp = this->get<unsigned short>("bpp");
-        const Dims binning(this->get<int>("bin.y"), this->get<int>("bin.x"));
-        const Dims roiOffsets(this->get<int>("roi.y"), this->get<int>("roi.x"));
+        Dims binning(this->get<int>("bin.y"), this->get<int>("bin.x"));
+        Dims roiOffsets(this->get<int>("roi.y"), this->get<int>("roi.x"));
+        const unsigned int rotation = this->get<unsigned int>("rotation");
+        void* buffer = nullptr;
         const Hash header;
+
+        switch (rotation) {
+            case 90:
+            case 270:
+                util::rotate_image<T>(imgArray, rotation);
+                binning.reverse();
+                roiOffsets.reverse();
+                break;
+            case 180:
+                util::rotate_image<T>(imgArray, rotation);
+                break;
+            default:
+                break;
+        }
 
         // Send image and metadata to output channel
         this->writeChannels(imgArray, binning, bpp, m_encoding, roiOffsets, ts, header);
