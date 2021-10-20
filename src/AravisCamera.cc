@@ -25,6 +25,8 @@ namespace karabo {
 
     KARABO_REGISTER_FOR_CONFIGURATION(BaseDevice, Device<>, ImageSource, CameraImageSource, AravisCamera)
 
+    boost::mutex AravisCamera::m_connect_mtx;
+
     void AravisCamera::expectedParameters(Schema& expected) {
         OVERWRITE_ELEMENT(expected).key("state")
                 .setNewOptions(State::UNKNOWN, State::ERROR, State::ON, State::ACQUIRING)
@@ -652,6 +654,10 @@ namespace karabo {
             m_reconnect_timer.async_wait(karabo::util::bind_weak(&AravisCamera::connect, this, boost::asio::placeholders::error));
             return;
         }
+
+        // ArvInterface (e.g arv_interface_update_device_list) is not thread safe, thus I create 
+        // here a class level lock.
+        boost::mutex::scoped_lock lock(AravisCamera::m_connect_mtx);
 
         const std::string& idType = this->get<std::string>("idType");
         const std::string& cameraId = this->get<std::string>("cameraId");
