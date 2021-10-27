@@ -110,6 +110,8 @@ namespace karabo {
         bool m_connect;
         boost::asio::deadline_timer m_reconnect_timer;
         unsigned short m_failed_connections;
+        static boost::mutex m_connect_mtx;
+
         void connect(const boost::system::error_code& ec);
         void connection_failed_helper(const std::string& message, const std::string& detailed_msg="");
 
