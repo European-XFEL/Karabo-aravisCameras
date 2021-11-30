@@ -103,6 +103,8 @@ namespace karabo {
         bool set_binning(int bin_x, int bin_y);
  
         unsigned int m_max_correction_time;
+        double m_min_latency;
+        double m_max_latency;
 
     private:
         void initialize();
@@ -174,8 +176,6 @@ namespace karabo {
 
         karabo::util::Epochstamp m_timer;
         unsigned long m_counter;
-        double m_min_latency;
-        double m_max_latency;
         double m_sum_latency;
 
         karabo::xms::EncodingType m_encoding;
