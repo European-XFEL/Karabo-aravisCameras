@@ -172,6 +172,7 @@ namespace karabo {
     AravisBaslerCamera::AravisBaslerCamera(const karabo::util::Hash& config) : AravisCamera(config),
             m_ptp_enabled(false), m_tick_frequency(0) {
         m_is_device_reset_available = true; // "DeviceReset" command is available
+        m_last_clock_reset.now();
         this->registerScene(boost::bind(&Self::aravisBaslerScene, this), "scene");
     }
 
@@ -204,6 +205,28 @@ namespace karabo {
 
         // XXX Possibly use PTP in the future
         m_ptp_enabled = false;
+
+        const karabo::util::Epochstamp epoch;
+        if (epoch.elapsed(m_last_clock_reset).getTotalSeconds() > 60.) {
+            // Verify synchronization once every minute
+            bool resetNeeded = false;
+            if (m_min_latency > 0. && m_max_latency / m_min_latency > 5.) {
+                // When min and max latency differ too much, the clock could need to be reset
+                KARABO_LOG_FRAMEWORK_INFO << "max_latency / min_latency = " << m_max_latency / m_min_latency;
+                resetNeeded = true;
+            } else if (m_max_latency > 3.) {
+                // Max latency higher than 3 s
+                KARABO_LOG_FRAMEWORK_INFO << "max_latency = " << m_max_latency << " s";
+                resetNeeded = true;
+            }
+
+            if (resetNeeded) {
+                KARABO_LOG_WARN << "Timestamp synchronization loss -> reset timestamp";
+                arv_camera_execute_command(m_camera, "GevTimestampControlReset", nullptr);
+                arv_camera_execute_command(m_camera, "GevTimestampControlLatchReset", nullptr);
+                m_last_clock_reset.now();
+            }
+        }
 
         m_tick_frequency = this->get<int>("gevTimestampTickFrequency");
 

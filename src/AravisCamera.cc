@@ -404,11 +404,12 @@ namespace karabo {
     AravisCamera::AravisCamera(const karabo::util::Hash& config) : CameraImageSource(config),
             m_arv_camera_trigger(true), m_is_device_reset_available(false), m_is_frame_count_available(false),
             m_camera(nullptr), m_device(nullptr), m_parser(nullptr), m_chunk_mode(false), m_post_connection_cb(0),
-            m_max_correction_time(0), m_connect(true), m_reconnect_timer(EventLoop::getIOService()), m_failed_connections(0u),
+            m_max_correction_time(0), m_min_latency(0.), m_max_latency(0.), m_connect(true),
+            m_reconnect_timer(EventLoop::getIOService()), m_failed_connections(0u),
             m_poll_timer(EventLoop::getIOService()), m_stream(nullptr),
             m_is_binning_available(false), m_is_exposure_time_available(false),
             m_is_frame_rate_available(false), m_is_gain_available(false), m_is_gain_auto_available(false),
-            m_counter(0), m_min_latency(0.), m_max_latency(0.), m_sum_latency(0.) {
+            m_counter(0), m_sum_latency(0.) {
 
         m_max_correction_time = config.get<unsigned int>("maxCorrectionTime");
 
