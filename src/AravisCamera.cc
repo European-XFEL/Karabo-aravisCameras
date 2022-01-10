@@ -760,13 +760,15 @@ namespace karabo {
         // Enable chunk data, if available on the camera
         this->configure_timestamp_chunk();
 
+        Hash h;
+
         // Successfully connected!
-        KARABO_LOG_INFO << "Connected to " << cameraIp;
+        const std::string message("Connected to " + cameraIp);
+        h.set("status", message);
+        KARABO_LOG_INFO << message;
 
         // Connect the control-lost signal
         g_signal_connect(arv_camera_get_device(m_camera), "control-lost", G_CALLBACK(AravisCamera::control_lost_cb), static_cast<void*>(this));
-
-        Hash h;
 
         // Read immutable properties
         if (error == nullptr) h.set("camId", std::string(arv_camera_get_device_id(m_camera, &error)));
@@ -820,6 +822,7 @@ namespace karabo {
         if (m_failed_connections < 1) {
             // Only log first error message
             KARABO_LOG_ERROR << message;
+            this->set("status", message);
             if (!detailed_msg.empty()) {
                 KARABO_LOG_FRAMEWORK_ERROR << detailed_msg;
             }
@@ -1359,7 +1362,9 @@ namespace karabo {
             }
 
             if (!success) {
-                KARABO_LOG_WARN << "Setting value for " << key << " may not have been successful. Value on device updated according to camera.";
+                const std::string message("Setting value for " + key + " may not have been successful");
+                KARABO_LOG_WARN << message << ". Value on device updated according to camera.";
+                this->set("status", message);
             }
         }
 
@@ -1470,6 +1475,7 @@ namespace karabo {
         // Connect the 'new-buffer' signal
         g_signal_connect(m_stream, "new-buffer", G_CALLBACK(AravisCamera::new_buffer_cb), static_cast<void*>(this));
 
+        this->set("status", "Acquisition started");
         this->updateState(State::ACQUIRING);
     }
 
@@ -1479,6 +1485,7 @@ namespace karabo {
 
         KARABO_LOG_ERROR << message;
         KARABO_LOG_FRAMEWORK_ERROR << detailed_msg;
+        this->set("status", message);
         this->updateState(State::ERROR);
     }
 
@@ -1496,14 +1503,17 @@ namespace karabo {
         arv_camera_stop_acquisition(m_camera, &error);
 
         if (error != nullptr) {
-            KARABO_LOG_ERROR << "Could not stop acquisition";
+            const std::string message("Could not stop acquisition");
+            KARABO_LOG_ERROR << message;
             KARABO_LOG_FRAMEWORK_ERROR << "arv_camera_stop_acquisition failed: " << error->message;
             g_clear_error(&error);
+            h.set("status", message);
             this->set(h);
             this->updateState(State::ERROR);
             return;
         }
 
+        h.set("status", "Acquisition stopped");
         this->signalEOS(); // End-of-Stream signal
         this->set(h);
         this->updateState(State::ON);
@@ -1695,13 +1705,15 @@ namespace karabo {
         // TODO what happens with multiple cameras on server?
         // Possibly use arv_gv_device_get_device_address (gv_device) to verify IP address
 
-        KARABO_LOG_FRAMEWORK_WARN << "Control of the camera " << self->get<std::string>("cameraId") << " is lost";
+        const std::string message("Control of the camera " + self->get<std::string>("cameraId") + " is lost");
+        KARABO_LOG_FRAMEWORK_WARN << message;
         // TODO possibly release resources
         // NOTE 'self->clear_camera();' will seg fault
         self->m_camera = nullptr;
         self->m_device = nullptr;
         self->m_parser = nullptr;
 
+        self->set("status", message);
         self->updateState(State::UNKNOWN);
     }
 
@@ -1952,13 +1964,15 @@ namespace karabo {
                 shape = {height, width};
         }
 
+        const std::string errorMsg("Could not update output schema");
         GError* error = nullptr;
 
         const ArvPixelFormat pixelFormat = arv_camera_get_pixel_format(m_camera, &error);
         if (error != nullptr) {
-            KARABO_LOG_ERROR << "Could not update output schema";
+            KARABO_LOG_ERROR << errorMsg;
             KARABO_LOG_FRAMEWORK_ERROR << "arv_camera_get_pixel_format failed: " << error->message;
             g_clear_error(&error);
+            this->set("status", errorMsg);
             return false; // failure
         }
 
@@ -2027,17 +2041,19 @@ namespace karabo {
         // get available pixel formats
         int_options = arv_camera_dup_available_pixel_formats(m_camera, &n_int_values, &error);
         if (error != nullptr) {
-            KARABO_LOG_ERROR << "Could not update output schema";
+            KARABO_LOG_ERROR << errorMsg;
             KARABO_LOG_FRAMEWORK_ERROR << "arv_camera_dup_available_pixel_formats failed: " << error->message;
             g_clear_error(&error);
+            this->set("status", errorMsg);
             return false; // failure
         }
 
         str_options = arv_camera_dup_available_pixel_formats_as_strings(m_camera, &n_str_values, &error);
         if (error != nullptr) {
-            KARABO_LOG_ERROR << "Could not update output schema";
+            KARABO_LOG_ERROR << errorMsg;
             KARABO_LOG_FRAMEWORK_ERROR << "arv_camera_dup_available_pixel_formats_as_strings failed: " << error->message;
             g_clear_error(&error);
+            this->set("status", errorMsg);
             return false; // failure
         }
 
@@ -2047,7 +2063,7 @@ namespace karabo {
                 m_pixelFormatOptions[int_options[i]] = str_options[i];
             }
         } else {
-            KARABO_LOG_WARN << "Could not fill-up pixel_format_options map: different number of "
+            KARABO_LOG_FRAMEWORK_WARN << "Could not fill-up pixel_format_options map: different number of "
                 << "int and string options.";
         }
 
@@ -2084,9 +2100,10 @@ namespace karabo {
             // get available trigger selectors
             str_options = arv_camera_dup_available_triggers(m_camera, &n_str_values, &error);
             if (error != nullptr) {
-                KARABO_LOG_ERROR << "Could not update output schema";
+                KARABO_LOG_ERROR << errorMsg;
                 KARABO_LOG_FRAMEWORK_ERROR << "arv_camera_dup_available_triggers failed: " << error->message;
                 g_clear_error(&error);
+                this->set("status", errorMsg);
                 return false; // failure
             }
 
@@ -2111,9 +2128,10 @@ namespace karabo {
             // get available trigger sources
             str_options = arv_camera_dup_available_trigger_sources(m_camera, &n_str_values, &error);
             if (error != nullptr) {
-                KARABO_LOG_ERROR << "Could not update output schema";
+                KARABO_LOG_ERROR << errorMsg;
                 KARABO_LOG_FRAMEWORK_ERROR << "arv_camera_dup_available_trigger_sources failed: " << error->message;
                 g_clear_error(&error);
+                this->set("status", errorMsg);
                 return false; // failure
             }
 
