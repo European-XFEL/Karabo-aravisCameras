@@ -438,8 +438,10 @@ namespace karabo {
         if (error == nullptr) camera_timestamp = arv_camera_get_integer(m_camera, "GevTimestampValue", &error);
 
         if (error != nullptr) {
-            KARABO_LOG_FRAMEWORK_ERROR << "Could not synchronize timestamp: " << error->message;
+            const std::string message("Could not synchronize timestamp");
+            KARABO_LOG_ERROR << message << ": " << error->message;
             g_clear_error(&error);
+            this->set("status", message);
             return false; // failure
         }
 

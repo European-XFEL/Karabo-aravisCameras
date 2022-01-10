@@ -137,8 +137,12 @@ namespace karabo {
         arv_camera_execute_command(m_camera, "DeviceReset", &error);
 
         if (error != nullptr) {
-            KARABO_LOG_FRAMEWORK_ERROR << "Could not reset camera: " << error->message;
+            const std::string message("Could not reset camera");
+            KARABO_LOG_ERROR << message << ": " << error->message;
+            this->set("status", message);
             g_clear_error(&error);
+        } else {
+            this->set("status", "Camera reset");
         }
     }
 

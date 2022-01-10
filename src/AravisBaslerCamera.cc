@@ -195,8 +195,12 @@ namespace karabo {
         arv_camera_execute_command(m_camera, "DeviceReset", &error);
 
         if (error != nullptr) {
-            KARABO_LOG_FRAMEWORK_ERROR << "Could not reset camera: " << error->message;
+            const std::string message("Could not reset camera");
+            KARABO_LOG_FRAMEWORK_ERROR << message << ": " << error->message;
+            this->set("status", message);
             g_clear_error(&error);
+        } else {
+            this->set("status", "Camera reset");
         }
     }
 
@@ -221,7 +225,9 @@ namespace karabo {
             }
 
             if (resetNeeded) {
-                KARABO_LOG_WARN << "Timestamp synchronization loss -> reset timestamp";
+                const std::string message("Timestamp synchronization loss -> reset timestamp");
+                KARABO_LOG_WARN << message;
+                this->set("status", message);
                 arv_camera_execute_command(m_camera, "GevTimestampControlReset", nullptr);
                 arv_camera_execute_command(m_camera, "GevTimestampControlLatchReset", nullptr);
                 m_last_clock_reset.now();
@@ -348,12 +354,16 @@ namespace karabo {
 
         bool success = this->set_region(x, y, width, height);
         if (!success) {
-            KARABO_LOG_ERROR << "Could not set ROI after resetting camera!";
+            const std::string message("Could not set ROI after resetting camera!");
+            KARABO_LOG_ERROR << message;
+            this->set("status", message);
         }
         success = this->set_binning(bin_x, bin_y);
-       	if (!success) {
-       	    KARABO_LOG_ERROR <<	"Could not set binning after resetting camera!";
-       	}
+        if (!success) {
+            const std::string message("Could not set binning after resetting camera!");
+            KARABO_LOG_ERROR << message;
+            this->set("status", message);
+        }
     }
 
 } // namespace karabo

@@ -4,5 +4,6 @@ nbproject/Makefile-*.mk
 package/
 dist/
 build/
+.vscode/
 .dep.inc
 version.hh
