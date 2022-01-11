@@ -152,6 +152,10 @@ namespace karabo {
         // XXX Possibly use PTP in the future
         m_ptp_enabled = false;
 
+        // XXX The counter cannot be reset during operation on a2A cameras:
+        // https://docs.baslerweb.com/timestamp#specifics
+        // In case of synchronization loss, a camera reset could be needed.
+
         m_tick_frequency = this->get<int>("gevTimestampTickFrequency");
 
         // Karabo current timestamp
