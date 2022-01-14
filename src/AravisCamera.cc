@@ -352,9 +352,10 @@ namespace karabo {
                 .commit();
 
         DOUBLE_ELEMENT(expected).key("gain")
-                .displayedName("Gain")
+                .displayedName("Normalized Gain")
                 .description("Sets the gain of the ADC converter.")
                 .assignmentOptional().noDefaultValue()
+                .minInc(0.).maxInc(1.)
                 .reconfigurable()
                 .allowedStates(State::UNKNOWN, State::ON)
                 .commit();
@@ -1081,6 +1082,33 @@ namespace karabo {
     }
 
 
+    bool AravisCamera::get_gain(double& gain) {
+        GError* error = nullptr;
+
+        // Get bounds
+        double gmin, gmax;
+        arv_camera_get_gain_bounds(m_camera, &gmin, &gmax, &error);
+        if (error != nullptr) {
+            KARABO_LOG_FRAMEWORK_ERROR << "arv_camera_get_gain_bounds failed: " << error->message;
+            g_clear_error(&error);
+            return false; // failure
+        } else if (gmin >= gmax) {
+            KARABO_LOG_FRAMEWORK_ERROR << "gmin >= gmax";
+            return false;
+        }
+
+        const double _gain = arv_camera_get_gain(m_camera, &error); // raw gain
+        if (error != nullptr) {
+            KARABO_LOG_FRAMEWORK_ERROR << "arv_camera_get_gain failed: " << error->message;
+            g_clear_error(&error);
+            return false; // failure
+        }
+
+        gain = (_gain - gmin) / (gmax - gmin); // normalized gain
+        return true; // success
+    }
+
+
     bool AravisCamera::set_gain(double gain) {
         GError* error = nullptr;
 
@@ -1093,11 +1121,10 @@ namespace karabo {
             return false; // failure
         }
 
-        // Apply bounds
-        gain = max(gain, gmin);
-        gain = min(gain, gmax);
+        // Convert normalized to raw gain
+        const double _gain = gmin + gain * (gmax - gmin);
 
-        arv_camera_set_gain(m_camera, gain, &error);
+        arv_camera_set_gain(m_camera, _gain, &error);
         if (error != nullptr) {
             KARABO_LOG_FRAMEWORK_ERROR << "arv_camera_set_gain failed: " << error->message;
             g_clear_error(&error);
@@ -1279,7 +1306,7 @@ namespace karabo {
         }
 
         if (configuration.has("gain") && m_is_gain_available) {
-            double gain = configuration.get<double>("gain");
+            const double gain = configuration.get<double>("gain");
 
             const bool success = this->set_gain(gain);
             if (!success) {
@@ -1845,12 +1872,10 @@ namespace karabo {
         }
 
         if (m_is_gain_available) {
-            const double gain = arv_camera_get_gain(m_camera, &error);
-            if (error == nullptr) {
+            double gain;
+            success = this->get_gain(gain);
+            if (success) {
                 h.set("gain", gain);
-            } else {
-                KARABO_LOG_FRAMEWORK_WARN << "arv_camera_get_gain failed: " << error->message;
-                g_clear_error(&error);
             }
         }
 
