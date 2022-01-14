@@ -120,6 +120,7 @@ namespace karabo {
         bool set_auto_packet_size();
         bool set_exposure_time(double exposure_time);
         bool set_frame_rate(bool enable, double frame_rate=0.);
+        bool get_gain(double& gain);
         bool set_gain(double gain);
         bool set_frame_count(gint64 frame_count);
 
