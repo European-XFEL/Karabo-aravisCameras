@@ -267,9 +267,30 @@ namespace karabo {
                 .allowedStates(State::UNKNOWN, State::ON)
                 .commit();
 
+        NODE_ELEMENT(expected).key("flip")
+                .displayedName("Image Flip")
+                .description("Enables mirroring of the image.")
+                .commit();
+
+        BOOL_ELEMENT(expected).key("flip.X")
+                .displayedName("Horizonzal Flip")
+                .description("Enable horizontal flip. This is done before the image rotation.")
+                .assignmentOptional().defaultValue(false)
+                .reconfigurable()
+                .allowedStates(State::UNKNOWN, State::ON)
+                .commit();
+
+        BOOL_ELEMENT(expected).key("flip.Y")
+                .displayedName("Vertical Flip")
+                .description("Enable vertical flip. This is done before the image rotation.")
+                .assignmentOptional().defaultValue(false)
+                .reconfigurable()
+                .allowedStates(State::UNKNOWN, State::ON)
+                .commit();
+
         UINT32_ELEMENT(expected).key("rotation")
                 .displayedName("Image Rotation")
-                .description("The image rotation.")
+                .description("The image rotation. This is done after the image flip.")
                 .assignmentOptional().defaultValue(0)
                 .options("0,90,180,270")
                 .unit(Unit::DEGREE)
@@ -409,6 +430,7 @@ namespace karabo {
             m_reconnect_timer(EventLoop::getIOService()), m_failed_connections(0u),
             m_poll_timer(EventLoop::getIOService()), m_stream(nullptr),
             m_is_binning_available(false), m_is_exposure_time_available(false),
+            m_is_flip_x_available(false), m_is_flip_y_available(false),
             m_is_frame_rate_available(false), m_is_gain_available(false), m_is_gain_auto_available(false),
             m_counter(0), m_sum_latency(0.) {
 
@@ -770,6 +792,10 @@ namespace karabo {
 
         // Connect the control-lost signal
         g_signal_connect(arv_camera_get_device(m_camera), "control-lost", G_CALLBACK(AravisCamera::control_lost_cb), static_cast<void*>(this));
+
+        // Verify whether horizontal and vertical flip are available on the camera
+        m_is_flip_x_available = this->is_flip_x_available();
+        m_is_flip_y_available = this->is_flip_y_available();
 
         // Read immutable properties
         if (error == nullptr) h.set("camId", std::string(arv_camera_get_device_id(m_camera, &error)));
@@ -1449,6 +1475,20 @@ namespace karabo {
 
     bool AravisCamera::get_timestamp(ArvBuffer* buffer, karabo::util::Timestamp& ts) {
         // If the camera provides HW timestamping in chunk data, this function shall be overridden
+        return false;
+    }
+
+
+    bool AravisCamera::is_flip_x_available() const {
+        // If the camera provides horizontal flip, this function shall be overridden.
+        // Also, "genicam" tag and alias shall be provided for "flip.X".
+        return false;
+    }
+
+
+    bool AravisCamera::is_flip_y_available() const {
+        // If the camera provides vertical flip, this function shall be overridden.
+        // Also, "genicam" tag and alias shall be provided for "flip.Y".
         return false;
     }
 
@@ -2315,6 +2355,38 @@ namespace karabo {
             }
         }
 
+        if (!m_is_flip_x_available) {
+            // Flip will be done on software
+            NODE_ELEMENT(schemaUpdate).key("flip")
+                    .displayedName("Image Flip")
+                    .description("Enables mirroring of the image.")
+                    .commit();
+
+            BOOL_ELEMENT(schemaUpdate).key("flip.X")
+                    .displayedName("Horizonzal Flip")
+                    .description("Enable horizontal flip. This is done before the image rotation.")
+                    .assignmentOptional().defaultValue(false)
+                    .reconfigurable()
+                    .allowedStates(State::UNKNOWN, State::ON)
+                    .commit();
+        }
+
+        if (!m_is_flip_y_available) {
+            // Flip will be done on software
+            NODE_ELEMENT(schemaUpdate).key("flip")
+                    .displayedName("Image Flip")
+                    .description("Enables mirroring of the image.")
+                    .commit();
+
+            BOOL_ELEMENT(schemaUpdate).key("flip.Y")
+                    .displayedName("Vertical Flip")
+                    .description("Enable vertical flip. This is done before the image rotation.")
+                    .assignmentOptional().defaultValue(false)
+                    .reconfigurable()
+                    .allowedStates(State::UNKNOWN, State::ON)
+                    .commit();
+        }
+
         this->appendSchema(schemaUpdate);
         return true; // success
     }
@@ -2331,10 +2403,17 @@ namespace karabo {
         const unsigned short bpp = this->get<unsigned short>("bpp");
         Dims binning(this->get<int>("bin.y"), this->get<int>("bin.x"));
         Dims roiOffsets(this->get<int>("roi.y"), this->get<int>("roi.x"));
-        const unsigned int rotation = this->get<unsigned int>("rotation");
         void* buffer = nullptr;
         const Hash header;
 
+        // Apply flip on software if not available on camera
+        const bool flipX = this->get<bool>("flip.X") && !m_is_flip_x_available;
+        const bool flipY = this->get<bool>("flip.Y") && !m_is_flip_y_available;
+        if (flipX || flipY) {
+            util::flip_image<T>(imgArray, flipX, flipY);
+        }
+
+        const unsigned int rotation = this->get<unsigned int>("rotation");
         switch (rotation) {
             case 90:
             case 270:

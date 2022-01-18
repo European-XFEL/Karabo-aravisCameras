@@ -33,36 +33,14 @@ namespace karabo {
                 .setNewDefaultValue("Mono12p")
                 .commit();
 
-        NODE_ELEMENT(expected).key("flip")
-                .displayedName("Image Flip")
-                .description("Enables mirroring of the image.")
+        OVERWRITE_ELEMENT(expected).key("flip.X")
+                .setNewAlias("ReverseX")
+                .setNewTags({"genicam"})
                 .commit();
 
-        BOOL_ELEMENT(expected).key("flip.X")
-                .alias("ReverseX")
-                .tags("genicam")
-                .displayedName("Reverse X")
-                .description("Enables horizontal mirroring of the image. The pixel values of every "
-                "line in a captured image will be swapped along the line's center. You can use the "
-                "ROI feature when using the Reverse X feature. The position of the ROI relative to "
-                "the sensor remains the same.")
-                .assignmentOptional().defaultValue(false)
-                .reconfigurable()
-                .allowedStates(State::UNKNOWN, State::ON)
-                .commit();
-
-        BOOL_ELEMENT(expected).key("flip.Y")
-                .alias("ReverseY")
-                .tags("genicam")
-                .displayedName("Reverse Y")
-                .description("Enables vertical mirroring of the image. The pixel values of every "
-                "column in a captured image will be swapped along the column's center. You can "
-                "use the ROI feature when using the Reverse Y feature. The position of the ROI "
-                "relative to the sensor remains the same. "
-                "This feature is not available on all models.")
-                .assignmentOptional().defaultValue(false)
-                .reconfigurable()
-                .allowedStates(State::UNKNOWN, State::ON)
+        OVERWRITE_ELEMENT(expected).key("flip.Y")
+                .setNewAlias("ReverseY")
+                .setNewTags({"genicam"})
                 .commit();
 
         INT32_ELEMENT(expected).key("gevSCBWR")
@@ -208,6 +186,47 @@ namespace karabo {
         format = arv_buffer_get_image_pixel_format(buffer); // e.g. ARV_PIXEL_FORMAT_MONO_8
 
         return true; // success
+    }
+
+    bool AravisBasler2Camera::is_flip_x_available() const {
+        return true;
+    }
+
+    bool AravisBasler2Camera::is_flip_y_available() const {
+        GError* error = nullptr;
+        bool value;
+        const std::string feature = this->getAliasFromKey<std::string>("flip.Y");
+
+        // Try to read flip.Y
+        value = arv_device_get_boolean_feature_value(m_device, feature.c_str(), &error);
+        if (error != nullptr) {
+            KARABO_LOG_FRAMEWORK_ERROR << "arv_device_get_boolean_feature_value failed: " << error->message;
+            g_clear_error(&error);
+            return false;
+        } else if (value) { // Flip Y is set, thus available
+            return true;
+        }
+
+        // Try to set flip.Y
+        arv_device_set_boolean_feature_value(m_device, feature.c_str(), true, &error);
+        if (error != nullptr) {
+            KARABO_LOG_FRAMEWORK_ERROR << "arv_device_set_boolean_feature_value failed: " << error->message;
+            g_clear_error(&error);
+            return false;
+        }
+
+        // Verify that flip.Y has been set: the parameter is available but not settable on some models
+        value = arv_device_get_boolean_feature_value(m_device, feature.c_str(), &error);
+        if (error != nullptr) {
+            KARABO_LOG_FRAMEWORK_ERROR << "arv_device_get_boolean_feature_value failed: " << error->message;
+            g_clear_error(&error);
+            return false;
+        } else if (value) { // Flip Y is set, thus available
+            arv_device_set_boolean_feature_value(m_device, feature.c_str(), false, &error); // Set back
+            return true;
+        } else {
+            return false;
+        }
     }
 
     bool AravisBasler2Camera::get_timestamp(ArvBuffer* buffer, karabo::util::Timestamp& ts) {
