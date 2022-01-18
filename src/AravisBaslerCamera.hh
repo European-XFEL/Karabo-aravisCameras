@@ -39,6 +39,10 @@ namespace karabo {
 
         virtual bool get_timestamp(ArvBuffer* buffer, karabo::util::Timestamp& ts) override;
 
+        virtual bool is_flip_x_available() const override;
+
+        virtual bool is_flip_y_available() const override;
+
         std::string aravisBaslerScene();
         
     private:

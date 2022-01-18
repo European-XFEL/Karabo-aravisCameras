@@ -31,6 +31,11 @@ namespace karabo {
         //                                   READ/WRITE HARDWARE PARAMETERS                                             *
         // **************************************************************************************************************
 
+        OVERWRITE_ELEMENT(expected).key("flip.Y")
+                .setNewAlias("ReverseY")
+                .setNewTags({"genicam"})
+                .commit();
+
         STRING_ELEMENT(expected).key("pixelSize")
             .alias("PixelSize")
             .tags("genicam")
@@ -561,6 +566,10 @@ namespace karabo {
                 g_clear_error(&error);
             }
         }
+    }
+
+    bool AravisPhotonicScienceCamera::is_flip_y_available() const {
+        return true;
     }
 
 } // namespace karabo

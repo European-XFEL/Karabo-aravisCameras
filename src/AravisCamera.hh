@@ -97,6 +97,9 @@ namespace karabo {
         virtual bool get_shape_and_format(ArvBuffer* buffer, gint& width, gint& height, ArvPixelFormat& format) const;
         virtual bool get_timestamp(ArvBuffer* buffer, karabo::util::Timestamp& ts);
 
+        virtual bool is_flip_x_available() const;
+        virtual bool is_flip_y_available() const;
+
         boost::function<void()> m_post_connection_cb;
 
         bool set_region(int x, int y, int width, int height);
@@ -169,6 +172,8 @@ namespace karabo {
 
         bool m_is_binning_available;
         bool m_is_exposure_time_available;
+        bool m_is_flip_x_available;
+        bool m_is_flip_y_available;
         bool m_is_frame_rate_available;
         bool m_is_gain_available;
         bool m_is_gain_auto_available;

@@ -40,6 +40,8 @@ namespace karabo {
 
         virtual bool get_timestamp(ArvBuffer* buffer, karabo::util::Timestamp& ts) override;
 
+        virtual bool is_flip_y_available() const override;
+
     private:
         void configure(karabo::util::Hash& configuration); // Over-ride parent's method
         virtual void trigger() override; // Over-ride parent's method
