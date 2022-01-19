@@ -195,6 +195,9 @@ namespace karabo {
     bool AravisBasler2Camera::is_flip_y_available() const {
         GError* error = nullptr;
         bool value;
+
+        if (!keyHasAlias("flip.Y")) return false; // No alias means no feature available
+
         const std::string feature = this->getAliasFromKey<std::string>("flip.Y");
 
         // Try to read flip.Y
