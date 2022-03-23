@@ -342,6 +342,16 @@ namespace karabo {
                 .allowedStates(State::UNKNOWN, State::ON)
                 .commit();
 
+        BOOL_ELEMENT(expected).key("testChart")
+                .alias("Test_Chart")
+                .tags("genicam")
+                .displayedName("Display Test Chart")
+                .assignmentOptional().defaultValue(false)
+                .adminAccess()
+                .reconfigurable()
+                .allowedStates(State::UNKNOWN, State::ON)
+                .commit();
+
         // **************************************************************************************************************
         //                                   READ ONLY HARDWARE PARAMETERS                                              *
         // **************************************************************************************************************
