@@ -117,6 +117,7 @@ namespace karabo {
         unsigned short m_failed_connections;
         static boost::mutex m_connect_mtx;
 
+        bool m_control_lost;
         void connect(const boost::system::error_code& ec);
         void connection_failed_helper(const std::string& message, const std::string& detailed_msg="");
 

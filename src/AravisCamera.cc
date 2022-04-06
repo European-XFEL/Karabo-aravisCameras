@@ -427,7 +427,7 @@ namespace karabo {
             m_arv_camera_trigger(true), m_is_device_reset_available(false), m_is_frame_count_available(false),
             m_camera(nullptr), m_device(nullptr), m_parser(nullptr), m_chunk_mode(false), m_post_connection_cb(0),
             m_max_correction_time(0), m_min_latency(0.), m_max_latency(0.), m_connect(true),
-            m_reconnect_timer(EventLoop::getIOService()), m_failed_connections(0u),
+            m_reconnect_timer(EventLoop::getIOService()), m_failed_connections(0u), m_control_lost(false),
             m_poll_timer(EventLoop::getIOService()), m_stream(nullptr),
             m_is_binning_available(false), m_is_exposure_time_available(false),
             m_is_flip_x_available(false), m_is_flip_y_available(false),
@@ -508,7 +508,7 @@ namespace karabo {
         value = arv_device_get_boolean_feature_value(m_device, feature.c_str(), &error);
 
         if (error != nullptr) {
-            KARABO_LOG_FRAMEWORK_ERROR << "arv_device_get_boolean_feature_value failed: " << error->message;
+            KARABO_LOG_FRAMEWORK_ERROR << this->getInstanceId() << ": arv_device_get_boolean_feature_value failed: " << error->message;
             g_clear_error(&error);
             return false;
         }
@@ -522,7 +522,7 @@ namespace karabo {
         value = arv_device_get_string_feature_value(m_device, feature.c_str(), &error);
 
         if (error != nullptr) {
-            KARABO_LOG_FRAMEWORK_ERROR << "arv_device_get_string_feature_value failed: " << error->message;
+            KARABO_LOG_FRAMEWORK_ERROR << this->getInstanceId() << ": arv_device_get_string_feature_value failed: " << error->message;
             g_clear_error(&error);
             return false;
         }
@@ -536,7 +536,7 @@ namespace karabo {
         value = arv_device_get_integer_feature_value(m_device, feature.c_str(), &error);
 
         if (error != nullptr) {
-            KARABO_LOG_FRAMEWORK_ERROR << "arv_device_get_integer_feature_value failed: " << error->message;
+            KARABO_LOG_FRAMEWORK_ERROR << this->getInstanceId() << ": arv_device_get_integer_feature_value failed: " << error->message;
             g_clear_error(&error);
             return false;
         }
@@ -550,7 +550,7 @@ namespace karabo {
         value = arv_device_get_float_feature_value(m_device, feature.c_str(), &error);
 
         if (error != nullptr) {
-            KARABO_LOG_FRAMEWORK_ERROR << "arv_device_get_float_feature_value failed: " << error->message;
+            KARABO_LOG_FRAMEWORK_ERROR << this->getInstanceId() << ": arv_device_get_float_feature_value failed: " << error->message;
             g_clear_error(&error);
             return false;
         }
@@ -561,9 +561,10 @@ namespace karabo {
 
     bool AravisCamera::setBoolFeature(const std::string& feature, bool& value) {
         GError* error = nullptr;
+        const std::string& deviceId = this->getInstanceId();
         arv_device_set_boolean_feature_value(m_device, feature.c_str(), value, &error);
         if (error != nullptr) {
-            KARABO_LOG_FRAMEWORK_ERROR << "arv_device_set_boolean_feature_value failed: " << error->message;
+            KARABO_LOG_FRAMEWORK_ERROR << deviceId << ": arv_device_set_boolean_feature_value failed: " << error->message;
             g_clear_error(&error);
         } else {
             return true; // success
@@ -572,7 +573,7 @@ namespace karabo {
         // read back value
         const bool rvalue = arv_device_get_boolean_feature_value(m_device, feature.c_str(), &error);
         if (error != nullptr) { // Could not read back value
-            KARABO_LOG_FRAMEWORK_ERROR << "arv_device_get_boolean_feature_value failed: " << error->message;
+            KARABO_LOG_FRAMEWORK_ERROR << deviceId << ": arv_device_get_boolean_feature_value failed: " << error->message;
             g_clear_error(&error);
             return false;
         } else if (rvalue != value) { // The value was not set
@@ -586,9 +587,10 @@ namespace karabo {
 
     bool AravisCamera::setStringFeature(const std::string& feature, std::string& value) {
         GError* error = nullptr;
+        const std::string& deviceId = this->getInstanceId();
         arv_device_set_string_feature_value(m_device, feature.c_str(), value.c_str(), &error);
         if (error != nullptr) {
-            KARABO_LOG_FRAMEWORK_ERROR << "arv_device_set_string_feature_value failed: " << error->message;
+            KARABO_LOG_FRAMEWORK_ERROR << deviceId << ": arv_device_set_string_feature_value failed: " << error->message;
             g_clear_error(&error);
         } else {
             return true; // success
@@ -597,7 +599,7 @@ namespace karabo {
         // read back value
         const std::string rvalue = arv_device_get_string_feature_value(m_device, feature.c_str(), &error);
         if (error != nullptr) { // Could not read back value
-            KARABO_LOG_FRAMEWORK_ERROR << "arv_device_get_string_feature_value failed: " << error->message;
+            KARABO_LOG_FRAMEWORK_ERROR << deviceId << ": arv_device_get_string_feature_value failed: " << error->message;
             g_clear_error(&error);
             return false;
         } else if (rvalue != value) { // The value was not set
@@ -611,9 +613,10 @@ namespace karabo {
 
     bool AravisCamera::setIntFeature(const std::string& feature, long long& value) {
         GError* error = nullptr;
+        const std::string& deviceId = this->getInstanceId();
         arv_device_set_integer_feature_value(m_device, feature.c_str(), value, &error);
         if (error != nullptr) {
-            KARABO_LOG_FRAMEWORK_ERROR << "arv_device_set_integer_feature_value failed: " << error->message;
+            KARABO_LOG_FRAMEWORK_ERROR << deviceId << ": arv_device_set_integer_feature_value failed: " << error->message;
             g_clear_error(&error);
         } else {
             return true; // success
@@ -622,7 +625,7 @@ namespace karabo {
         // read back value
         const long long rvalue = arv_device_get_integer_feature_value(m_device, feature.c_str(), &error);
         if (error != nullptr) { // Could not read back value
-            KARABO_LOG_FRAMEWORK_ERROR << "arv_device_get_integer_feature_value failed: " << error->message;
+            KARABO_LOG_FRAMEWORK_ERROR << deviceId << ": arv_device_get_integer_feature_value failed: " << error->message;
             g_clear_error(&error);
             return false;
         } else if (rvalue != value) { // The value was not set
@@ -636,9 +639,10 @@ namespace karabo {
 
     bool AravisCamera::setFloatFeature(const std::string& feature, double& value) {
         GError* error = nullptr;
+        const std::string& deviceId = this->getInstanceId();
         arv_device_set_float_feature_value(m_device, feature.c_str(), value, &error);
         if (error != nullptr) {
-            KARABO_LOG_FRAMEWORK_ERROR << "arv_device_set_float_feature_value failed: " << error->message;
+            KARABO_LOG_FRAMEWORK_ERROR << deviceId << ":arv_device_set_float_feature_value failed: " << error->message;
             g_clear_error(&error);
         } {
             return true; // success
@@ -647,7 +651,7 @@ namespace karabo {
         // read back value
         const double rvalue = arv_device_get_float_feature_value(m_device, feature.c_str(), &error);
         if (error != nullptr) { // The value was not set
-            KARABO_LOG_FRAMEWORK_ERROR << "arv_device_get_float_feature_value failed: " << error->message;
+            KARABO_LOG_FRAMEWORK_ERROR << deviceId << ": arv_device_get_float_feature_value failed: " << error->message;
             g_clear_error(&error);
             return false;
         } else if (rvalue != value) { // The value was not set
@@ -672,20 +676,25 @@ namespace karabo {
         if (ec == boost::asio::error::operation_aborted) return;
         if (!m_connect) return;
 
-        if (m_camera) {
+        if (m_control_lost) {
+            // In case connection to the camera has been lost, we need to clear resources here
+            m_control_lost = false;
+            this->clear_camera();
+            this->clear_stream();
+        } else if (m_camera) {
             // Already connected
             m_reconnect_timer.expires_from_now(boost::posix_time::seconds(5l));
             m_reconnect_timer.async_wait(karabo::util::bind_weak(&AravisCamera::connect, this, boost::asio::placeholders::error));
             return;
         }
 
-        // ArvInterface (e.g arv_interface_update_device_list) is not thread safe, thus I create 
-        // here a class level lock.
-        boost::mutex::scoped_lock lock(AravisCamera::m_connect_mtx);
-
         const std::string& idType = this->get<std::string>("idType");
         const std::string& cameraId = this->get<std::string>("cameraId");
         std::string cameraIp;
+
+        // ArvInterface (e.g arv_interface_update_device_list) is not thread safe, thus I create
+        // here a class level lock.
+        boost::mutex::scoped_lock lock(AravisCamera::m_connect_mtx);
 
         if (idType == "IP") { // IP address
             cameraIp = cameraId;
@@ -744,8 +753,6 @@ namespace karabo {
 
         }
 
-        this->clear_stream();
-        this->clear_camera();
         GError* error = nullptr;
         m_camera = arv_camera_new(cameraIp.c_str(), &error);
 
@@ -791,7 +798,7 @@ namespace karabo {
         KARABO_LOG_INFO << message;
 
         // Connect the control-lost signal
-        g_signal_connect(arv_camera_get_device(m_camera), "control-lost", G_CALLBACK(AravisCamera::control_lost_cb), static_cast<void*>(this));
+        g_signal_connect(m_device, "control-lost", G_CALLBACK(AravisCamera::control_lost_cb), static_cast<void*>(this));
 
         // Verify whether horizontal and vertical flip are available on the camera
         m_is_flip_x_available = this->is_flip_x_available();
@@ -838,6 +845,7 @@ namespace karabo {
            m_post_connection_cb();
            m_post_connection_cb = 0;
         }
+
         this->updateState(State::ON);
         m_failed_connections = 0;
         m_reconnect_timer.expires_from_now(boost::posix_time::seconds(5l));
@@ -846,25 +854,25 @@ namespace karabo {
 
 
     void AravisCamera::connection_failed_helper(const std::string& message, const std::string& detailed_msg) {
+        const std::string& deviceId = this->getInstanceId();
+
         if (m_failed_connections < 1) {
             // Only log first error message
             KARABO_LOG_ERROR << message;
             this->set("status", message);
             if (!detailed_msg.empty()) {
-                KARABO_LOG_FRAMEWORK_ERROR << detailed_msg;
+                KARABO_LOG_FRAMEWORK_ERROR << deviceId << ": " << detailed_msg;
             }
         } else {
             KARABO_LOG_DEBUG << message;
             if (!detailed_msg.empty()) {
-                KARABO_LOG_FRAMEWORK_DEBUG << detailed_msg;
+                KARABO_LOG_FRAMEWORK_DEBUG << deviceId << ": " << detailed_msg;
             }
         }
 
-        // Increase counter, and reset objects
+        // Increase counter, and clear objects
         ++m_failed_connections;
-        m_camera = nullptr;
-        m_device = nullptr;
-        m_parser = nullptr;
+        this->clear_camera();
 
         // Try reconnecting after some time
         m_reconnect_timer.expires_from_now(boost::posix_time::seconds(5l));
@@ -874,17 +882,18 @@ namespace karabo {
 
     bool AravisCamera::set_auto_packet_size() {
         GError* error = nullptr;
+        const std::string& deviceId = this->getInstanceId();
 
         const guint packetSize = arv_camera_gv_auto_packet_size(m_camera, &error);
         if (error != nullptr) {
-            KARABO_LOG_FRAMEWORK_ERROR << "arv_camera_gv_auto_packet_size failed: " << error->message;
+            KARABO_LOG_FRAMEWORK_ERROR << deviceId << ": arv_camera_gv_auto_packet_size failed: " << error->message;
             g_clear_error(&error);
             return false; // failure
         }
 
         arv_camera_gv_set_packet_size(m_camera, packetSize, &error);
         if (error != nullptr) {
-            KARABO_LOG_FRAMEWORK_ERROR << "arv_camera_gv_set_packet_size failed: " << error->message;
+            KARABO_LOG_FRAMEWORK_ERROR << deviceId << ": arv_camera_gv_set_packet_size failed: " << error->message;
             g_clear_error(&error);
             return false; // failure
         }
@@ -895,7 +904,7 @@ namespace karabo {
 
     bool AravisCamera::set_region(int x, int y, int width, int height) {
         GError* error = nullptr;
-
+        const std::string& deviceId = this->getInstanceId();
         // Get bounds
         gint xmin, xmax, ymin, ymax, wmin, wmax, hmin, hmax;
         arv_camera_get_x_offset_bounds(m_camera, &xmin, &xmax, &error);
@@ -910,7 +919,7 @@ namespace karabo {
         }
 
         if (error != nullptr) {
-            KARABO_LOG_FRAMEWORK_ERROR << "Could not get ROI bounds: " << error->message;
+            KARABO_LOG_FRAMEWORK_ERROR << deviceId << "Could not get ROI bounds: " << error->message;
             g_clear_error(&error);
             return false; // failure
         }
@@ -937,7 +946,7 @@ namespace karabo {
 
         arv_camera_set_region(m_camera, x, y, width, height, &error);
         if (error != nullptr) {
-            KARABO_LOG_FRAMEWORK_ERROR << "arv_camera_set_region failed: " << error->message;
+            KARABO_LOG_FRAMEWORK_ERROR << deviceId << ": arv_camera_set_region failed: " << error->message;
             g_clear_error(&error);
             return false; // failure
         }
@@ -948,6 +957,7 @@ namespace karabo {
 
     bool AravisCamera::set_binning(int bin_x, int bin_y) {
         GError* error = nullptr;
+        const std::string& deviceId = this->getInstanceId();
 
         // Get bounds
         gint xmin, xmax, ymin, ymax;
@@ -957,7 +967,7 @@ namespace karabo {
         }
 
         if (error != nullptr) {
-            KARABO_LOG_FRAMEWORK_ERROR << "Could not get binning bounds: " << error->message;
+            KARABO_LOG_FRAMEWORK_ERROR << deviceId << ": Could not get binning bounds: " << error->message;
             g_clear_error(&error);
             return false; // failure
         }
@@ -970,7 +980,7 @@ namespace karabo {
 
         arv_camera_set_binning(m_camera, bin_x, bin_y, &error);
         if (error != nullptr) {
-            KARABO_LOG_FRAMEWORK_ERROR << "arv_camera_set_binning failed: " << error->message;
+            KARABO_LOG_FRAMEWORK_ERROR << deviceId << ": arv_camera_set_binning failed: " << error->message;
             g_clear_error(&error);
             return false; // failure
         }
@@ -981,13 +991,14 @@ namespace karabo {
 
     bool AravisCamera::set_exposure_time(double exposure_time) {
         GError* error = nullptr;
+        const std::string& deviceId = this->getInstanceId();
 
         // Get bounds
         double tmin, tmax;
         arv_camera_get_exposure_time_bounds(m_camera, &tmin, &tmax, &error);
 
         if (error != nullptr) {
-            KARABO_LOG_FRAMEWORK_ERROR << "arv_camera_get_exposure_time_bounds failed: " << error->message;
+            KARABO_LOG_FRAMEWORK_ERROR << deviceId << ": arv_camera_get_exposure_time_bounds failed: " << error->message;
             g_clear_error(&error);
             return false; // failure
         }
@@ -1003,7 +1014,7 @@ namespace karabo {
 
         arv_camera_set_exposure_time(m_camera, exposure_time, &error);
         if (error != nullptr) {
-            KARABO_LOG_FRAMEWORK_ERROR << "arv_camera_set_exposure_time failed: " << error->message;
+            KARABO_LOG_FRAMEWORK_ERROR << deviceId << ": arv_camera_set_exposure_time failed: " << error->message;
             g_clear_error(&error);
             return false; // failure
         }
@@ -1014,6 +1025,7 @@ namespace karabo {
 
     bool AravisCamera::set_frame_rate(bool enable, double frame_rate) {
         GError* error = nullptr;
+        const std::string& deviceId = this->getInstanceId();
 
         if (enable) {
             // set frame rate
@@ -1022,7 +1034,7 @@ namespace karabo {
                 // If no valid rate is provided, the one on the camera is re-applied
                 frame_rate = arv_camera_get_frame_rate(m_camera, &error);
                 if (error != nullptr) {
-                    KARABO_LOG_FRAMEWORK_ERROR << "arv_camera_get_frame_rate failed: " << error->message;
+                    KARABO_LOG_FRAMEWORK_ERROR << deviceId << ": arv_camera_get_frame_rate failed: " << error->message;
                     g_clear_error(&error);
                     return false; // failure
                 }
@@ -1031,7 +1043,7 @@ namespace karabo {
             // read the current trigger selector
             const std::string& triggerSelector = arv_device_get_string_feature_value(m_device, "TriggerSelector", &error);
             if (error != nullptr) {
-                KARABO_LOG_FRAMEWORK_ERROR << "arv_device_get_string_feature_value failed: " << error->message;
+                KARABO_LOG_FRAMEWORK_ERROR << deviceId << ": arv_device_get_string_feature_value failed: " << error->message;
                 g_clear_error(&error);
                 return false; // failure
             }
@@ -1040,7 +1052,7 @@ namespace karabo {
             guint n_triggers;
             const char** triggerSelectorOptions = arv_camera_dup_available_triggers(m_camera, &n_triggers, &error);
             if (error != nullptr) {
-                KARABO_LOG_FRAMEWORK_ERROR << "arv_camera_dup_available_triggers failed: " << error->message;
+                KARABO_LOG_FRAMEWORK_ERROR << deviceId << ": arv_camera_dup_available_triggers failed: " << error->message;
                 g_clear_error(&error);
                 return false; // failure
             }
@@ -1059,7 +1071,7 @@ namespace karabo {
             }
 
             if (error != nullptr) {
-                KARABO_LOG_FRAMEWORK_ERROR << "Could not get TriggerModes: " << error->message;
+                KARABO_LOG_FRAMEWORK_ERROR << deviceId << ": Could not get TriggerModes: " << error->message;
                 g_clear_error(&error);
                 return false; // failure
             }
@@ -1067,7 +1079,7 @@ namespace karabo {
             // N.B. this function will set triggerMode to "Off" on all the selectors
             arv_camera_set_frame_rate(m_camera, frame_rate, &error);
             if (error != nullptr) {
-                KARABO_LOG_FRAMEWORK_ERROR << "arv_camera_set_frame_rate failed: " << error->message;
+                KARABO_LOG_FRAMEWORK_ERROR << deviceId << ": arv_camera_set_frame_rate failed: " << error->message;
                 g_clear_error(&error);
                 return false; // failure
             }
@@ -1082,7 +1094,7 @@ namespace karabo {
             }
 
             if (error != nullptr) {
-                KARABO_LOG_FRAMEWORK_ERROR << "Could not restore TriggerModes: " << error->message;
+                KARABO_LOG_FRAMEWORK_ERROR << deviceId << ": Could not restore TriggerModes: " << error->message;
                 g_clear_error(&error);
                 return false; // failure
             }
@@ -1090,7 +1102,7 @@ namespace karabo {
             // restore trigger selector
             arv_device_set_string_feature_value(m_device, "TriggerSelector", triggerSelector.c_str(), &error);
             if (error != nullptr) {
-                KARABO_LOG_FRAMEWORK_ERROR << "Could not restore TriggerSelector: " << error->message;
+                KARABO_LOG_FRAMEWORK_ERROR << deviceId << ": Could not restore TriggerSelector: " << error->message;
                 g_clear_error(&error);
                 return false; // failure
             }
@@ -1098,7 +1110,7 @@ namespace karabo {
         } else { // enable == false
             arv_device_set_boolean_feature_value(m_device, "AcquisitionFrameRateEnable", false, &error);
             if (error != nullptr) {
-                KARABO_LOG_FRAMEWORK_ERROR << "Could not set AcquisitionFrameRateEnable: " << error->message;
+                KARABO_LOG_FRAMEWORK_ERROR << deviceId << ": Could not set AcquisitionFrameRateEnable: " << error->message;
                 g_clear_error(&error);
                 return false; // failure
             }
@@ -1110,22 +1122,23 @@ namespace karabo {
 
     bool AravisCamera::get_gain(double& gain) {
         GError* error = nullptr;
+        const std::string& deviceId = this->getInstanceId();
 
         // Get bounds
         double gmin, gmax;
         arv_camera_get_gain_bounds(m_camera, &gmin, &gmax, &error);
         if (error != nullptr) {
-            KARABO_LOG_FRAMEWORK_ERROR << "arv_camera_get_gain_bounds failed: " << error->message;
+            KARABO_LOG_FRAMEWORK_ERROR << deviceId << ": arv_camera_get_gain_bounds failed: " << error->message;
             g_clear_error(&error);
             return false; // failure
         } else if (gmin >= gmax) {
-            KARABO_LOG_FRAMEWORK_ERROR << "gmin >= gmax";
+            KARABO_LOG_FRAMEWORK_ERROR << deviceId << ": gmin >= gmax";
             return false;
         }
 
         const double _gain = arv_camera_get_gain(m_camera, &error); // raw gain
         if (error != nullptr) {
-            KARABO_LOG_FRAMEWORK_ERROR << "arv_camera_get_gain failed: " << error->message;
+            KARABO_LOG_FRAMEWORK_ERROR << deviceId << ": arv_camera_get_gain failed: " << error->message;
             g_clear_error(&error);
             return false; // failure
         }
@@ -1137,12 +1150,13 @@ namespace karabo {
 
     bool AravisCamera::set_gain(double gain) {
         GError* error = nullptr;
+        const std::string& deviceId = this->getInstanceId();
 
         // Get bounds
         double gmin, gmax;
         arv_camera_get_gain_bounds(m_camera, &gmin, &gmax, &error);
         if (error != nullptr) {
-            KARABO_LOG_FRAMEWORK_ERROR << "arv_camera_get_gain_bounds failed: " << error->message;
+            KARABO_LOG_FRAMEWORK_ERROR << deviceId << ": arv_camera_get_gain_bounds failed: " << error->message;
             g_clear_error(&error);
             return false; // failure
         }
@@ -1152,7 +1166,7 @@ namespace karabo {
 
         arv_camera_set_gain(m_camera, _gain, &error);
         if (error != nullptr) {
-            KARABO_LOG_FRAMEWORK_ERROR << "arv_camera_set_gain failed: " << error->message;
+            KARABO_LOG_FRAMEWORK_ERROR << deviceId << ": arv_camera_set_gain failed: " << error->message;
             g_clear_error(&error);
             return false; // failure
         }
@@ -1163,12 +1177,13 @@ namespace karabo {
 
     bool AravisCamera::set_frame_count(gint64 frame_count) {
         GError* error = nullptr;
+        const std::string& deviceId = this->getInstanceId();
 
         // Get bounds
         gint64 fmin, fmax;
         arv_camera_get_frame_count_bounds(m_camera, &fmin, &fmax, &error);
         if (error != nullptr) {
-            KARABO_LOG_FRAMEWORK_ERROR << "arv_camera_get_frame_count_bounds failed: " << error->message;
+            KARABO_LOG_FRAMEWORK_ERROR << deviceId << ": arv_camera_get_frame_count_bounds failed: " << error->message;
             g_clear_error(&error);
             return false; // failure
         }
@@ -1179,7 +1194,7 @@ namespace karabo {
 
         arv_camera_set_frame_count(m_camera, frame_count, &error);
         if (error != nullptr) {
-            KARABO_LOG_FRAMEWORK_ERROR << "arv_camera_set_frame_count failed: " << error->message;
+            KARABO_LOG_FRAMEWORK_ERROR << deviceId << ": arv_camera_set_frame_count failed: " << error->message;
             g_clear_error(&error);
             return false; // failure
         }
@@ -1195,11 +1210,12 @@ namespace karabo {
         }
 
         GError* error = nullptr;
+        const std::string& deviceId = this->getInstanceId();
 
         if (configuration.has("packetDelay")) {
             arv_camera_gv_set_packet_delay(m_camera, configuration.get<long long>("packetDelay"), &error);
             if (error != nullptr) {
-                KARABO_LOG_FRAMEWORK_ERROR << "arv_camera_gv_set_packet_delay failed: " << error->message;
+                KARABO_LOG_FRAMEWORK_ERROR << deviceId << ": arv_camera_gv_set_packet_delay failed: " << error->message;
                 configuration.erase("packetDelay");
                 g_clear_error(&error);
             }
@@ -1216,7 +1232,7 @@ namespace karabo {
                 const guint packetSize = GET_PATH(configuration, "packetSize", int);
                 arv_camera_gv_set_packet_size(m_camera, packetSize, &error);
                 if (error != nullptr) {
-                    KARABO_LOG_FRAMEWORK_ERROR << "arv_camera_gv_set_packet_size failed: " << error->message;
+                    KARABO_LOG_FRAMEWORK_ERROR << deviceId << ": arv_camera_gv_set_packet_size failed: " << error->message;
                     if (configuration.has("packetSize")) configuration.erase("packetSize");
                     g_clear_error(&error);
                 }
@@ -1229,7 +1245,7 @@ namespace karabo {
             const char* pixelFormat = configuration.get<std::string>("pixelFormat").c_str();
             arv_camera_set_pixel_format_from_string(m_camera, pixelFormat, &error);
             if (error != nullptr) {
-                KARABO_LOG_FRAMEWORK_ERROR << "arv_camera_set_pixel_format_from_string failed: " << error->message;
+                KARABO_LOG_FRAMEWORK_ERROR << deviceId << ": arv_camera_set_pixel_format_from_string failed: " << error->message;
                 configuration.erase("pixelFormat");
                 g_clear_error(&error);
             }
@@ -1325,7 +1341,7 @@ namespace karabo {
 
             arv_camera_set_gain_auto(m_camera, autoGain, &error);
             if (error != nullptr) {
-                KARABO_LOG_FRAMEWORK_ERROR << "arv_camera_set_gain_auto failed: " << error->message;
+                KARABO_LOG_FRAMEWORK_ERROR << deviceId << ": arv_camera_set_gain_auto failed: " << error->message;
                 configuration.erase("autoGain");
                 g_clear_error(&error);
             }
@@ -1344,7 +1360,7 @@ namespace karabo {
             const std::string& acquisitionMode = configuration.get<std::string>("acquisitionMode");
             arv_camera_set_acquisition_mode(m_camera, arv_acquisition_mode_from_string(acquisitionMode.c_str()), &error);
             if (error != nullptr) {
-                KARABO_LOG_FRAMEWORK_ERROR << "arv_camera_set_acquisition_mode failed: " << error->message;
+                KARABO_LOG_FRAMEWORK_ERROR << deviceId << ": arv_camera_set_acquisition_mode failed: " << error->message;
                 configuration.erase("acquisitionMode");
                 g_clear_error(&error);
             }
@@ -1446,7 +1462,7 @@ namespace karabo {
         arv_camera_get_region(m_camera, &x, &y, &width, &height, &error);
 
         if (error != nullptr) {
-            KARABO_LOG_FRAMEWORK_WARN << "arv_camera_get_region failed: " << error->message;
+            KARABO_LOG_FRAMEWORK_WARN << this->getInstanceId() << ": arv_camera_get_region failed: " << error->message;
             g_clear_error(&error);
             return false; // failure
         }
@@ -1467,7 +1483,7 @@ namespace karabo {
         arv_buffer_get_image_region(buffer, &x, &y, &width, &height);
         format = arv_buffer_get_image_pixel_format(buffer); // e.g. ARV_PIXEL_FORMAT_MONO_8
         // const guint32 frame_id = arv_buffer_get_frame_id(buffer);
-        // KARABO_LOG_FRAMEWORK_DEBUG << "Got frame " << frame_id;
+        // KARABO_LOG_FRAMEWORK_DEBUG << this->getInstanceId() << ": Got frame " << frame_id;
 
         return true;
     }
@@ -1551,7 +1567,7 @@ namespace karabo {
         const std::string message("Could not start acquisition");
 
         KARABO_LOG_ERROR << message;
-        KARABO_LOG_FRAMEWORK_ERROR << detailed_msg;
+        KARABO_LOG_FRAMEWORK_ERROR << this->getInstanceId() << ": " << detailed_msg;
         this->set("status", message);
         this->updateState(State::ERROR);
     }
@@ -1572,7 +1588,7 @@ namespace karabo {
         if (error != nullptr) {
             const std::string message("Could not stop acquisition");
             KARABO_LOG_ERROR << message;
-            KARABO_LOG_FRAMEWORK_ERROR << "arv_camera_stop_acquisition failed: " << error->message;
+            KARABO_LOG_FRAMEWORK_ERROR << this->getInstanceId() << ": arv_camera_stop_acquisition failed: " << error->message;
             g_clear_error(&error);
             h.set("status", message);
             this->set(h);
@@ -1600,7 +1616,7 @@ namespace karabo {
             if (triggerSource == "Software") {
                 arv_camera_software_trigger(m_camera, &error);
                 if (error != nullptr) {
-                    KARABO_LOG_FRAMEWORK_ERROR << "arv_camera_software_trigger failed: " << error->message;
+                    KARABO_LOG_FRAMEWORK_ERROR << this->getInstanceId() << ": arv_camera_software_trigger failed: " << error->message;
                     g_clear_error(&error);
                 }
             }
@@ -1632,9 +1648,9 @@ namespace karabo {
 
 
     void AravisCamera::clear_camera() {
-        if (m_camera != nullptr) {
-            g_clear_object(&m_camera);
-        }
+        g_clear_object(&m_camera);
+        m_device = nullptr; // Has been clearead by clearing m_camera
+        g_clear_object(&m_parser);
     }
 
 
@@ -1650,10 +1666,13 @@ namespace karabo {
 
 
     void AravisCamera::stream_cb(void *context, ArvStreamCallbackType type, ArvBuffer *buffer) {
+        Self* self = static_cast<Self*>(context);
+        const std::string& deviceId = self->getInstanceId();
+
         if (type == ARV_STREAM_CALLBACK_TYPE_INIT) {
-            KARABO_LOG_FRAMEWORK_DEBUG << "Init stream";
+            KARABO_LOG_FRAMEWORK_DEBUG << deviceId << ": Init stream";
                 if (!arv_make_thread_realtime(10) && !arv_make_thread_high_priority(-10)) {
-                    KARABO_LOG_FRAMEWORK_WARN << "Failed to make stream thread high priority";
+                    KARABO_LOG_FRAMEWORK_WARN << deviceId << ": Failed to make stream thread high priority";
                 }
         }
     }
@@ -1663,6 +1682,7 @@ namespace karabo {
         Self* self = static_cast<Self*>(context);
 
         const karabo::util::Timestamp dev_ts = self->getActualTimestamp();
+        const std::string& deviceId = self->getInstanceId();
 
         ArvBuffer* arv_buffer = arv_stream_pop_buffer(stream);
         if (arv_buffer == nullptr) {
@@ -1682,7 +1702,7 @@ namespace karabo {
                     return;
                 }
             } catch (const karabo::util::LogicException& e) {
-                KARABO_LOG_FRAMEWORK_ERROR << e.what();
+                KARABO_LOG_FRAMEWORK_ERROR << deviceId << ": " << e.what();
                 if (self->getState() == State::ACQUIRING) {
                     self->execute("stop");
                 }
@@ -1747,10 +1767,10 @@ namespace karabo {
                 // TODO RGB, YUV...
                 default:
                     if (self->m_pixelFormatOptions.find(pixel_format) != self->m_pixelFormatOptions.end()) {
-                        KARABO_LOG_FRAMEWORK_ERROR << "Format " << self->m_pixelFormatOptions[pixel_format]
+                        KARABO_LOG_FRAMEWORK_ERROR << deviceId << ": Format " << self->m_pixelFormatOptions[pixel_format]
                             << " is not yet supported";
                     } else {
-                        KARABO_LOG_FRAMEWORK_ERROR << "Format " << pixel_format << " is not yet supported";
+                        KARABO_LOG_FRAMEWORK_ERROR << deviceId << ": Format " << pixel_format << " is not yet supported";
                     }
 
                     if (self->getState() == State::ACQUIRING) {
@@ -1773,12 +1793,11 @@ namespace karabo {
         // Possibly use arv_gv_device_get_device_address (gv_device) to verify IP address
 
         const std::string message("Control of the camera " + self->get<std::string>("cameraId") + " is lost");
-        KARABO_LOG_FRAMEWORK_WARN << message;
-        // TODO possibly release resources
-        // NOTE 'self->clear_camera();' will seg fault
-        self->m_camera = nullptr;
-        self->m_device = nullptr;
-        self->m_parser = nullptr;
+        KARABO_LOG_FRAMEWORK_WARN << self->getInstanceId() << ": " << message;
+        // NOTE calling here g_object_clear(m_device) would seg fault.
+        //      By setting m_control_host, the 'connect' function will know that m_camera,
+        //      m_device and m_parser needs to be cleared.
+        self->m_control_lost = true;
 
         self->set("status", message);
         self->updateState(State::UNKNOWN);
@@ -1788,12 +1807,13 @@ namespace karabo {
     void AravisCamera::pollOnce(karabo::util::Hash& h) {
         bool success;
         GError* error = nullptr;
+        const std::string& deviceId = this->getInstanceId();
 
         const long long packetDelay = arv_camera_gv_get_packet_delay(m_camera, &error);
         if (error == nullptr) {
             h.set("packetDelay", packetDelay);
         } else {
-            KARABO_LOG_FRAMEWORK_WARN << "arv_camera_gv_get_packet_delay failed: " << error->message;
+            KARABO_LOG_FRAMEWORK_WARN << deviceId << ": arv_camera_gv_get_packet_delay failed: " << error->message;
             g_clear_error(&error);
         }
 
@@ -1801,7 +1821,7 @@ namespace karabo {
         if (error == nullptr) {
             h.set("packetSize", packetSize);
         } else {
-            KARABO_LOG_FRAMEWORK_WARN << "arv_camera_gv_get_packet_size failed: " << error->message;
+            KARABO_LOG_FRAMEWORK_WARN << deviceId << ": arv_camera_gv_get_packet_size failed: " << error->message;
             g_clear_error(&error);
         }
 
@@ -1821,7 +1841,7 @@ namespace karabo {
                 h.set("bin.x", dx);
                 h.set("bin.y", dy);
             } else {
-                KARABO_LOG_FRAMEWORK_WARN << "arv_camera_get_binning failed: " << error->message;
+                KARABO_LOG_FRAMEWORK_WARN << deviceId << ": arv_camera_get_binning failed: " << error->message;
                 g_clear_error(&error);
             }
         }
@@ -1830,7 +1850,7 @@ namespace karabo {
         if (error == nullptr) {
             h.set("pixelFormat", pixelFormat);
         } else {
-            KARABO_LOG_FRAMEWORK_WARN << "arv_camera_get_pixel_format_as_string failed: " << error->message;
+            KARABO_LOG_FRAMEWORK_WARN << deviceId << ": arv_camera_get_pixel_format_as_string failed: " << error->message;
             g_clear_error(&error);
         }
 
@@ -1839,7 +1859,7 @@ namespace karabo {
             if (error == nullptr) {
                 h.set("exposureTime", exposureTime);
             } else {
-                KARABO_LOG_FRAMEWORK_WARN << "arv_camera_get_exposure_time failed: " << error->message;
+                KARABO_LOG_FRAMEWORK_WARN << deviceId << ": arv_camera_get_exposure_time failed: " << error->message;
                 g_clear_error(&error);
             }
         }
@@ -1849,7 +1869,7 @@ namespace karabo {
             if (error == nullptr) {
                 h.set("triggerSelector", triggerSelector);
             } else {
-                KARABO_LOG_FRAMEWORK_WARN << "Could not get TriggerSelector: " << error->message;
+                KARABO_LOG_FRAMEWORK_WARN << deviceId << ": Could not get TriggerSelector: " << error->message;
                 g_clear_error(&error);
             }
 
@@ -1857,26 +1877,25 @@ namespace karabo {
             if (error == nullptr) {
                 h.set("triggerMode", triggerMode);
             } else {
-                KARABO_LOG_FRAMEWORK_WARN << "Could not get TriggerMode: " << error->message;
+                KARABO_LOG_FRAMEWORK_WARN << deviceId << ": Could not get TriggerMode: " << error->message;
                 g_clear_error(&error);
             }
 
             // Under certain circumstances, nullptr is returned for "TriggerSource"
             const char* triggerSourcePtr = arv_device_get_string_feature_value(m_device, "TriggerSource", &error);
             if (error != nullptr) {
-                KARABO_LOG_FRAMEWORK_WARN << "Could not get TriggerSource: " << error->message;
+                KARABO_LOG_FRAMEWORK_WARN << deviceId << ": Could not get TriggerSource: " << error->message;
                 g_clear_error(&error);
             } else if (triggerSourcePtr != nullptr) {
                 h.set("triggerSource", triggerSourcePtr);
             } else {
-                KARABO_LOG_FRAMEWORK_WARN << this->get<std::string>("deviceId")
-                    << ": cannot get trigger sources from the camera";
+                KARABO_LOG_FRAMEWORK_WARN << deviceId << ": cannot get trigger sources from the camera";
 
                 // Ensure that Karabo device and camera are in sync
                 const std::string& triggerSource = this->get<std::string>("triggerSource");
                 arv_device_set_string_feature_value(m_device, "TriggerSource", triggerSource.c_str(), &error);
                 if (error != nullptr) {
-                    KARABO_LOG_FRAMEWORK_WARN << "Could not set TriggerSource: " << error->message;
+                    KARABO_LOG_FRAMEWORK_WARN << deviceId << ": Could not set TriggerSource: " << error->message;
                     g_clear_error(&error);
                 }
             }
@@ -1885,7 +1904,7 @@ namespace karabo {
             if (error == nullptr) {
                 h.set("triggerActivation", triggerActivation);
             } else {
-                KARABO_LOG_FRAMEWORK_WARN << "Could not get TriggerActivation: " << error->message;
+                KARABO_LOG_FRAMEWORK_WARN << deviceId << ": Could not get TriggerActivation: " << error->message;
                 g_clear_error(&error);
             }
         }
@@ -1895,7 +1914,7 @@ namespace karabo {
             if (error == nullptr) {
                 h.set("frameRate.target", frameRate);
             } else {
-                KARABO_LOG_FRAMEWORK_WARN << "arv_camera_get_frame_rate failed: " << error->message;
+                KARABO_LOG_FRAMEWORK_WARN << deviceId << ": arv_camera_get_frame_rate failed: " << error->message;
                 g_clear_error(&error);
             }
         }
@@ -1906,7 +1925,7 @@ namespace karabo {
                 const std::string autoGainStr(arv_auto_to_string(autoGain));
                 h.set("autoGain", autoGainStr);
             } else {
-                KARABO_LOG_FRAMEWORK_WARN << "arv_camera_get_gain_auto failed: " << error->message;
+                KARABO_LOG_FRAMEWORK_WARN << deviceId << ": arv_camera_get_gain_auto failed: " << error->message;
                 g_clear_error(&error);
             }
         }
@@ -1924,7 +1943,7 @@ namespace karabo {
             const std::string acquisitionModeStr(arv_acquisition_mode_to_string(acquisitionMode));
             h.set("acquisitionMode", acquisitionModeStr);
         } else {
-            KARABO_LOG_FRAMEWORK_WARN << "arv_camera_get_acquisition_mode failed: " << error->message;
+            KARABO_LOG_FRAMEWORK_WARN << deviceId << ": arv_camera_get_acquisition_mode failed: " << error->message;
             g_clear_error(&error);
         }
 
@@ -1933,7 +1952,7 @@ namespace karabo {
             if (error == nullptr) {
                 h.set("frameCount", frameCount);
             } else {
-                KARABO_LOG_FRAMEWORK_WARN << "arv_camera_get_frame_count failed: " << error->message;
+                KARABO_LOG_FRAMEWORK_WARN << deviceId << ": arv_camera_get_frame_count failed: " << error->message;
                 g_clear_error(&error);
             }
         }
@@ -2030,12 +2049,13 @@ namespace karabo {
         }
 
         const std::string errorMsg("Could not update output schema");
+        const std::string& deviceId = this->getInstanceId();
         GError* error = nullptr;
 
         const ArvPixelFormat pixelFormat = arv_camera_get_pixel_format(m_camera, &error);
         if (error != nullptr) {
             KARABO_LOG_ERROR << errorMsg;
-            KARABO_LOG_FRAMEWORK_ERROR << "arv_camera_get_pixel_format failed: " << error->message;
+            KARABO_LOG_FRAMEWORK_ERROR << deviceId << ": arv_camera_get_pixel_format failed: " << error->message;
             g_clear_error(&error);
             this->set("status", errorMsg);
             return false; // failure
@@ -2107,7 +2127,7 @@ namespace karabo {
         int_options = arv_camera_dup_available_pixel_formats(m_camera, &n_int_values, &error);
         if (error != nullptr) {
             KARABO_LOG_ERROR << errorMsg;
-            KARABO_LOG_FRAMEWORK_ERROR << "arv_camera_dup_available_pixel_formats failed: " << error->message;
+            KARABO_LOG_FRAMEWORK_ERROR << deviceId << ": arv_camera_dup_available_pixel_formats failed: " << error->message;
             g_clear_error(&error);
             this->set("status", errorMsg);
             return false; // failure
@@ -2116,7 +2136,7 @@ namespace karabo {
         str_options = arv_camera_dup_available_pixel_formats_as_strings(m_camera, &n_str_values, &error);
         if (error != nullptr) {
             KARABO_LOG_ERROR << errorMsg;
-            KARABO_LOG_FRAMEWORK_ERROR << "arv_camera_dup_available_pixel_formats_as_strings failed: " << error->message;
+            KARABO_LOG_FRAMEWORK_ERROR << deviceId << ":arv_camera_dup_available_pixel_formats_as_strings failed: " << error->message;
             g_clear_error(&error);
             this->set("status", errorMsg);
             return false; // failure
@@ -2128,7 +2148,7 @@ namespace karabo {
                 m_pixelFormatOptions[int_options[i]] = str_options[i];
             }
         } else {
-            KARABO_LOG_FRAMEWORK_WARN << "Could not fill-up pixel_format_options map: different number of "
+            KARABO_LOG_FRAMEWORK_WARN << deviceId << ": Could not fill-up pixel_format_options map: different number of "
                 << "int and string options.";
         }
 
@@ -2166,7 +2186,7 @@ namespace karabo {
             str_options = arv_camera_dup_available_triggers(m_camera, &n_str_values, &error);
             if (error != nullptr) {
                 KARABO_LOG_ERROR << errorMsg;
-                KARABO_LOG_FRAMEWORK_ERROR << "arv_camera_dup_available_triggers failed: " << error->message;
+                KARABO_LOG_FRAMEWORK_ERROR << deviceId<< ": arv_camera_dup_available_triggers failed: " << error->message;
                 g_clear_error(&error);
                 this->set("status", errorMsg);
                 return false; // failure
@@ -2194,7 +2214,7 @@ namespace karabo {
             str_options = arv_camera_dup_available_trigger_sources(m_camera, &n_str_values, &error);
             if (error != nullptr) {
                 KARABO_LOG_ERROR << errorMsg;
-                KARABO_LOG_FRAMEWORK_ERROR << "arv_camera_dup_available_trigger_sources failed: " << error->message;
+                KARABO_LOG_FRAMEWORK_ERROR << deviceId << ": arv_camera_dup_available_trigger_sources failed: " << error->message;
                 g_clear_error(&error);
                 this->set("status", errorMsg);
                 return false; // failure
@@ -2208,7 +2228,7 @@ namespace karabo {
             g_free(str_options);
 
             if (n_str_values == 0) {
-                KARABO_LOG_FRAMEWORK_WARN << this->get<std::string>("deviceId")
+                KARABO_LOG_FRAMEWORK_WARN << deviceId
                     << ": could not get available trigger sources from camera. "
                     << "Using defaults.";
                 triggerSourceOptions = "Software,Line1";
@@ -2292,7 +2312,7 @@ namespace karabo {
 
         const std::string vendor = arv_camera_get_vendor_name(m_camera, &error);
         if (error != nullptr) {
-            KARABO_LOG_FRAMEWORK_WARN << "arv_camera_get_vendor_name failed: " << error->message;
+            KARABO_LOG_FRAMEWORK_WARN << deviceId << ": arv_camera_get_vendor_name failed: " << error->message;
             g_clear_error(&error);
         }
         if (vendor == "Basler") {

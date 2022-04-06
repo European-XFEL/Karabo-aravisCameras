@@ -146,7 +146,7 @@ namespace karabo {
         if (error == nullptr) m_reference_camera_timestamp = arv_camera_get_integer(m_camera, "TimestampLatchValue", &error);
 
         if (error != nullptr) {
-            KARABO_LOG_FRAMEWORK_ERROR << "Could not synchronize timestamp: " << error->message;
+            KARABO_LOG_FRAMEWORK_ERROR << this->getInstanceId() << ": Could not synchronize timestamp: " << error->message;
             g_clear_error(&error);
             return false; // failure
         }
@@ -156,6 +156,7 @@ namespace karabo {
 
     bool AravisBasler2Camera::configure_timestamp_chunk() {
         GError* error = nullptr;
+        const std::string& deviceId = this->getInstanceId();
 
         // Enable chunk data
         arv_camera_set_chunk_mode(m_camera, true, &error);
@@ -169,7 +170,7 @@ namespace karabo {
         if (error != nullptr) {
             arv_camera_set_chunk_mode(m_camera, false, nullptr);
             m_chunk_mode = false;
-            KARABO_LOG_FRAMEWORK_ERROR << "Could not enable timestamp chunk: " << error->message;
+            KARABO_LOG_FRAMEWORK_ERROR << deviceId << ": Could not enable timestamp chunk: " << error->message;
             g_clear_error(&error);
             return false; // failure
         }
@@ -195,6 +196,7 @@ namespace karabo {
     bool AravisBasler2Camera::is_flip_y_available() const {
         GError* error = nullptr;
         bool value;
+        const std::string& deviceId = this->getInstanceId();
 
         if (!keyHasAlias("flip.Y")) return false; // No alias means no feature available
 
@@ -203,7 +205,7 @@ namespace karabo {
         // Try to read flip.Y
         value = arv_device_get_boolean_feature_value(m_device, feature.c_str(), &error);
         if (error != nullptr) {
-            KARABO_LOG_FRAMEWORK_ERROR << "arv_device_get_boolean_feature_value failed: " << error->message;
+            KARABO_LOG_FRAMEWORK_ERROR << deviceId << ": arv_device_get_boolean_feature_value failed: " << error->message;
             g_clear_error(&error);
             return false;
         } else if (value) { // Flip Y is set, thus available
@@ -213,7 +215,7 @@ namespace karabo {
         // Try to set flip.Y
         arv_device_set_boolean_feature_value(m_device, feature.c_str(), true, &error);
         if (error != nullptr) {
-            KARABO_LOG_FRAMEWORK_ERROR << "arv_device_set_boolean_feature_value failed: " << error->message;
+            KARABO_LOG_FRAMEWORK_ERROR << deviceId << ": arv_device_set_boolean_feature_value failed: " << error->message;
             g_clear_error(&error);
             return false;
         }
@@ -221,7 +223,7 @@ namespace karabo {
         // Verify that flip.Y has been set: the parameter is available but not settable on some models
         value = arv_device_get_boolean_feature_value(m_device, feature.c_str(), &error);
         if (error != nullptr) {
-            KARABO_LOG_FRAMEWORK_ERROR << "arv_device_get_boolean_feature_value failed: " << error->message;
+            KARABO_LOG_FRAMEWORK_ERROR << deviceId << ": arv_device_get_boolean_feature_value failed: " << error->message;
             g_clear_error(&error);
             return false;
         } else if (value) { // Flip Y is set, thus available
@@ -240,7 +242,7 @@ namespace karabo {
         // Get timestamp from buffer
         const gint64 timestamp = arv_chunk_parser_get_integer_value(m_parser, buffer, "BslChunkTimestampValue", &error);
         if (error != nullptr) {
-            KARABO_LOG_FRAMEWORK_ERROR << "Could not read image timestamp: " << error->message;
+            KARABO_LOG_FRAMEWORK_ERROR << this->getInstanceId() << ": Could not read image timestamp: " << error->message;
             g_clear_error(&error);
             return false; // failure
         }

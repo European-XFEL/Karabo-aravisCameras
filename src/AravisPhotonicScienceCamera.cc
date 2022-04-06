@@ -465,7 +465,7 @@ namespace karabo {
         arv_device_set_string_feature_value(m_device, "GevTimestampCounterSelector", "GevTimestamp", &error);
 
         if (error != nullptr) {
-            KARABO_LOG_FRAMEWORK_ERROR << "Could not configure timestamp: " << error->message;
+            KARABO_LOG_FRAMEWORK_ERROR << this->getInstanceId() << ": Could not configure timestamp: " << error->message;
             g_clear_error(&error);
             return false; // failure
         }
@@ -482,7 +482,7 @@ namespace karabo {
         if (error == nullptr) height = arv_device_get_integer_feature_value(m_device, "Height", &error);
 
         if (error != nullptr) {
-            KARABO_LOG_FRAMEWORK_ERROR << "Could not get region: " << error->message;
+            KARABO_LOG_FRAMEWORK_ERROR << this->getInstanceId() << ": Could not get region: " << error->message;
             g_clear_error(&error);
             return false; // failure
         }
@@ -495,7 +495,7 @@ namespace karabo {
         arv_buffer_get_image_region(buffer, &x, &y, &width, &height);
         format = arv_buffer_get_image_pixel_format(buffer); // e.g. ARV_PIXEL_FORMAT_MONO_8
         // const guint32 frame_id = arv_buffer_get_frame_id(buffer);
-        // KARABO_LOG_FRAMEWORK_DEBUG << "Got frame " << frame_id;
+        // KARABO_LOG_FRAMEWORK_DEBUG << this->getInstanceId() << ": Got frame " << frame_id;
 
         return true;
     }
@@ -562,7 +562,7 @@ namespace karabo {
             arv_camera_software_trigger(m_camera, &error);
 
             if (error != nullptr) {
-                KARABO_LOG_FRAMEWORK_ERROR << "arv_camera_software_trigger failed: " << error->message;
+                KARABO_LOG_FRAMEWORK_ERROR << this->getInstanceId() << ": arv_camera_software_trigger failed: " << error->message;
                 g_clear_error(&error);
             }
         }
