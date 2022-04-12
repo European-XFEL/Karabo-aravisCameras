@@ -426,8 +426,8 @@ namespace karabo {
     AravisCamera::AravisCamera(const karabo::util::Hash& config) : CameraImageSource(config),
             m_arv_camera_trigger(true), m_is_device_reset_available(false), m_is_frame_count_available(false),
             m_camera(nullptr), m_device(nullptr), m_parser(nullptr), m_chunk_mode(false), m_post_connection_cb(0),
-            m_max_correction_time(0), m_min_latency(0.), m_max_latency(0.), m_connect(true),
-            m_reconnect_timer(EventLoop::getIOService()), m_failed_connections(0u), m_control_lost(false),
+            m_max_correction_time(0), m_min_latency(0.), m_max_latency(0.), m_connect(true), m_is_connected(false),
+            m_reconnect_timer(EventLoop::getIOService()), m_failed_connections(0u),
             m_poll_timer(EventLoop::getIOService()), m_stream(nullptr),
             m_is_binning_available(false), m_is_exposure_time_available(false),
             m_is_flip_x_available(false), m_is_flip_y_available(false),
@@ -484,6 +484,7 @@ namespace karabo {
 
     bool AravisCamera::isFeatureAvailable(const std::string& feature) {
         if (m_device != nullptr) {
+            boost::mutex::scoped_lock lock(m_camera_mtx);
             ArvGcNode* node = arv_device_get_feature(m_device, feature.c_str());
             if (node != nullptr) {
                 return true;
@@ -505,6 +506,7 @@ namespace karabo {
 
     bool AravisCamera::getBoolFeature(const std::string& feature, bool& value) {
         GError* error = nullptr;
+        boost::mutex::scoped_lock lock(m_camera_mtx);
         value = arv_device_get_boolean_feature_value(m_device, feature.c_str(), &error);
 
         if (error != nullptr) {
@@ -519,6 +521,7 @@ namespace karabo {
 
     bool AravisCamera::getStringFeature(const std::string& feature, std::string& value) {
         GError* error = nullptr;
+        boost::mutex::scoped_lock lock(m_camera_mtx);
         value = arv_device_get_string_feature_value(m_device, feature.c_str(), &error);
 
         if (error != nullptr) {
@@ -533,6 +536,7 @@ namespace karabo {
 
     bool AravisCamera::getIntFeature(const std::string& feature, long long& value) {
         GError* error = nullptr;
+        boost::mutex::scoped_lock lock(m_camera_mtx);
         value = arv_device_get_integer_feature_value(m_device, feature.c_str(), &error);
 
         if (error != nullptr) {
@@ -547,6 +551,7 @@ namespace karabo {
 
     bool AravisCamera::getFloatFeature(const std::string& feature, double& value) {
         GError* error = nullptr;
+        boost::mutex::scoped_lock lock(m_camera_mtx);
         value = arv_device_get_float_feature_value(m_device, feature.c_str(), &error);
 
         if (error != nullptr) {
@@ -562,6 +567,7 @@ namespace karabo {
     bool AravisCamera::setBoolFeature(const std::string& feature, bool& value) {
         GError* error = nullptr;
         const std::string& deviceId = this->getInstanceId();
+        boost::mutex::scoped_lock lock(m_camera_mtx);
         arv_device_set_boolean_feature_value(m_device, feature.c_str(), value, &error);
         if (error != nullptr) {
             KARABO_LOG_FRAMEWORK_ERROR << deviceId << ": arv_device_set_boolean_feature_value failed: " << error->message;
@@ -588,6 +594,7 @@ namespace karabo {
     bool AravisCamera::setStringFeature(const std::string& feature, std::string& value) {
         GError* error = nullptr;
         const std::string& deviceId = this->getInstanceId();
+        boost::mutex::scoped_lock lock(m_camera_mtx);
         arv_device_set_string_feature_value(m_device, feature.c_str(), value.c_str(), &error);
         if (error != nullptr) {
             KARABO_LOG_FRAMEWORK_ERROR << deviceId << ": arv_device_set_string_feature_value failed: " << error->message;
@@ -614,6 +621,7 @@ namespace karabo {
     bool AravisCamera::setIntFeature(const std::string& feature, long long& value) {
         GError* error = nullptr;
         const std::string& deviceId = this->getInstanceId();
+        boost::mutex::scoped_lock lock(m_camera_mtx);
         arv_device_set_integer_feature_value(m_device, feature.c_str(), value, &error);
         if (error != nullptr) {
             KARABO_LOG_FRAMEWORK_ERROR << deviceId << ": arv_device_set_integer_feature_value failed: " << error->message;
@@ -640,6 +648,7 @@ namespace karabo {
     bool AravisCamera::setFloatFeature(const std::string& feature, double& value) {
         GError* error = nullptr;
         const std::string& deviceId = this->getInstanceId();
+        boost::mutex::scoped_lock lock(m_camera_mtx);
         arv_device_set_float_feature_value(m_device, feature.c_str(), value, &error);
         if (error != nullptr) {
             KARABO_LOG_FRAMEWORK_ERROR << deviceId << ":arv_device_set_float_feature_value failed: " << error->message;
@@ -676,16 +685,15 @@ namespace karabo {
         if (ec == boost::asio::error::operation_aborted) return;
         if (!m_connect) return;
 
-        if (m_control_lost) {
-            // In case connection to the camera has been lost, we need to clear resources here
-            m_control_lost = false;
-            this->clear_camera();
-            this->clear_stream();
-        } else if (m_camera) {
+        if (m_is_connected) {
             // Already connected
             m_reconnect_timer.expires_from_now(boost::posix_time::seconds(5l));
             m_reconnect_timer.async_wait(karabo::util::bind_weak(&AravisCamera::connect, this, boost::asio::placeholders::error));
             return;
+        } else {
+            // Clear resources before trying reconnection
+            this->clear_camera();
+            this->clear_stream();
         }
 
         const std::string& idType = this->get<std::string>("idType");
@@ -723,7 +731,6 @@ namespace karabo {
                     break;
                 }
             }
-
             if (cameraIp.size() == 0) {
                 const std::string message("Could not discover any camera with serial: " + cameraId);
                 this->connection_failed_helper(message);
@@ -744,7 +751,6 @@ namespace karabo {
                     break;
                 }
             }
-
             if (cameraIp.size() == 0) {
                 const std::string message("Could not discover any camera with MAC: " + cameraId);
                 this->connection_failed_helper(message);
@@ -754,37 +760,42 @@ namespace karabo {
         }
 
         GError* error = nullptr;
-        m_camera = arv_camera_new(cameraIp.c_str(), &error);
 
-        if (error != nullptr) {
-            std::stringstream ss;
-            ss << "arv_camera_new failed: " << error->message; // detailed message
-            this->connection_failed_helper("Cannot connect to " + cameraIp, ss.str());
-            g_clear_error(&error);
-            return;
-        }
+        {
+            boost::mutex::scoped_lock lock(m_camera_mtx);
 
-        // ArvDevice gives more complete access to camera features
-        m_device = arv_camera_get_device(m_camera);
+            m_camera = arv_camera_new(cameraIp.c_str(), &error);
 
-        // Instantiation of a chunk parser
-        m_parser = arv_camera_create_chunk_parser(m_camera);
+            if (error != nullptr) {
+                std::stringstream ss;
+                ss << "arv_camera_new failed: " << error->message; // detailed message
+                this->connection_failed_helper("Cannot connect to " + cameraIp, ss.str());
+                g_clear_error(&error);
+                return;
+            }
 
-        // The following is a workaround due to the fact that ARAVIS 0.6 does
-        // not decode the AccessStatus from the discovery pong.
-        // Therefore we send a "TriggerSoftware" command, which is listed as
-        // "recommended" in the GenICam standard, and check for status.
-        // If it is not "SUCCESS" we assume it's because of another application
-        // controlling the camera.
-        arv_device_execute_command(m_device, "TriggerSoftware", &error);
-        if (error != nullptr) {
-            const std::string message("Cannot connect to " + cameraIp
-                + ". Another application might be controlling it.");
-            std::stringstream ss;
-            ss << "arv_device_execute_command failed: " << error->message; // detailed message
-            this->connection_failed_helper(message, ss.str());
-            g_clear_error(&error);
-            return;
+            // ArvDevice gives more complete access to camera features
+            m_device = arv_camera_get_device(m_camera);
+
+            // Instantiation of a chunk parser
+            m_parser = arv_camera_create_chunk_parser(m_camera);
+
+            // The following is a workaround due to the fact that ARAVIS 0.6 does
+            // not decode the AccessStatus from the discovery pong.
+            // Therefore we send a "TriggerSoftware" command, which is listed as
+            // "recommended" in the GenICam standard, and check for status.
+            // If it is not "SUCCESS" we assume it's because of another application
+            // controlling the camera.
+            arv_device_execute_command(m_device, "TriggerSoftware", &error);
+            if (error != nullptr) {
+                const std::string message("Cannot connect to " + cameraIp
+                    + ". Another application might be controlling it.");
+                std::stringstream ss;
+                ss << "arv_device_execute_command failed: " << error->message; // detailed message
+                this->connection_failed_helper(message, ss.str());
+                g_clear_error(&error);
+                return;
+            }
         }
 
         // Enable chunk data, if available on the camera
@@ -797,30 +808,33 @@ namespace karabo {
         h.set("status", message);
         KARABO_LOG_INFO << message;
 
-        // Connect the control-lost signal
-        g_signal_connect(m_device, "control-lost", G_CALLBACK(AravisCamera::control_lost_cb), static_cast<void*>(this));
+        {
+            boost::mutex::scoped_lock lock(m_camera_mtx);
+            // Connect the control-lost signal
+            g_signal_connect(m_device, "control-lost", G_CALLBACK(AravisCamera::control_lost_cb), static_cast<void*>(this));
+
+            // Read immutable properties
+            if (error == nullptr) h.set("camId", std::string(arv_camera_get_device_id(m_camera, &error)));
+            if (error == nullptr) h.set("vendor", std::string(arv_camera_get_vendor_name(m_camera, &error)));
+            if (error == nullptr) h.set("model", std::string(arv_camera_get_model_name(m_camera, &error)));
+
+            if (error == nullptr) {
+                gint width, height;
+                arv_camera_get_sensor_size(m_camera, &width, &height, &error);
+                h.set("width", width);
+                h.set("height", height);
+            }
+
+            if (error == nullptr) m_is_binning_available = arv_camera_is_binning_available(m_camera, &error);
+            if (error == nullptr) m_is_exposure_time_available = arv_camera_is_exposure_time_available(m_camera, &error);
+            if (error == nullptr) m_is_frame_rate_available = arv_camera_is_frame_rate_available(m_camera, &error);
+            if (error == nullptr) m_is_gain_available = arv_camera_is_gain_available(m_camera, &error);
+            if (error == nullptr) m_is_gain_auto_available = arv_camera_is_gain_auto_available(m_camera, &error);
+        }
 
         // Verify whether horizontal and vertical flip are available on the camera
         m_is_flip_x_available = this->is_flip_x_available();
         m_is_flip_y_available = this->is_flip_y_available();
-
-        // Read immutable properties
-        if (error == nullptr) h.set("camId", std::string(arv_camera_get_device_id(m_camera, &error)));
-        if (error == nullptr) h.set("vendor", std::string(arv_camera_get_vendor_name(m_camera, &error)));
-        if (error == nullptr) h.set("model", std::string(arv_camera_get_model_name(m_camera, &error)));
-
-        if (error == nullptr) {
-            gint width, height;
-            arv_camera_get_sensor_size(m_camera, &width, &height, &error);
-            h.set("width", width);
-            h.set("height", height);
-        }
-
-        if (error == nullptr) m_is_binning_available = arv_camera_is_binning_available(m_camera, &error);
-        if (error == nullptr) m_is_exposure_time_available = arv_camera_is_exposure_time_available(m_camera, &error);
-        if (error == nullptr) m_is_frame_rate_available = arv_camera_is_frame_rate_available(m_camera, &error);
-        if (error == nullptr) m_is_gain_available = arv_camera_is_gain_available(m_camera, &error);
-        if (error == nullptr) m_is_gain_auto_available = arv_camera_is_gain_auto_available(m_camera, &error);
 
         if (error != nullptr) {
             const std::string detailed_msg(error->message);
@@ -846,6 +860,7 @@ namespace karabo {
            m_post_connection_cb = 0;
         }
 
+        m_is_connected = true;
         this->updateState(State::ON);
         m_failed_connections = 0;
         m_reconnect_timer.expires_from_now(boost::posix_time::seconds(5l));
@@ -870,9 +885,8 @@ namespace karabo {
             }
         }
 
-        // Increase counter, and clear objects
+        // Increase counter
         ++m_failed_connections;
-        this->clear_camera();
 
         // Try reconnecting after some time
         m_reconnect_timer.expires_from_now(boost::posix_time::seconds(5l));
@@ -883,6 +897,7 @@ namespace karabo {
     bool AravisCamera::set_auto_packet_size() {
         GError* error = nullptr;
         const std::string& deviceId = this->getInstanceId();
+        boost::mutex::scoped_lock lock(m_camera_mtx);
 
         const guint packetSize = arv_camera_gv_auto_packet_size(m_camera, &error);
         if (error != nullptr) {
@@ -905,6 +920,8 @@ namespace karabo {
     bool AravisCamera::set_region(int x, int y, int width, int height) {
         GError* error = nullptr;
         const std::string& deviceId = this->getInstanceId();
+        boost::mutex::scoped_lock lock(m_camera_mtx);
+
         // Get bounds
         gint xmin, xmax, ymin, ymax, wmin, wmax, hmin, hmax;
         arv_camera_get_x_offset_bounds(m_camera, &xmin, &xmax, &error);
@@ -958,6 +975,7 @@ namespace karabo {
     bool AravisCamera::set_binning(int bin_x, int bin_y) {
         GError* error = nullptr;
         const std::string& deviceId = this->getInstanceId();
+        boost::mutex::scoped_lock lock(m_camera_mtx);
 
         // Get bounds
         gint xmin, xmax, ymin, ymax;
@@ -992,6 +1010,7 @@ namespace karabo {
     bool AravisCamera::set_exposure_time(double exposure_time) {
         GError* error = nullptr;
         const std::string& deviceId = this->getInstanceId();
+        boost::mutex::scoped_lock lock(m_camera_mtx);
 
         // Get bounds
         double tmin, tmax;
@@ -1026,6 +1045,7 @@ namespace karabo {
     bool AravisCamera::set_frame_rate(bool enable, double frame_rate) {
         GError* error = nullptr;
         const std::string& deviceId = this->getInstanceId();
+        boost::mutex::scoped_lock lock(m_camera_mtx);
 
         if (enable) {
             // set frame rate
@@ -1123,6 +1143,7 @@ namespace karabo {
     bool AravisCamera::get_gain(double& gain) {
         GError* error = nullptr;
         const std::string& deviceId = this->getInstanceId();
+        boost::mutex::scoped_lock lock(m_camera_mtx);
 
         // Get bounds
         double gmin, gmax;
@@ -1151,6 +1172,7 @@ namespace karabo {
     bool AravisCamera::set_gain(double gain) {
         GError* error = nullptr;
         const std::string& deviceId = this->getInstanceId();
+        boost::mutex::scoped_lock lock(m_camera_mtx);
 
         // Get bounds
         double gmin, gmax;
@@ -1178,6 +1200,7 @@ namespace karabo {
     bool AravisCamera::set_frame_count(gint64 frame_count) {
         GError* error = nullptr;
         const std::string& deviceId = this->getInstanceId();
+        boost::mutex::scoped_lock lock(m_camera_mtx);
 
         // Get bounds
         gint64 fmin, fmax;
@@ -1213,6 +1236,7 @@ namespace karabo {
         const std::string& deviceId = this->getInstanceId();
 
         if (configuration.has("packetDelay")) {
+            boost::mutex::scoped_lock lock(m_camera_mtx);
             arv_camera_gv_set_packet_delay(m_camera, configuration.get<long long>("packetDelay"), &error);
             if (error != nullptr) {
                 KARABO_LOG_FRAMEWORK_ERROR << deviceId << ": arv_camera_gv_set_packet_delay failed: " << error->message;
@@ -1230,6 +1254,7 @@ namespace karabo {
         } else {
             try {
                 const guint packetSize = GET_PATH(configuration, "packetSize", int);
+                boost::mutex::scoped_lock lock(m_camera_mtx);
                 arv_camera_gv_set_packet_size(m_camera, packetSize, &error);
                 if (error != nullptr) {
                     KARABO_LOG_FRAMEWORK_ERROR << deviceId << ": arv_camera_gv_set_packet_size failed: " << error->message;
@@ -1243,6 +1268,7 @@ namespace karabo {
 
         if (configuration.has("pixelFormat")) {
             const char* pixelFormat = configuration.get<std::string>("pixelFormat").c_str();
+            boost::mutex::scoped_lock lock(m_camera_mtx);
             arv_camera_set_pixel_format_from_string(m_camera, pixelFormat, &error);
             if (error != nullptr) {
                 KARABO_LOG_FRAMEWORK_ERROR << deviceId << ": arv_camera_set_pixel_format_from_string failed: " << error->message;
@@ -1338,7 +1364,7 @@ namespace karabo {
         if (configuration.has("autoGain") && m_is_gain_auto_available) {
             const std::string& autoGainStr = configuration.get<std::string>("autoGain");
             const ArvAuto autoGain = arv_auto_from_string(autoGainStr.c_str());
-
+            boost::mutex::scoped_lock lock(m_camera_mtx);
             arv_camera_set_gain_auto(m_camera, autoGain, &error);
             if (error != nullptr) {
                 KARABO_LOG_FRAMEWORK_ERROR << deviceId << ": arv_camera_set_gain_auto failed: " << error->message;
@@ -1358,6 +1384,7 @@ namespace karabo {
 
         if (configuration.has("acquisitionMode")) {
             const std::string& acquisitionMode = configuration.get<std::string>("acquisitionMode");
+            boost::mutex::scoped_lock lock(m_camera_mtx);
             arv_camera_set_acquisition_mode(m_camera, arv_acquisition_mode_from_string(acquisitionMode.c_str()), &error);
             if (error != nullptr) {
                 KARABO_LOG_FRAMEWORK_ERROR << deviceId << ": arv_camera_set_acquisition_mode failed: " << error->message;
@@ -1447,6 +1474,8 @@ namespace karabo {
 
 
     bool AravisCamera::configure_timestamp_chunk() {
+        boost::mutex::scoped_lock lock(m_camera_mtx);
+
         // By default chunk mode is disabled.
         // It can be enabled in the derived class, if the camera provides HW timestamping.
         arv_camera_set_chunk_mode(m_camera, false, nullptr);
@@ -1458,6 +1487,7 @@ namespace karabo {
 
     bool AravisCamera::get_region(gint& x, gint& y, gint& width, gint& height) const {
         GError* error = nullptr;
+        boost::mutex::scoped_lock lock(m_camera_mtx);
 
         arv_camera_get_region(m_camera, &x, &y, &width, &height, &error);
 
@@ -1515,48 +1545,56 @@ namespace karabo {
         m_timer.now();
         m_counter = 0;
         m_sum_latency = 0.;
-        m_stream = arv_camera_create_stream(m_camera, AravisCamera::stream_cb, static_cast<void*>(this), &error);
 
-        if (error != nullptr) {
-            std::stringstream ss;
-            ss << "arv_camera_create_stream failed: " << error->message;
-            this->acquire_failed_helper(ss.str());
-            g_clear_error(&error);
-            return;
-        }
+        {
+            boost::mutex::scoped_lock lock(m_camera_mtx);
+            m_stream = arv_camera_create_stream(m_camera, AravisCamera::stream_cb, static_cast<void*>(this), &error);
 
-        // Enable emission of signals (it's disabled by default for performance reason)
-        arv_stream_set_emit_signals(m_stream, TRUE);
+            if (error != nullptr) {
+                std::stringstream ss;
+                ss << "arv_camera_create_stream failed: " << error->message;
+                this->acquire_failed_helper(ss.str());
+                g_clear_error(&error);
+                return;
+            }
 
-        // Create and push buffers to the stream
-        const gint payload = arv_camera_get_payload(m_camera, &error);
-        if (error != nullptr) {
-            std::stringstream ss;
-            ss << "arv_camera_get_payload failed: " << error->message;
-            this->acquire_failed_helper(ss.str());
-            g_clear_error(&error);
-            return;
-        }
+            // Enable emission of signals (it's disabled by default for performance reason)
+            arv_stream_set_emit_signals(m_stream, TRUE);
 
-        for (size_t i = 0; i < 10; i++) {
-            arv_stream_push_buffer(m_stream, arv_buffer_new(payload, NULL));
+            // Create and push buffers to the stream
+            const gint payload = arv_camera_get_payload(m_camera, &error);
+
+            if (error != nullptr) {
+                std::stringstream ss;
+                ss << "arv_camera_get_payload failed: " << error->message;
+                this->acquire_failed_helper(ss.str());
+                g_clear_error(&error);
+                return;
+            }
+
+            for (size_t i = 0; i < 10; i++) {
+                arv_stream_push_buffer(m_stream, arv_buffer_new(payload, NULL));
+            }
         }
 
         // Synchronize timestamp.
         // This will be repeated periodically during acquisition
         this->synchronize_timestamp();
 
-        arv_camera_start_acquisition(m_camera, &error);
-        if (error != nullptr) {
-            std::stringstream ss;
-            ss << "arv_camera_start_acquisition failed: " << error->message;
-            this->acquire_failed_helper(ss.str());
-            g_clear_error(&error);
-            return;
-        }
+        {
+            boost::mutex::scoped_lock lock(m_camera_mtx);
+            arv_camera_start_acquisition(m_camera, &error);
+            if (error != nullptr) {
+                std::stringstream ss;
+                ss << "arv_camera_start_acquisition failed: " << error->message;
+                this->acquire_failed_helper(ss.str());
+                g_clear_error(&error);
+                return;
+            }
 
-        // Connect the 'new-buffer' signal
-        g_signal_connect(m_stream, "new-buffer", G_CALLBACK(AravisCamera::new_buffer_cb), static_cast<void*>(this));
+            // Connect the 'new-buffer' signal
+            g_signal_connect(m_stream, "new-buffer", G_CALLBACK(AravisCamera::new_buffer_cb), static_cast<void*>(this));
+        }
 
         this->set("status", "Acquisition started");
         this->updateState(State::ACQUIRING);
@@ -1583,6 +1621,7 @@ namespace karabo {
         h.set("latency.max", 0.);
 
         GError* error = nullptr;
+        boost::mutex::scoped_lock lock(m_camera_mtx);
         arv_camera_stop_acquisition(m_camera, &error);
 
         if (error != nullptr) {
@@ -1614,6 +1653,7 @@ namespace karabo {
         if (triggerMode == "On") {
             const std::string& triggerSource = this->get<std::string>("triggerSource");
             if (triggerSource == "Software") {
+                boost::mutex::scoped_lock lock(m_camera_mtx);
                 arv_camera_software_trigger(m_camera, &error);
                 if (error != nullptr) {
                     KARABO_LOG_FRAMEWORK_ERROR << this->getInstanceId() << ": arv_camera_software_trigger failed: " << error->message;
@@ -1648,6 +1688,7 @@ namespace karabo {
 
 
     void AravisCamera::clear_camera() {
+        boost::mutex::scoped_lock lock(m_camera_mtx);
         g_clear_object(&m_camera);
         m_device = nullptr; // Has been clearead by clearing m_camera
         g_clear_object(&m_parser);
@@ -1659,6 +1700,7 @@ namespace karabo {
             // TODO possibly disconnect signal, see https://developer.gnome.org/gobject/stable/gobject-Signals.html#g-signal-handler-disconnect
 
             // Disable emission of signals and free resource
+            boost::mutex::scoped_lock lock(m_camera_mtx);
             arv_stream_set_emit_signals(m_stream, FALSE);
             g_clear_object(&m_stream);
         }
@@ -1678,7 +1720,7 @@ namespace karabo {
     }
 
 
-    void AravisCamera::new_buffer_cb(ArvStream* stream, void* context) {
+    void AravisCamera::new_buffer_cb(ArvStream* stream, void* context) { // XXX is locking needed?
         Self* self = static_cast<Self*>(context);
 
         const karabo::util::Timestamp dev_ts = self->getActualTimestamp();
@@ -1794,10 +1836,8 @@ namespace karabo {
 
         const std::string message("Control of the camera " + self->get<std::string>("cameraId") + " is lost");
         KARABO_LOG_FRAMEWORK_WARN << self->getInstanceId() << ": " << message;
-        // NOTE calling here g_object_clear(m_device) would seg fault.
-        //      By setting m_control_host, the 'connect' function will know that m_camera,
-        //      m_device and m_parser needs to be cleared.
-        self->m_control_lost = true;
+        // NOTE calling here g_object_clear(m_camera) would seg fault.
+        self->m_is_connected = false;
 
         self->set("status", message);
         self->updateState(State::UNKNOWN);
@@ -1836,6 +1876,7 @@ namespace karabo {
 
         if (m_is_binning_available) {
             gint dx, dy;
+            boost::mutex::scoped_lock lock(m_camera_mtx);
             arv_camera_get_binning(m_camera, &dx, &dy, &error);
             if (error == nullptr) {
                 h.set("bin.x", dx);
@@ -1846,15 +1887,19 @@ namespace karabo {
             }
         }
 
-        const std::string pixelFormat = arv_camera_get_pixel_format_as_string(m_camera, &error);
-        if (error == nullptr) {
-            h.set("pixelFormat", pixelFormat);
-        } else {
-            KARABO_LOG_FRAMEWORK_WARN << deviceId << ": arv_camera_get_pixel_format_as_string failed: " << error->message;
-            g_clear_error(&error);
+        {
+            boost::mutex::scoped_lock lock(m_camera_mtx);
+            const std::string pixelFormat = arv_camera_get_pixel_format_as_string(m_camera, &error);
+            if (error == nullptr) {
+                h.set("pixelFormat", pixelFormat);
+            } else {
+                KARABO_LOG_FRAMEWORK_WARN << deviceId << ": arv_camera_get_pixel_format_as_string failed: " << error->message;
+                g_clear_error(&error);
+            }
         }
 
         if (m_is_exposure_time_available) {
+            boost::mutex::scoped_lock lock(m_camera_mtx);
             const double exposureTime = arv_camera_get_exposure_time(m_camera, &error);
             if (error == nullptr) {
                 h.set("exposureTime", exposureTime);
@@ -1865,6 +1910,7 @@ namespace karabo {
         }
 
         if (m_arv_camera_trigger) {
+            boost::mutex::scoped_lock lock(m_camera_mtx);
             const std::string triggerSelector = arv_device_get_string_feature_value(m_device, "TriggerSelector", &error);
             if (error == nullptr) {
                 h.set("triggerSelector", triggerSelector);
@@ -1910,6 +1956,7 @@ namespace karabo {
         }
 
         if (m_is_frame_rate_available) {
+            boost::mutex::scoped_lock lock(m_camera_mtx);
             const double frameRate = arv_camera_get_frame_rate(m_camera, &error);
             if (error == nullptr) {
                 h.set("frameRate.target", frameRate);
@@ -1920,6 +1967,7 @@ namespace karabo {
         }
 
         if (m_is_gain_auto_available) {
+            boost::mutex::scoped_lock lock(m_camera_mtx);
             const ArvAuto autoGain = arv_camera_get_gain_auto(m_camera, &error);
             if (error == nullptr) {
                 const std::string autoGainStr(arv_auto_to_string(autoGain));
@@ -1938,16 +1986,20 @@ namespace karabo {
             }
         }
 
-        const ArvAcquisitionMode acquisitionMode = arv_camera_get_acquisition_mode(m_camera, &error);
-        if (error == nullptr) {
-            const std::string acquisitionModeStr(arv_acquisition_mode_to_string(acquisitionMode));
-            h.set("acquisitionMode", acquisitionModeStr);
-        } else {
-            KARABO_LOG_FRAMEWORK_WARN << deviceId << ": arv_camera_get_acquisition_mode failed: " << error->message;
-            g_clear_error(&error);
+        {
+            boost::mutex::scoped_lock lock(m_camera_mtx);
+            const ArvAcquisitionMode acquisitionMode = arv_camera_get_acquisition_mode(m_camera, &error);
+            if (error == nullptr) {
+                const std::string acquisitionModeStr(arv_acquisition_mode_to_string(acquisitionMode));
+                h.set("acquisitionMode", acquisitionModeStr);
+            } else {
+                KARABO_LOG_FRAMEWORK_WARN << deviceId << ": arv_camera_get_acquisition_mode failed: " << error->message;
+                g_clear_error(&error);
+            }
         }
 
         if (m_is_frame_count_available) {
+            boost::mutex::scoped_lock lock(m_camera_mtx);
             const long long frameCount = arv_camera_get_frame_count(m_camera, &error);
             if (error == nullptr) {
                 h.set("frameCount", frameCount);
@@ -2048,9 +2100,10 @@ namespace karabo {
                 shape = {height, width};
         }
 
+        GError* error = nullptr;
         const std::string errorMsg("Could not update output schema");
         const std::string& deviceId = this->getInstanceId();
-        GError* error = nullptr;
+        boost::mutex::scoped_lock lock(m_camera_mtx);
 
         const ArvPixelFormat pixelFormat = arv_camera_get_pixel_format(m_camera, &error);
         if (error != nullptr) {
@@ -2367,6 +2420,7 @@ namespace karabo {
         // Disable features which are unavailable on the camera
         std::vector<std::string> paths;
         this->getPathsByTag(paths, "genicam,poll");
+        lock.unlock(); // must unlock m_camera_mtx before calling isFeatureAvailable(
         for (const auto& key : paths) {
             const std::string feature = this->getAliasFromKey<std::string>(key);
             if (!this->isFeatureAvailable(feature)) {
