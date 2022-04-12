@@ -170,6 +170,7 @@ namespace karabo {
                                            this->get<int>("bin.x"),
                                            this->get<int>("bin.y"));
 
+        boost::mutex::scoped_lock lock(m_camera_mtx);
         arv_camera_execute_command(m_camera, "DeviceReset", &error);
 
         if (error != nullptr) {
@@ -185,6 +186,7 @@ namespace karabo {
     bool AravisBaslerCamera::synchronize_timestamp() {
         GError* error = nullptr;
         const std::string& deviceId = this->getInstanceId();
+        boost::mutex::scoped_lock lock(m_camera_mtx);
 
         // XXX Possibly use PTP in the future
         m_ptp_enabled = false;
@@ -235,6 +237,7 @@ namespace karabo {
 
     bool AravisBaslerCamera::configure_timestamp_chunk() {
         GError* error = nullptr;
+        boost::mutex::scoped_lock lock(m_camera_mtx);
 
         // Enable chunk data
         arv_camera_set_chunk_mode(m_camera, true, &error);
@@ -259,6 +262,7 @@ namespace karabo {
 
     bool AravisBaslerCamera::get_shape_and_format(ArvBuffer* buffer, gint& width, gint& height, ArvPixelFormat& format) const {
         GError* error = nullptr;
+        boost::mutex::scoped_lock lock(m_camera_mtx);
 
         width = arv_chunk_parser_get_integer_value(m_parser, buffer, "ChunkWidth", &error);
         if (error == nullptr) height = arv_chunk_parser_get_integer_value(m_parser, buffer, "ChunkHeight", &error);
@@ -333,6 +337,8 @@ namespace karabo {
         if (!keyHasAlias("flip.Y")) return false; // No alias means no feature available
 
         const std::string feature = this->getAliasFromKey<std::string>("flip.Y");
+
+        boost::mutex::scoped_lock lock(m_camera_mtx);
 
         // Try to read flip.Y
         value = arv_device_get_boolean_feature_value(m_device, feature.c_str(), &error);

@@ -82,6 +82,7 @@ namespace karabo {
         bool m_is_device_reset_available;
         bool m_is_frame_count_available;
 
+        mutable boost::mutex m_camera_mtx; // Object lock is needed for ArvCamera etc.
         ArvCamera* m_camera;
         ArvDevice* m_device;
         ArvChunkParser* m_parser;
@@ -112,10 +113,11 @@ namespace karabo {
     private:
         void initialize();
 
-        bool m_connect;
+        bool m_connect; // Set to false to quit connection loop
+        bool m_is_connected;
         boost::asio::deadline_timer m_reconnect_timer;
         unsigned short m_failed_connections;
-        static boost::mutex m_connect_mtx;
+        static boost::mutex m_connect_mtx; // Class lock is needed for ArvInterface
 
         bool m_control_lost;
         void connect(const boost::system::error_code& ec);
