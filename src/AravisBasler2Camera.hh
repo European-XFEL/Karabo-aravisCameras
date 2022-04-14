@@ -1,7 +1,7 @@
 /*
  * Author: <parenti>
  *
- * Created on April 27, 2021, 18:00 PM
+ * Created on April 27, 2021,  6:00 PM
  *
  * Copyright (c) European XFEL GmbH Hamburg. All rights reserved.
  */
@@ -11,7 +11,7 @@
 
 #include <karabo/karabo.hpp>
 
-#include "AravisCamera.hh"
+#include "AravisBaslerBase.hh"
 #include "version.hh"  // provides ARAVISCAMERAS_PACKAGE_VERSION
 
 /**
@@ -19,7 +19,7 @@
  */
 namespace karabo {
 
-    class AravisBasler2Camera : public AravisCamera {
+    class AravisBasler2Camera final : public AravisBaslerBase {
     public:
 
         KARABO_CLASSINFO(AravisBasler2Camera, "AravisBasler2Camera", ARAVISCAMERAS_PACKAGE_VERSION)
@@ -28,27 +28,18 @@ namespace karabo {
 
         explicit AravisBasler2Camera(const karabo::util::Hash& config);
 
-        virtual ~AravisBasler2Camera();
+        virtual ~AravisBasler2Camera() = default;
 
-        virtual bool synchronize_timestamp() override;
+        bool get_shape_and_format(ArvBuffer* buffer, gint& width, gint& height, ArvPixelFormat& format) const override;
 
-        virtual bool configure_timestamp_chunk() override;
+        bool synchronize_timestamp() override;
 
-        virtual bool get_shape_and_format(ArvBuffer* buffer, gint& width, gint& height, ArvPixelFormat& format) const override;
+        bool configure_timestamp_chunk() override;
 
-        virtual bool get_timestamp(ArvBuffer* buffer, karabo::util::Timestamp& ts) override;
-
-        virtual bool is_flip_x_available() const override;
-
-        virtual bool is_flip_y_available() const override;
+        bool get_timestamp(ArvBuffer* buffer, karabo::util::Timestamp& ts) override;
 
     private:
-        virtual void resetCamera() override;
-
-        bool m_ptp_enabled;
-        int m_tick_frequency;
-        gint64 m_reference_camera_timestamp;
-
+        void resetCamera() override;
     };
 
 } // namespace karabo

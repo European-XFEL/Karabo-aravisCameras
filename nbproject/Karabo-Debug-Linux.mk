@@ -36,6 +36,7 @@ OBJECTDIR=${CND_BUILDDIR}/${CND_CONF}/${CND_PLATFORM}
 # Object Files
 OBJECTFILES= \
 	${OBJECTDIR}/src/AravisBasler2Camera.o \
+	${OBJECTDIR}/src/AravisBaslerBase.o \
 	${OBJECTDIR}/src/AravisBaslerCamera.o \
 	${OBJECTDIR}/src/AravisBaslerCameraScene.o \
 	${OBJECTDIR}/src/AravisCamera.o \
@@ -76,6 +77,11 @@ ${OBJECTDIR}/src/AravisBasler2Camera.o: src/AravisBasler2Camera.cc
 	${MKDIR} -p ${OBJECTDIR}/src
 	${RM} "$@.d"
 	$(COMPILE.cc) -g -I${KARABO}/include -I${KARABO}/extern/include `pkg-config --cflags karaboDependencies` -std=c++11  -fPIC  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/src/AravisBasler2Camera.o src/AravisBasler2Camera.cc
+
+${OBJECTDIR}/src/AravisBaslerBase.o: src/AravisBaslerBase.cc 
+	${MKDIR} -p ${OBJECTDIR}/src
+	${RM} "$@.d"
+	$(COMPILE.cc) -g -I${KARABO}/include -I${KARABO}/extern/include `pkg-config --cflags karaboDependencies` -std=c++11  -fPIC  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/src/AravisBaslerBase.o src/AravisBaslerBase.cc
 
 ${OBJECTDIR}/src/AravisBaslerCamera.o: src/AravisBaslerCamera.cc 
 	${MKDIR} -p ${OBJECTDIR}/src
@@ -130,6 +136,19 @@ ${OBJECTDIR}/src/AravisBasler2Camera_nomain.o: ${OBJECTDIR}/src/AravisBasler2Cam
 	    $(COMPILE.cc) -g -I${KARABO}/include -I${KARABO}/extern/include `pkg-config --cflags karaboDependencies` -std=c++11  -fPIC  -Dmain=__nomain -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/src/AravisBasler2Camera_nomain.o src/AravisBasler2Camera.cc;\
 	else  \
 	    ${CP} ${OBJECTDIR}/src/AravisBasler2Camera.o ${OBJECTDIR}/src/AravisBasler2Camera_nomain.o;\
+	fi
+
+${OBJECTDIR}/src/AravisBaslerBase_nomain.o: ${OBJECTDIR}/src/AravisBaslerBase.o src/AravisBaslerBase.cc 
+	${MKDIR} -p ${OBJECTDIR}/src
+	@NMOUTPUT=`${NM} ${OBJECTDIR}/src/AravisBaslerBase.o`; \
+	if (echo "$$NMOUTPUT" | ${GREP} '|main$$') || \
+	   (echo "$$NMOUTPUT" | ${GREP} 'T main$$') || \
+	   (echo "$$NMOUTPUT" | ${GREP} 'T _main$$'); \
+	then  \
+	    ${RM} "$@.d";\
+	    $(COMPILE.cc) -g -I${KARABO}/include -I${KARABO}/extern/include `pkg-config --cflags karaboDependencies` -std=c++11  -fPIC  -Dmain=__nomain -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/src/AravisBaslerBase_nomain.o src/AravisBaslerBase.cc;\
+	else  \
+	    ${CP} ${OBJECTDIR}/src/AravisBaslerBase.o ${OBJECTDIR}/src/AravisBaslerBase_nomain.o;\
 	fi
 
 ${OBJECTDIR}/src/AravisBaslerCamera_nomain.o: ${OBJECTDIR}/src/AravisBaslerCamera.o src/AravisBaslerCamera.cc 

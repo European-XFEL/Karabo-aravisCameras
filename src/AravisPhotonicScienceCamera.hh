@@ -19,7 +19,7 @@
  */
 namespace karabo {
 
-    class AravisPhotonicScienceCamera : public AravisCamera {
+    class AravisPhotonicScienceCamera final : public AravisCamera {
     public:
 
         KARABO_CLASSINFO(AravisPhotonicScienceCamera, "AravisPhotonicScienceCamera", ARAVISCAMERAS_PACKAGE_VERSION)
@@ -28,23 +28,23 @@ namespace karabo {
 
         explicit AravisPhotonicScienceCamera(const karabo::util::Hash& config);
 
-        virtual ~AravisPhotonicScienceCamera();
+        virtual ~AravisPhotonicScienceCamera() = default;
 
-        virtual bool synchronize_timestamp() override;
+        bool synchronize_timestamp() override;
 
-        virtual bool configure_timestamp_chunk() override;
+        bool configure_timestamp_chunk() override;
 
-        virtual bool get_region(gint& x, gint& y, gint& width, gint& height) const override;
+        bool get_region(gint& x, gint& y, gint& width, gint& height) const override;
 
-        virtual bool get_shape_and_format(ArvBuffer* buffer, gint& width, gint& height, ArvPixelFormat& format) const override;
+        bool get_shape_and_format(ArvBuffer* buffer, gint& width, gint& height, ArvPixelFormat& format) const override;
 
-        virtual bool get_timestamp(ArvBuffer* buffer, karabo::util::Timestamp& ts) override;
+        bool get_timestamp(ArvBuffer* buffer, karabo::util::Timestamp& ts) override;
 
-        virtual bool is_flip_y_available() const override;
+        bool is_flip_y_available() const override;
 
     private:
-        void configure(karabo::util::Hash& configuration); // Over-ride parent's method
-        virtual void trigger() override; // Over-ride parent's method
+        void configure(karabo::util::Hash& configuration) override;
+        void trigger() override;
 
         double m_reference_camera_timestamp;
 

@@ -4,6 +4,7 @@
     <logicalFolder name="HeaderFiles"
                    displayName="Header Files"
                    projectFiles="true">
+      <itemPath>src/AravisBaslerBase.hh</itemPath>
       <itemPath>src/AravisBasler2Camera.hh</itemPath>
       <itemPath>src/AravisBaslerCamera.hh</itemPath>
       <itemPath>src/AravisCamera.hh</itemPath>
@@ -16,6 +17,7 @@
     <logicalFolder name="SourceFiles"
                    displayName="Source Files"
                    projectFiles="true">
+      <itemPath>src/AravisBaslerBase.cc</itemPath>
       <itemPath>src/AravisBasler2Camera.cc</itemPath>
       <itemPath>src/AravisBaslerCamera.cc</itemPath>
       <itemPath>src/AravisBaslerCameraScene.cc</itemPath>
@@ -92,6 +94,10 @@
           </linkerLibItems>
         </linkerTool>
       </folder>
+      <item path="src/AravisBaslerBase.cc" ex="false" tool="1" flavor2="0">
+      </item>
+      <item path="src/AravisBaslerBase.hh" ex="false" tool="3" flavor2="0">
+      </item>
       <item path="src/AravisBasler2Camera.cc" ex="false" tool="1" flavor2="0">
       </item>
       <item path="src/AravisBasler2Camera.hh" ex="false" tool="3" flavor2="0">
@@ -179,6 +185,10 @@
           </linkerLibItems>
         </linkerTool>
       </folder>
+      <item path="src/AravisBaslerBase.cc" ex="false" tool="1" flavor2="0">
+      </item>
+      <item path="src/AravisBaslerBase.hh" ex="false" tool="3" flavor2="0">
+      </item>
       <item path="src/AravisBasler2Camera.cc" ex="false" tool="1" flavor2="0">
       </item>
       <item path="src/AravisBasler2Camera.hh" ex="false" tool="3" flavor2="0">

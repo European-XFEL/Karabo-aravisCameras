@@ -1,6 +1,6 @@
 // Copyright (c) European XFEL GmbH Schenefeld. All rights reserved.
 
-#include "AravisBaslerCamera.hh"
+#include "AravisBaslerBase.hh"
 
 using namespace std;
 USING_KARABO_NAMESPACES;
@@ -9,7 +9,7 @@ USING_KARABO_NAMESPACES;
 namespace karabo {
 
 
-    std::string AravisBaslerCamera::aravisBaslerScene() {
+    std::string AravisBaslerBase::aravisBaslerScene() {
         const std::string& instanceId = this->getInstanceId();
         std::ostringstream output;
         output << ""
