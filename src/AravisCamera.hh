@@ -87,7 +87,7 @@ namespace karabo {
         ArvDevice* m_device;
         ArvChunkParser* m_parser;
 
-        void configure(karabo::util::Hash& configuration);
+        virtual void configure(karabo::util::Hash& configuration);
 
         virtual bool synchronize_timestamp();
         virtual bool configure_timestamp_chunk();
@@ -119,7 +119,6 @@ namespace karabo {
         unsigned short m_failed_connections;
         static boost::mutex m_connect_mtx; // Class lock is needed for ArvInterface
 
-        bool m_control_lost;
         void connect(const boost::system::error_code& ec);
         void connection_failed_helper(const std::string& message, const std::string& detailed_msg="");
 

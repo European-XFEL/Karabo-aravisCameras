@@ -13,10 +13,9 @@ USING_KARABO_NAMESPACES
 
 namespace karabo {
 
-    // XXX The following does not compile in Karabo 2.8.1 - too many parameters
+    // XXX The following does not compile - too many parameters
     // KARABO_REGISTER_FOR_CONFIGURATION(BaseDevice, Device<>, ImageSource, CameraImageSource, AravisCamera, AravisPhotonicScienceCamera)
-    // XXX Work-around: do not register the base class parameters here,
-    //     do it in AravisPhotonicScienceCamera::expectedParameters
+    // XXX Work-around: do not register all parameters here, but call parent's expectedParameters in this class
     KARABO_REGISTER_FOR_CONFIGURATION(BaseDevice, Device<>, ImageSource, CameraImageSource, AravisPhotonicScienceCamera)
 
     void AravisPhotonicScienceCamera::expectedParameters(Schema& expected) {
@@ -434,9 +433,6 @@ namespace karabo {
     AravisPhotonicScienceCamera::AravisPhotonicScienceCamera(const karabo::util::Hash& config) : AravisCamera(config),
             m_reference_camera_timestamp(0.) {
         m_arv_camera_trigger = false; // Trigger properties to be accessed from non-standard paths
-    }
-
-    AravisPhotonicScienceCamera::~AravisPhotonicScienceCamera() {
     }
 
     bool AravisPhotonicScienceCamera::synchronize_timestamp() {
