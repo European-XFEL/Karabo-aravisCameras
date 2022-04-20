@@ -4,8 +4,8 @@
     <logicalFolder name="HeaderFiles"
                    displayName="Header Files"
                    projectFiles="true">
-      <itemPath>src/AravisBaslerBase.hh</itemPath>
       <itemPath>src/AravisBasler2Camera.hh</itemPath>
+      <itemPath>src/AravisBaslerBase.hh</itemPath>
       <itemPath>src/AravisBaslerCamera.hh</itemPath>
       <itemPath>src/AravisCamera.hh</itemPath>
       <itemPath>src/AravisPhotonicScienceCamera.hh</itemPath>
@@ -17,8 +17,8 @@
     <logicalFolder name="SourceFiles"
                    displayName="Source Files"
                    projectFiles="true">
-      <itemPath>src/AravisBaslerBase.cc</itemPath>
       <itemPath>src/AravisBasler2Camera.cc</itemPath>
+      <itemPath>src/AravisBaslerBase.cc</itemPath>
       <itemPath>src/AravisBaslerCamera.cc</itemPath>
       <itemPath>src/AravisBaslerCameraScene.cc</itemPath>
       <itemPath>src/AravisCamera.cc</itemPath>
@@ -54,12 +54,11 @@
       </toolsSet>
       <compileType>
         <ccTool>
-          <standard>8</standard>
           <incDir>
             <pElem>${KARABO}/include</pElem>
             <pElem>${KARABO}/extern/include</pElem>
           </incDir>
-          <commandLine>`pkg-config --cflags aravis-0.8`</commandLine>
+          <commandLine>-std=c++14 `pkg-config --cflags aravis-0.8`</commandLine>
         </ccTool>
         <linkerTool>
           <output>${CND_DISTDIR}/${CND_CONF}/${CND_PLATFORM}/libaravisCameras.${CND_DLIB_EXT}</output>
@@ -94,13 +93,13 @@
           </linkerLibItems>
         </linkerTool>
       </folder>
-      <item path="src/AravisBaslerBase.cc" ex="false" tool="1" flavor2="0">
-      </item>
-      <item path="src/AravisBaslerBase.hh" ex="false" tool="3" flavor2="0">
-      </item>
       <item path="src/AravisBasler2Camera.cc" ex="false" tool="1" flavor2="0">
       </item>
       <item path="src/AravisBasler2Camera.hh" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="src/AravisBaslerBase.cc" ex="false" tool="1" flavor2="0">
+      </item>
+      <item path="src/AravisBaslerBase.hh" ex="false" tool="3" flavor2="0">
       </item>
       <item path="src/AravisBaslerCamera.cc" ex="false" tool="1" flavor2="0">
       </item>
@@ -135,16 +134,14 @@
         </cTool>
         <ccTool>
           <developmentMode>5</developmentMode>
-          <standard>8</standard>
           <incDir>
             <pElem>${KARABO}/include</pElem>
             <pElem>${KARABO}/extern/include</pElem>
-            <pElem>${KARABO}/extern/include/aravis-0.6</pElem>
             <pElem>/usr/lib/x86_64-linux-gnu/glib-2.0/include</pElem>
             <pElem>/usr/lib64/glib-2.0/include</pElem>
             <pElem>/usr/include/glib-2.0</pElem>
           </incDir>
-          <commandLine>`pkg-config --cflags aravis-0.8`</commandLine>
+          <commandLine>-std=c++14 `pkg-config --cflags aravis-0.8`</commandLine>
         </ccTool>
         <fortranCompilerTool>
           <developmentMode>5</developmentMode>
@@ -185,13 +182,13 @@
           </linkerLibItems>
         </linkerTool>
       </folder>
-      <item path="src/AravisBaslerBase.cc" ex="false" tool="1" flavor2="0">
-      </item>
-      <item path="src/AravisBaslerBase.hh" ex="false" tool="3" flavor2="0">
-      </item>
       <item path="src/AravisBasler2Camera.cc" ex="false" tool="1" flavor2="0">
       </item>
       <item path="src/AravisBasler2Camera.hh" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="src/AravisBaslerBase.cc" ex="false" tool="1" flavor2="0">
+      </item>
+      <item path="src/AravisBaslerBase.hh" ex="false" tool="3" flavor2="0">
       </item>
       <item path="src/AravisBaslerCamera.cc" ex="false" tool="1" flavor2="0">
       </item>
