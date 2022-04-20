@@ -53,8 +53,8 @@ TESTFILES= \
 CFLAGS=
 
 # CC Compiler Flags
-CCFLAGS=`pkg-config --cflags aravis-0.8` 
-CXXFLAGS=`pkg-config --cflags aravis-0.8` 
+CCFLAGS=-std=c++14 `pkg-config --cflags aravis-0.8` 
+CXXFLAGS=-std=c++14 `pkg-config --cflags aravis-0.8` 
 
 # Fortran Compiler Flags
 FFLAGS=
@@ -76,32 +76,32 @@ ${CND_DISTDIR}/${CND_CONF}/${CND_PLATFORM}/libaravisCameras.${CND_DLIB_EXT}: ${O
 ${OBJECTDIR}/src/AravisBasler2Camera.o: src/AravisBasler2Camera.cc 
 	${MKDIR} -p ${OBJECTDIR}/src
 	${RM} "$@.d"
-	$(COMPILE.cc) -O2 -I${KARABO}/include -I${KARABO}/extern/include -I${KARABO}/extern/include/aravis-0.6 -I/usr/lib/x86_64-linux-gnu/glib-2.0/include -I/usr/lib64/glib-2.0/include -I/usr/include/glib-2.0 `pkg-config --cflags karaboDependencies` -std=c++11  -fPIC  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/src/AravisBasler2Camera.o src/AravisBasler2Camera.cc
+	$(COMPILE.cc) -O2 -I${KARABO}/include -I${KARABO}/extern/include -I${KARABO}/extern/include/aravis-0.6 -I/usr/lib/x86_64-linux-gnu/glib-2.0/include -I/usr/lib64/glib-2.0/include -I/usr/include/glib-2.0 `pkg-config --cflags karaboDependencies`   -fPIC  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/src/AravisBasler2Camera.o src/AravisBasler2Camera.cc
 
 ${OBJECTDIR}/src/AravisBaslerBase.o: src/AravisBaslerBase.cc 
 	${MKDIR} -p ${OBJECTDIR}/src
 	${RM} "$@.d"
-	$(COMPILE.cc) -O2 -I${KARABO}/include -I${KARABO}/extern/include -I${KARABO}/extern/include/aravis-0.6 -I/usr/lib/x86_64-linux-gnu/glib-2.0/include -I/usr/lib64/glib-2.0/include -I/usr/include/glib-2.0 `pkg-config --cflags karaboDependencies` -std=c++11  -fPIC  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/src/AravisBaslerBase.o src/AravisBaslerBase.cc
+	$(COMPILE.cc) -O2 -I${KARABO}/include -I${KARABO}/extern/include -I${KARABO}/extern/include/aravis-0.6 -I/usr/lib/x86_64-linux-gnu/glib-2.0/include -I/usr/lib64/glib-2.0/include -I/usr/include/glib-2.0 `pkg-config --cflags karaboDependencies`   -fPIC  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/src/AravisBaslerBase.o src/AravisBaslerBase.cc
 
 ${OBJECTDIR}/src/AravisBaslerCamera.o: src/AravisBaslerCamera.cc 
 	${MKDIR} -p ${OBJECTDIR}/src
 	${RM} "$@.d"
-	$(COMPILE.cc) -O2 -I${KARABO}/include -I${KARABO}/extern/include -I${KARABO}/extern/include/aravis-0.6 -I/usr/lib/x86_64-linux-gnu/glib-2.0/include -I/usr/lib64/glib-2.0/include -I/usr/include/glib-2.0 `pkg-config --cflags karaboDependencies` -std=c++11  -fPIC  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/src/AravisBaslerCamera.o src/AravisBaslerCamera.cc
+	$(COMPILE.cc) -O2 -I${KARABO}/include -I${KARABO}/extern/include -I${KARABO}/extern/include/aravis-0.6 -I/usr/lib/x86_64-linux-gnu/glib-2.0/include -I/usr/lib64/glib-2.0/include -I/usr/include/glib-2.0 `pkg-config --cflags karaboDependencies`   -fPIC  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/src/AravisBaslerCamera.o src/AravisBaslerCamera.cc
 
 ${OBJECTDIR}/src/AravisBaslerCameraScene.o: src/AravisBaslerCameraScene.cc 
 	${MKDIR} -p ${OBJECTDIR}/src
 	${RM} "$@.d"
-	$(COMPILE.cc) -O2 -I${KARABO}/include -I${KARABO}/extern/include -I${KARABO}/extern/include/aravis-0.6 -I/usr/lib/x86_64-linux-gnu/glib-2.0/include -I/usr/lib64/glib-2.0/include -I/usr/include/glib-2.0 `pkg-config --cflags karaboDependencies` -std=c++11  -fPIC  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/src/AravisBaslerCameraScene.o src/AravisBaslerCameraScene.cc
+	$(COMPILE.cc) -O2 -I${KARABO}/include -I${KARABO}/extern/include -I${KARABO}/extern/include/aravis-0.6 -I/usr/lib/x86_64-linux-gnu/glib-2.0/include -I/usr/lib64/glib-2.0/include -I/usr/include/glib-2.0 `pkg-config --cflags karaboDependencies`   -fPIC  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/src/AravisBaslerCameraScene.o src/AravisBaslerCameraScene.cc
 
 ${OBJECTDIR}/src/AravisCamera.o: src/AravisCamera.cc 
 	${MKDIR} -p ${OBJECTDIR}/src
 	${RM} "$@.d"
-	$(COMPILE.cc) -O2 -I${KARABO}/include -I${KARABO}/extern/include -I${KARABO}/extern/include/aravis-0.6 -I/usr/lib/x86_64-linux-gnu/glib-2.0/include -I/usr/lib64/glib-2.0/include -I/usr/include/glib-2.0 `pkg-config --cflags karaboDependencies` -std=c++11  -fPIC  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/src/AravisCamera.o src/AravisCamera.cc
+	$(COMPILE.cc) -O2 -I${KARABO}/include -I${KARABO}/extern/include -I${KARABO}/extern/include/aravis-0.6 -I/usr/lib/x86_64-linux-gnu/glib-2.0/include -I/usr/lib64/glib-2.0/include -I/usr/include/glib-2.0 `pkg-config --cflags karaboDependencies`   -fPIC  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/src/AravisCamera.o src/AravisCamera.cc
 
 ${OBJECTDIR}/src/AravisPhotonicScienceCamera.o: src/AravisPhotonicScienceCamera.cc 
 	${MKDIR} -p ${OBJECTDIR}/src
 	${RM} "$@.d"
-	$(COMPILE.cc) -O2 -I${KARABO}/include -I${KARABO}/extern/include -I${KARABO}/extern/include/aravis-0.6 -I/usr/lib/x86_64-linux-gnu/glib-2.0/include -I/usr/lib64/glib-2.0/include -I/usr/include/glib-2.0 `pkg-config --cflags karaboDependencies` -std=c++11  -fPIC  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/src/AravisPhotonicScienceCamera.o src/AravisPhotonicScienceCamera.cc
+	$(COMPILE.cc) -O2 -I${KARABO}/include -I${KARABO}/extern/include -I${KARABO}/extern/include/aravis-0.6 -I/usr/lib/x86_64-linux-gnu/glib-2.0/include -I/usr/lib64/glib-2.0/include -I/usr/include/glib-2.0 `pkg-config --cflags karaboDependencies`   -fPIC  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/src/AravisPhotonicScienceCamera.o src/AravisPhotonicScienceCamera.cc
 
 # Subprojects
 .build-subprojects:
@@ -116,13 +116,13 @@ ${TESTDIR}/TestFiles/f1: ${TESTDIR}/src/tests/CameraTest.o ${TESTDIR}/src/tests/
 ${TESTDIR}/src/tests/CameraTest.o: src/tests/CameraTest.cc 
 	${MKDIR} -p ${TESTDIR}/src/tests
 	${RM} "$@.d"
-	$(COMPILE.cc) -O2 -I${KARABO}/include -I${KARABO}/extern/include -I${KARABO}/extern/include/aravis-0.6 -I/usr/lib/x86_64-linux-gnu/glib-2.0/include -I/usr/lib64/glib-2.0/include -I/usr/include/glib-2.0 `pkg-config --cflags karaboDependencies` -std=c++11  -MMD -MP -MF "$@.d" -o ${TESTDIR}/src/tests/CameraTest.o src/tests/CameraTest.cc
+	$(COMPILE.cc) -O2 -I${KARABO}/include -I${KARABO}/extern/include -I${KARABO}/extern/include/aravis-0.6 -I/usr/lib/x86_64-linux-gnu/glib-2.0/include -I/usr/lib64/glib-2.0/include -I/usr/include/glib-2.0 `pkg-config --cflags karaboDependencies`   -MMD -MP -MF "$@.d" -o ${TESTDIR}/src/tests/CameraTest.o src/tests/CameraTest.cc
 
 
 ${TESTDIR}/src/tests/test_runner.o: src/tests/test_runner.cc 
 	${MKDIR} -p ${TESTDIR}/src/tests
 	${RM} "$@.d"
-	$(COMPILE.cc) -O2 -I${KARABO}/include -I${KARABO}/extern/include -I${KARABO}/extern/include/aravis-0.6 -I/usr/lib/x86_64-linux-gnu/glib-2.0/include -I/usr/lib64/glib-2.0/include -I/usr/include/glib-2.0 `pkg-config --cflags karaboDependencies` -std=c++11  -MMD -MP -MF "$@.d" -o ${TESTDIR}/src/tests/test_runner.o src/tests/test_runner.cc
+	$(COMPILE.cc) -O2 -I${KARABO}/include -I${KARABO}/extern/include -I${KARABO}/extern/include/aravis-0.6 -I/usr/lib/x86_64-linux-gnu/glib-2.0/include -I/usr/lib64/glib-2.0/include -I/usr/include/glib-2.0 `pkg-config --cflags karaboDependencies`   -MMD -MP -MF "$@.d" -o ${TESTDIR}/src/tests/test_runner.o src/tests/test_runner.cc
 
 
 ${OBJECTDIR}/src/AravisBasler2Camera_nomain.o: ${OBJECTDIR}/src/AravisBasler2Camera.o src/AravisBasler2Camera.cc 
@@ -133,7 +133,7 @@ ${OBJECTDIR}/src/AravisBasler2Camera_nomain.o: ${OBJECTDIR}/src/AravisBasler2Cam
 	   (echo "$$NMOUTPUT" | ${GREP} 'T _main$$'); \
 	then  \
 	    ${RM} "$@.d";\
-	    $(COMPILE.cc) -O2 -I${KARABO}/include -I${KARABO}/extern/include -I${KARABO}/extern/include/aravis-0.6 -I/usr/lib/x86_64-linux-gnu/glib-2.0/include -I/usr/lib64/glib-2.0/include -I/usr/include/glib-2.0 `pkg-config --cflags karaboDependencies` -std=c++11  -fPIC  -Dmain=__nomain -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/src/AravisBasler2Camera_nomain.o src/AravisBasler2Camera.cc;\
+	    $(COMPILE.cc) -O2 -I${KARABO}/include -I${KARABO}/extern/include -I${KARABO}/extern/include/aravis-0.6 -I/usr/lib/x86_64-linux-gnu/glib-2.0/include -I/usr/lib64/glib-2.0/include -I/usr/include/glib-2.0 `pkg-config --cflags karaboDependencies`   -fPIC  -Dmain=__nomain -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/src/AravisBasler2Camera_nomain.o src/AravisBasler2Camera.cc;\
 	else  \
 	    ${CP} ${OBJECTDIR}/src/AravisBasler2Camera.o ${OBJECTDIR}/src/AravisBasler2Camera_nomain.o;\
 	fi
@@ -146,7 +146,7 @@ ${OBJECTDIR}/src/AravisBaslerBase_nomain.o: ${OBJECTDIR}/src/AravisBaslerBase.o 
 	   (echo "$$NMOUTPUT" | ${GREP} 'T _main$$'); \
 	then  \
 	    ${RM} "$@.d";\
-	    $(COMPILE.cc) -O2 -I${KARABO}/include -I${KARABO}/extern/include -I${KARABO}/extern/include/aravis-0.6 -I/usr/lib/x86_64-linux-gnu/glib-2.0/include -I/usr/lib64/glib-2.0/include -I/usr/include/glib-2.0 `pkg-config --cflags karaboDependencies` -std=c++11  -fPIC  -Dmain=__nomain -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/src/AravisBaslerBase_nomain.o src/AravisBaslerBase.cc;\
+	    $(COMPILE.cc) -O2 -I${KARABO}/include -I${KARABO}/extern/include -I${KARABO}/extern/include/aravis-0.6 -I/usr/lib/x86_64-linux-gnu/glib-2.0/include -I/usr/lib64/glib-2.0/include -I/usr/include/glib-2.0 `pkg-config --cflags karaboDependencies`   -fPIC  -Dmain=__nomain -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/src/AravisBaslerBase_nomain.o src/AravisBaslerBase.cc;\
 	else  \
 	    ${CP} ${OBJECTDIR}/src/AravisBaslerBase.o ${OBJECTDIR}/src/AravisBaslerBase_nomain.o;\
 	fi
@@ -159,7 +159,7 @@ ${OBJECTDIR}/src/AravisBaslerCamera_nomain.o: ${OBJECTDIR}/src/AravisBaslerCamer
 	   (echo "$$NMOUTPUT" | ${GREP} 'T _main$$'); \
 	then  \
 	    ${RM} "$@.d";\
-	    $(COMPILE.cc) -O2 -I${KARABO}/include -I${KARABO}/extern/include -I${KARABO}/extern/include/aravis-0.6 -I/usr/lib/x86_64-linux-gnu/glib-2.0/include -I/usr/lib64/glib-2.0/include -I/usr/include/glib-2.0 `pkg-config --cflags karaboDependencies` -std=c++11  -fPIC  -Dmain=__nomain -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/src/AravisBaslerCamera_nomain.o src/AravisBaslerCamera.cc;\
+	    $(COMPILE.cc) -O2 -I${KARABO}/include -I${KARABO}/extern/include -I${KARABO}/extern/include/aravis-0.6 -I/usr/lib/x86_64-linux-gnu/glib-2.0/include -I/usr/lib64/glib-2.0/include -I/usr/include/glib-2.0 `pkg-config --cflags karaboDependencies`   -fPIC  -Dmain=__nomain -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/src/AravisBaslerCamera_nomain.o src/AravisBaslerCamera.cc;\
 	else  \
 	    ${CP} ${OBJECTDIR}/src/AravisBaslerCamera.o ${OBJECTDIR}/src/AravisBaslerCamera_nomain.o;\
 	fi
@@ -172,7 +172,7 @@ ${OBJECTDIR}/src/AravisBaslerCameraScene_nomain.o: ${OBJECTDIR}/src/AravisBasler
 	   (echo "$$NMOUTPUT" | ${GREP} 'T _main$$'); \
 	then  \
 	    ${RM} "$@.d";\
-	    $(COMPILE.cc) -O2 -I${KARABO}/include -I${KARABO}/extern/include -I${KARABO}/extern/include/aravis-0.6 -I/usr/lib/x86_64-linux-gnu/glib-2.0/include -I/usr/lib64/glib-2.0/include -I/usr/include/glib-2.0 `pkg-config --cflags karaboDependencies` -std=c++11  -fPIC  -Dmain=__nomain -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/src/AravisBaslerCameraScene_nomain.o src/AravisBaslerCameraScene.cc;\
+	    $(COMPILE.cc) -O2 -I${KARABO}/include -I${KARABO}/extern/include -I${KARABO}/extern/include/aravis-0.6 -I/usr/lib/x86_64-linux-gnu/glib-2.0/include -I/usr/lib64/glib-2.0/include -I/usr/include/glib-2.0 `pkg-config --cflags karaboDependencies`   -fPIC  -Dmain=__nomain -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/src/AravisBaslerCameraScene_nomain.o src/AravisBaslerCameraScene.cc;\
 	else  \
 	    ${CP} ${OBJECTDIR}/src/AravisBaslerCameraScene.o ${OBJECTDIR}/src/AravisBaslerCameraScene_nomain.o;\
 	fi
@@ -185,7 +185,7 @@ ${OBJECTDIR}/src/AravisCamera_nomain.o: ${OBJECTDIR}/src/AravisCamera.o src/Arav
 	   (echo "$$NMOUTPUT" | ${GREP} 'T _main$$'); \
 	then  \
 	    ${RM} "$@.d";\
-	    $(COMPILE.cc) -O2 -I${KARABO}/include -I${KARABO}/extern/include -I${KARABO}/extern/include/aravis-0.6 -I/usr/lib/x86_64-linux-gnu/glib-2.0/include -I/usr/lib64/glib-2.0/include -I/usr/include/glib-2.0 `pkg-config --cflags karaboDependencies` -std=c++11  -fPIC  -Dmain=__nomain -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/src/AravisCamera_nomain.o src/AravisCamera.cc;\
+	    $(COMPILE.cc) -O2 -I${KARABO}/include -I${KARABO}/extern/include -I${KARABO}/extern/include/aravis-0.6 -I/usr/lib/x86_64-linux-gnu/glib-2.0/include -I/usr/lib64/glib-2.0/include -I/usr/include/glib-2.0 `pkg-config --cflags karaboDependencies`   -fPIC  -Dmain=__nomain -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/src/AravisCamera_nomain.o src/AravisCamera.cc;\
 	else  \
 	    ${CP} ${OBJECTDIR}/src/AravisCamera.o ${OBJECTDIR}/src/AravisCamera_nomain.o;\
 	fi
@@ -198,7 +198,7 @@ ${OBJECTDIR}/src/AravisPhotonicScienceCamera_nomain.o: ${OBJECTDIR}/src/AravisPh
 	   (echo "$$NMOUTPUT" | ${GREP} 'T _main$$'); \
 	then  \
 	    ${RM} "$@.d";\
-	    $(COMPILE.cc) -O2 -I${KARABO}/include -I${KARABO}/extern/include -I${KARABO}/extern/include/aravis-0.6 -I/usr/lib/x86_64-linux-gnu/glib-2.0/include -I/usr/lib64/glib-2.0/include -I/usr/include/glib-2.0 `pkg-config --cflags karaboDependencies` -std=c++11  -fPIC  -Dmain=__nomain -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/src/AravisPhotonicScienceCamera_nomain.o src/AravisPhotonicScienceCamera.cc;\
+	    $(COMPILE.cc) -O2 -I${KARABO}/include -I${KARABO}/extern/include -I${KARABO}/extern/include/aravis-0.6 -I/usr/lib/x86_64-linux-gnu/glib-2.0/include -I/usr/lib64/glib-2.0/include -I/usr/include/glib-2.0 `pkg-config --cflags karaboDependencies`   -fPIC  -Dmain=__nomain -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/src/AravisPhotonicScienceCamera_nomain.o src/AravisPhotonicScienceCamera.cc;\
 	else  \
 	    ${CP} ${OBJECTDIR}/src/AravisPhotonicScienceCamera.o ${OBJECTDIR}/src/AravisPhotonicScienceCamera_nomain.o;\
 	fi
