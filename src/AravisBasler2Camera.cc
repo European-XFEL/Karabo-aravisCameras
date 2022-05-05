@@ -27,6 +27,12 @@ namespace karabo {
                 .setNewOptions("Mono8,Mono10,Mono10p,Mono12,Mono12p")
                 .setNewDefaultValue("Mono12p")
                 .commit();
+
+        // This class supports the following models: ace2 (Area Scan)
+        const std::vector<std::string> supportedModels = {"a2A"};
+        OVERWRITE_ELEMENT(expected).key("supportedModels")
+                .setNewDefaultValue(supportedModels)
+                .commit();
     }
 
     AravisBasler2Camera::AravisBasler2Camera(const karabo::util::Hash& config) : AravisBaslerBase(config) {

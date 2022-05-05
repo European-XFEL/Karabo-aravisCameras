@@ -185,12 +185,26 @@ namespace karabo {
 
         STRING_ELEMENT(expected).key("vendor")
                 .displayedName("Vendor Name")
+                .description("The vendor of the camera.")
+                .readOnly().initialValue("")
+                .commit();
+
+        STRING_ELEMENT(expected).key("supportedVendor")
+                .displayedName("Supported Vendor")
+                .description("The vendor supported by this Karabo device.")
                 .readOnly().initialValue("")
                 .commit();
 
         STRING_ELEMENT(expected).key("model")
                 .displayedName("Model Name")
+                .description("The model of the camera.")
                 .readOnly().initialValue("")
+                .commit();
+
+        VECTOR_STRING_ELEMENT(expected).key("supportedModels")
+                .displayedName("Supported Models")
+                .description("The camera models supported by this Karabo device.")
+                .readOnly().initialValue({})
                 .commit();
 
         INT32_ELEMENT(expected).key("width")
@@ -702,7 +716,7 @@ namespace karabo {
 
         // ArvInterface (e.g arv_interface_update_device_list) is not thread safe, thus I create
         // here a class level lock.
-        boost::mutex::scoped_lock lock(AravisCamera::m_connect_mtx);
+        boost::mutex::scoped_lock class_lock(AravisCamera::m_connect_mtx);
 
         if (idType == "IP") { // IP address
             cameraIp = cameraId;
@@ -760,6 +774,7 @@ namespace karabo {
         }
 
         GError* error = nullptr;
+        Hash h; // For the bulk update
 
         {
             boost::mutex::scoped_lock lock(m_camera_mtx);
@@ -774,11 +789,27 @@ namespace karabo {
                 return;
             }
 
+            // Read immutable properties
+            if (error == nullptr) h.set("camId", std::string(arv_camera_get_device_id(m_camera, &error)));
+            const std::string vendor(arv_camera_get_vendor_name(m_camera, &error));
+            if (error == nullptr) h.set("vendor", vendor);
+            const std::string model(arv_camera_get_model_name(m_camera, &error));
+            if (error == nullptr) h.set("model", model);
+
+            const bool is_supported = verify_vendor_and_model(vendor, model);
+            if (!is_supported) {
+                this->set(h);
+                // Must unlock before 'clear_camera' is called
+                lock.unlock();
+                this->clear_camera();
+                // Camera not supported -> quit connection loop. It can be restarted by 'reset'
+                m_connect = false;
+                this->updateState(State::ERROR);
+                return;
+            }
+
             // ArvDevice gives more complete access to camera features
             m_device = arv_camera_get_device(m_camera);
-
-            // Instantiation of a chunk parser
-            m_parser = arv_camera_create_chunk_parser(m_camera);
 
             // The following is a workaround due to the fact that ARAVIS 0.6 does
             // not decode the AccessStatus from the discovery pong.
@@ -796,12 +827,13 @@ namespace karabo {
                 g_clear_error(&error);
                 return;
             }
+
+            // Instantiation of a chunk parser
+            m_parser = arv_camera_create_chunk_parser(m_camera);
         }
 
         // Enable chunk data, if available on the camera
         this->configure_timestamp_chunk();
-
-        Hash h;
 
         // Successfully connected!
         const std::string message("Connected to " + cameraIp);
@@ -812,11 +844,6 @@ namespace karabo {
             boost::mutex::scoped_lock lock(m_camera_mtx);
             // Connect the control-lost signal
             g_signal_connect(m_device, "control-lost", G_CALLBACK(AravisCamera::control_lost_cb), static_cast<void*>(this));
-
-            // Read immutable properties
-            if (error == nullptr) h.set("camId", std::string(arv_camera_get_device_id(m_camera, &error)));
-            if (error == nullptr) h.set("vendor", std::string(arv_camera_get_vendor_name(m_camera, &error)));
-            if (error == nullptr) h.set("model", std::string(arv_camera_get_model_name(m_camera, &error)));
 
             if (error == nullptr) {
                 gint width, height;
@@ -891,6 +918,29 @@ namespace karabo {
         // Try reconnecting after some time
         m_reconnect_timer.expires_from_now(boost::posix_time::seconds(5l));
         m_reconnect_timer.async_wait(karabo::util::bind_weak(&AravisCamera::connect, this, boost::asio::placeholders::error));
+    }
+
+
+    bool AravisCamera::verify_vendor_and_model(const std::string& vendor, const std::string& model) {
+        const std::string& supportedVendor = this->get<std::string>("supportedVendor");
+        if (vendor != supportedVendor) {
+            const std::string msg("This Karabo device does not support cameras from " + vendor);
+            KARABO_LOG_ERROR << msg;
+            this->set("status", msg);
+            return false;
+        }
+
+        const std::vector<std::string>& supportedModels = this->get<std::vector<std::string>>("supportedModels");
+        for (const std::string& supported : supportedModels) {
+            if (model.find(supported) == 0) {
+                return true;
+            }
+        }
+        const std::string msg("This Karabo device does not support model " + model +
+            " from " + vendor);
+        KARABO_LOG_ERROR << msg;
+        this->set("status", msg);
+        return false;
     }
 
 
@@ -1674,6 +1724,16 @@ namespace karabo {
 
 
     void AravisCamera::reset() {
+        if (!m_connect) {
+            // Connection task has been stopped
+            this->updateState(State::UNKNOWN);
+            this->set("status", "");
+            m_connect = true;
+            m_reconnect_timer.expires_from_now(boost::posix_time::milliseconds(1));
+            m_reconnect_timer.async_wait(karabo::util::bind_weak(&AravisCamera::connect, this, boost::asio::placeholders::error));
+            return;
+        }
+
         // Poll parameters and update options
         const bool success = this->updateOutputSchema();
         if (success) {

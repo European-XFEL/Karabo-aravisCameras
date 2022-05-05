@@ -22,6 +22,12 @@ namespace karabo {
         // Call parent's method, as KARABO_REGISTER_FOR_CONFIGURATION
         // does not compile with too many parameters
         AravisBaslerBase::expectedParameters(expected);
+
+        // This class supports the following models: ace, aviator, pilot (Area Scan) and racer (Line Scan)
+        const std::vector<std::string> supportedModels = {"acA", "avA", "piA", "raL"};
+        OVERWRITE_ELEMENT(expected).key("supportedModels")
+                .setNewDefaultValue(supportedModels)
+                .commit();
     }
 
     AravisBaslerCamera::AravisBaslerCamera(const karabo::util::Hash& config) : AravisBaslerBase(config) {
