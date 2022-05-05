@@ -35,6 +35,17 @@ namespace karabo {
                 .setNewTags({"genicam"})
                 .commit();
 
+        // This class supports camreas from Photonic Science
+        OVERWRITE_ELEMENT(expected).key("supportedVendor")
+                .setNewDefaultValue("Photonic Science")
+                .commit();
+
+        // This class supports the following models: 'SCOMS Camera'
+        const std::vector<std::string> supportedModels = {"SCMOS"};
+        OVERWRITE_ELEMENT(expected).key("supportedModels")
+                .setNewDefaultValue(supportedModels)
+                .commit();
+
         STRING_ELEMENT(expected).key("pixelSize")
             .alias("PixelSize")
             .tags("genicam")

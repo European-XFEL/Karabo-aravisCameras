@@ -32,6 +32,11 @@ namespace karabo {
                 .setNewTags({"genicam"})
                 .commit();
 
+        // This class supports cameras from Basler
+        OVERWRITE_ELEMENT(expected).key("supportedVendor")
+                .setNewDefaultValue("Basler")
+                .commit();
+
         OVERWRITE_ELEMENT(expected).key("flip.Y")
                 .setNewAlias("ReverseY")
                 .setNewTags({"genicam"})
