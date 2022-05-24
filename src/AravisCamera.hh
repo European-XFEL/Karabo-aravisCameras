@@ -111,6 +111,7 @@ namespace karabo {
         double m_max_latency;
 
     private:
+        bool m_need_schema_update;
         void initialize();
 
         bool m_connect; // Set to false to quit connection loop

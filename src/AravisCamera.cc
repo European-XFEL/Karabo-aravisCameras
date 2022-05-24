@@ -876,6 +876,7 @@ namespace karabo {
         Hash initialConfiguration = this->getCurrentConfiguration();
         this->configure(initialConfiguration);
 
+        m_need_schema_update = true; // Always update schema upon connection
         const bool success = this->updateOutputSchema();
         if (!success) {
             this->connection_failed_helper("Could not update output schema");
@@ -1316,6 +1317,15 @@ namespace karabo {
             }
         }
 
+        if (configuration.has("rotation")) {
+            // Rotation is done on software, thus nothing is set to the camera.
+            // Still, schema needs to be updated if rotation is changed by +- 90 degrees.
+            const int change = configuration.get<unsigned int>("rotation") - this->get<unsigned int>("rotation");
+            if (change % 180 != 0) {
+                m_need_schema_update = true;
+            }
+        }
+
         if (configuration.has("pixelFormat")) {
             const char* pixelFormat = configuration.get<std::string>("pixelFormat").c_str();
             boost::mutex::scoped_lock lock(m_camera_mtx);
@@ -1325,6 +1335,7 @@ namespace karabo {
                 configuration.erase("pixelFormat");
                 g_clear_error(&error);
             }
+            m_need_schema_update = true; // Schema update is needes as data type changed
         }
 
         if (configuration.has("roi")) {
@@ -1337,6 +1348,7 @@ namespace karabo {
             if (!success) {
                 configuration.erase("roi");
             }
+            m_need_schema_update = true; // Schema update is needed as image shape changed
         }
 
         if (configuration.has("bin") && m_is_binning_available) {
@@ -1347,6 +1359,7 @@ namespace karabo {
             if (!success) {
                 configuration.erase("bin");
             }
+            m_need_schema_update = true; // Schema update is needed as image shape changed
         }
 
         if (configuration.has("exposureTime") && m_is_exposure_time_available) {
@@ -1384,6 +1397,7 @@ namespace karabo {
                 if (!success) {
                     configuration.erase("triggerSelector");
                 }
+                m_need_schema_update = true; // Schema update is needed as trigger mode, source and activation must be updated.
             }
 
             if (configuration.has("triggerMode")) {
@@ -1453,6 +1467,7 @@ namespace karabo {
         }
 
         // Filter configuration by tag "genicam" and loop over it
+        // XXX possibly need a tag "update_schema" for parameter changing image "size"
         const Hash filtered = this->filterByTags(configuration, "genicam");
         const Schema schema = this->getFullSchema();
         std::vector<std::string> paths;
@@ -2139,8 +2154,9 @@ namespace karabo {
     }
 
     bool AravisCamera::updateOutputSchema() {
-        if (m_camera == nullptr) {
+        if (m_camera == nullptr || !m_need_schema_update) {
             // cannot query camera, as we are not connected
+            // OR no schema update is needed
             return true;
         }
 
@@ -2522,6 +2538,7 @@ namespace karabo {
         }
 
         this->appendSchema(schemaUpdate);
+        m_need_schema_update = false;
         return true; // success
     }
 
