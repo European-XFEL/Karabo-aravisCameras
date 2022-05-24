@@ -441,7 +441,7 @@ namespace karabo {
             m_arv_camera_trigger(true), m_is_device_reset_available(false), m_is_frame_count_available(false),
             m_camera(nullptr), m_device(nullptr), m_parser(nullptr), m_chunk_mode(false), m_post_connection_cb(0),
             m_max_correction_time(0), m_min_latency(0.), m_max_latency(0.), m_connect(true), m_is_connected(false),
-            m_reconnect_timer(EventLoop::getIOService()), m_failed_connections(0u),
+            m_reconnect_timer(EventLoop::getIOService()), m_failed_connections(0u), m_is_acquiring(false),
             m_poll_timer(EventLoop::getIOService()), m_stream(nullptr),
             m_is_binning_available(false), m_is_exposure_time_available(false),
             m_is_flip_x_available(false), m_is_flip_y_available(false),
@@ -888,8 +888,14 @@ namespace karabo {
            m_post_connection_cb = 0;
         }
 
+        if (m_is_acquiring) {
+            // Connection to the camera was lost during acquisition -> restart it
+            this->acquire();
+        } else {
+            this->updateState(State::ON);
+        }
+
         m_is_connected = true;
-        this->updateState(State::ON);
         m_failed_connections = 0;
         m_reconnect_timer.expires_from_now(boost::posix_time::seconds(5l));
         m_reconnect_timer.async_wait(karabo::util::bind_weak(&AravisCamera::connect, this, boost::asio::placeholders::error));
@@ -1661,6 +1667,7 @@ namespace karabo {
             g_signal_connect(m_stream, "new-buffer", G_CALLBACK(AravisCamera::new_buffer_cb), static_cast<void*>(this));
         }
 
+        m_is_acquiring = true;
         this->set("status", "Acquisition started");
         this->updateState(State::ACQUIRING);
     }
@@ -1688,6 +1695,7 @@ namespace karabo {
         GError* error = nullptr;
         boost::mutex::scoped_lock lock(m_camera_mtx);
         arv_camera_stop_acquisition(m_camera, &error);
+        m_is_acquiring = false;
 
         if (error != nullptr) {
             const std::string message("Could not stop acquisition");
