@@ -134,6 +134,7 @@ namespace karabo {
 
         boost::asio::deadline_timer m_poll_timer;
 
+        bool m_is_acquiring;
         void acquire();
         void acquire_failed_helper(const std::string& detailed_msg);
         void stop();
