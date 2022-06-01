@@ -171,6 +171,7 @@ namespace karabo {
         bool updateOutputSchema();
         template <class T>
         void writeOutputChannels(const void* data, gint width, gint height, const karabo::util::Timestamp& ts);
+        void updateFrameRate();
 
         bool resolveHostname(const std::string& hostname, std::string& ip_address, std::string& message);
 
