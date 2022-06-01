@@ -1934,9 +1934,24 @@ namespace karabo {
                         self->execute("stop");
                     }
             }
+
+            self->m_counter += 1;
+
         } else {
-            ++(self->m_errorCount);
+            self->m_errorCount += 1;
             self->m_lastError = lastError;
+        }
+
+        if (self->m_timer.elapsed() >= 1.) {
+            // Update frame rate and error count
+            self->updateFrameRate();
+
+            // Synchronize camera timestamp with timeserver.
+            // This shall be repetead regularly to correct for drift.
+            self->synchronize_timestamp();
+
+            self->m_timer.now();
+            self->m_counter = 0;
         }
 
         // Push back the buffer to the stream
@@ -2624,42 +2639,34 @@ namespace karabo {
 
         // Send image and metadata to output channel
         this->writeChannels(imgArray, binning, bpp, m_encoding, roiOffsets, ts, header);
+    }
 
-        m_counter += 1;
-        if (m_timer.elapsed() >= 1.) {
-            Hash h;
 
-            if (m_sum_latency > 0.) { // Only update if available
-                // Convert latency to ms
-                h.set("latency.min", 1000. * m_min_latency);
-                h.set("latency.max", 1000. * m_max_latency);
-                h.set("latency.mean", 1000. * m_sum_latency / m_counter);
-            }
+    void AravisCamera::updateFrameRate() {
+        Hash h;
 
-            // Calculate frame rate
-            const float frameRate = m_counter / m_timer.elapsed();
-            h.set("frameRate.actual", frameRate);
+        if (m_counter > 0) { // Only update if available
+            // Convert latency to ms
+            h.set("latency.min", 1000. * m_min_latency);
+            h.set("latency.max", 1000. * m_max_latency);
+            h.set("latency.mean", 1000. * m_sum_latency / m_counter);
+        }
 
-            // XXX This shall be moved to its own deadline_timer, otherwise there will be no
-            // updates in the Karabo devices, when all images are dropped by aravis.
-            if (m_errorCount != this->get<unsigned long long>("errorCount")) {
-                h.set("errorCount", m_errorCount);
-                if (m_bufferStatus.find(m_lastError) != m_bufferStatus.end()) {
-                    const std::string& lastError = m_bufferStatus[m_lastError];
-                    if (lastError != this->get<std::string>("lastError")) {
-                        h.set("lastError", lastError);
-                    }
+        // Calculate frame rate
+        const float frameRate = m_counter / m_timer.elapsed();
+        h.set("frameRate.actual", frameRate);
+
+        if (m_errorCount != this->get<unsigned long long>("errorCount")) {
+            h.set("errorCount", m_errorCount);
+            if (m_bufferStatus.find(m_lastError) != m_bufferStatus.end()) {
+                const std::string& lastError = m_bufferStatus[m_lastError];
+                if (lastError != this->get<std::string>("lastError")) {
+                    h.set("lastError", lastError);
                 }
             }
-
-            // Synchronize camera timestamp with timeserver.
-            // This shall be repetead regularly to correct for drift.
-            this->synchronize_timestamp();
-
-            m_timer.now();
-            m_counter = 0;
-            this->set(h);
         }
+
+        this->set(h);
     }
 
 
