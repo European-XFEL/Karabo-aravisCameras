@@ -142,6 +142,21 @@ namespace karabo {
                 .initialValue(0.)
                 .commit();
 
+        UINT64_ELEMENT(expected).key("errorCount")
+                .displayedName("Acq. Error Count")
+                .description("The number of errors occurred during acquisition.")
+                .unit(Unit::COUNT)
+                .readOnly()
+                .initialValue(0)
+                .commit();
+
+        STRING_ELEMENT(expected).key("lastError")
+                .displayedName("Last Acq. Error")
+                .description("Description of the last error occurred during acquisition.")
+                .readOnly()
+                .initialValue("")
+                .commit();
+
         NODE_ELEMENT(expected).key("latency")
                 .displayedName("Image Latency")
                 .description("The latency between the image timestamp - if available - and the "
@@ -446,9 +461,21 @@ namespace karabo {
             m_is_binning_available(false), m_is_exposure_time_available(false),
             m_is_flip_x_available(false), m_is_flip_y_available(false),
             m_is_frame_rate_available(false), m_is_gain_available(false), m_is_gain_auto_available(false),
+            m_errorCount(0), m_lastError(ARV_BUFFER_STATUS_SUCCESS),
             m_counter(0), m_sum_latency(0.) {
 
         m_max_correction_time = config.get<unsigned int>("maxCorrectionTime");
+
+        // From <arvbuffer.h>
+        m_bufferStatus[ARV_BUFFER_STATUS_UNKNOWN] = "Unknown status";
+        m_bufferStatus[ARV_BUFFER_STATUS_SUCCESS] = "The buffer contains a valid image";
+        m_bufferStatus[ARV_BUFFER_STATUS_CLEARED] = "The buffer is cleared";
+        m_bufferStatus[ARV_BUFFER_STATUS_TIMEOUT] = "Timeout was reached before all packets are received";
+        m_bufferStatus[ARV_BUFFER_STATUS_MISSING_PACKETS] = "Stream has missing packets";
+        m_bufferStatus[ARV_BUFFER_STATUS_WRONG_PACKET_ID] = "Stream has packet with wrong id";
+        m_bufferStatus[ARV_BUFFER_STATUS_SIZE_MISMATCH] = "The received image didn't fit in the buffer data space";
+        m_bufferStatus[ARV_BUFFER_STATUS_FILLING] = "The image is currently being filled";
+        m_bufferStatus[ARV_BUFFER_STATUS_ABORTED] = "The filling was aborted before completion";
 
         KARABO_SLOT(acquire);
         KARABO_SLOT(stop);
@@ -1688,6 +1715,8 @@ namespace karabo {
 
         Hash h;
         h.set("frameRate.actual", 0.);
+        h.set("errorCount", 0ull);
+        h.set("lastError", "");
         h.set("latency.mean", 0.);
         h.set("latency.min", 0.);
         h.set("latency.max", 0.);
@@ -1696,6 +1725,8 @@ namespace karabo {
         boost::mutex::scoped_lock lock(m_camera_mtx);
         arv_camera_stop_acquisition(m_camera, &error);
         m_is_acquiring = false;
+        m_errorCount = 0;
+        m_lastError = ARV_BUFFER_STATUS_SUCCESS;
 
         if (error != nullptr) {
             const std::string message("Could not stop acquisition");
@@ -1814,7 +1845,8 @@ namespace karabo {
             return;
         }
 
-        if (arv_buffer_get_status(arv_buffer) == ARV_BUFFER_STATUS_SUCCESS) {
+        ArvBufferStatus lastError = arv_buffer_get_status(arv_buffer);
+        if (lastError == ARV_BUFFER_STATUS_SUCCESS) {
             gint x, y, width, height;
             size_t buffer_size;
             ArvPixelFormat pixel_format;
@@ -1902,6 +1934,9 @@ namespace karabo {
                         self->execute("stop");
                     }
             }
+        } else {
+            ++(self->m_errorCount);
+            self->m_lastError = lastError;
         }
 
         // Push back the buffer to the stream
@@ -2604,6 +2639,18 @@ namespace karabo {
             // Calculate frame rate
             const float frameRate = m_counter / m_timer.elapsed();
             h.set("frameRate.actual", frameRate);
+
+            // XXX This shall be moved to its own deadline_timer, otherwise there will be no
+            // updates in the Karabo devices, when all images are dropped by aravis.
+            if (m_errorCount != this->get<unsigned long long>("errorCount")) {
+                h.set("errorCount", m_errorCount);
+                if (m_bufferStatus.find(m_lastError) != m_bufferStatus.end()) {
+                    const std::string& lastError = m_bufferStatus[m_lastError];
+                    if (lastError != this->get<std::string>("lastError")) {
+                        h.set("lastError", lastError);
+                    }
+                }
+            }
 
             // Synchronize camera timestamp with timeserver.
             // This shall be repetead regularly to correct for drift.

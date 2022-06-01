@@ -186,6 +186,10 @@ namespace karabo {
 
         std::unordered_map<ArvPixelFormat, std::string> m_pixelFormatOptions;
 
+        unsigned long long m_errorCount;
+        ArvBufferStatus m_lastError;
+        std::unordered_map<ArvBufferStatus, std::string> m_bufferStatus;
+
         karabo::util::Epochstamp m_timer;
         unsigned long m_counter;
         double m_sum_latency;
