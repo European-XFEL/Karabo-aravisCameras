@@ -78,6 +78,7 @@ namespace karabo {
         virtual void postReconfigure() override;
 
     protected:
+        bool m_is_base_class; // false for derived classes
         bool m_arv_camera_trigger; // Use arv_camera to access trigger
         bool m_is_device_reset_available;
         bool m_is_frame_count_available;

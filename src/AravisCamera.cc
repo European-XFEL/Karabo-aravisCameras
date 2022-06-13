@@ -453,9 +453,10 @@ namespace karabo {
 
 
     AravisCamera::AravisCamera(const karabo::util::Hash& config) : CameraImageSource(config),
-            m_arv_camera_trigger(true), m_is_device_reset_available(false), m_is_frame_count_available(false),
-            m_camera(nullptr), m_device(nullptr), m_parser(nullptr), m_chunk_mode(false), m_post_connection_cb(0),
-            m_max_correction_time(0), m_min_latency(0.), m_max_latency(0.), m_connect(true), m_is_connected(false),
+            m_is_base_class(true), m_arv_camera_trigger(true), m_is_device_reset_available(false),
+            m_is_frame_count_available(false), m_camera(nullptr), m_device(nullptr), m_parser(nullptr),
+            m_chunk_mode(false), m_post_connection_cb(0), m_max_correction_time(0), m_min_latency(0.),
+            m_max_latency(0.), m_connect(true), m_is_connected(false),
             m_reconnect_timer(EventLoop::getIOService()), m_failed_connections(0u), m_is_acquiring(false),
             m_poll_timer(EventLoop::getIOService()), m_stream(nullptr),
             m_is_binning_available(false), m_is_exposure_time_available(false),
@@ -823,7 +824,8 @@ namespace karabo {
             const std::string model(arv_camera_get_model_name(m_camera, &error));
             if (error == nullptr) h.set("model", model);
 
-            const bool is_supported = verify_vendor_and_model(vendor, model);
+            // For derived classes, check that vendor and model are supported by the class
+            const bool is_supported = m_is_base_class || verify_vendor_and_model(vendor, model);
             if (!is_supported) {
                 this->set(h);
                 // Must unlock before 'clear_camera' is called
