@@ -153,6 +153,7 @@ namespace karabo {
 
     AravisBaslerBase::AravisBaslerBase(const karabo::util::Hash& config) : AravisCamera(config),
             m_ptp_enabled(false), m_tick_frequency(0) {
+        m_is_base_class = false;
         this->registerScene(boost::bind(&AravisBaslerBase::aravisBaslerScene, this), "scene");
     }
 
