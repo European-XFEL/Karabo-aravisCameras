@@ -1108,14 +1108,16 @@ namespace karabo {
             return false; // failure
         }
 
+        // Apply upper bound
+        exposure_time = min(exposure_time, tmax);
+
         if (tmin > 0.) {
             // exposure time must be multiple of tmin
             exposure_time = tmin * floor(exposure_time / tmin);
         }
 
-        // Apply bounds
+        // Apply lower bound
         exposure_time = max(exposure_time, tmin);
-        exposure_time = min(exposure_time, tmax);
 
         arv_camera_set_exposure_time(m_camera, exposure_time, &error);
         if (error != nullptr) {
