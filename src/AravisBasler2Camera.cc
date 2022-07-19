@@ -56,6 +56,43 @@ namespace karabo {
         }
     }
 
+    bool AravisBasler2Camera::set_exposure_time(double exposure_time) {
+        GError* error = nullptr;
+        const std::string& deviceId = this->getInstanceId();
+        boost::mutex::scoped_lock lock(m_camera_mtx);
+
+        // Get bounds
+        double tmin, tmax;
+        arv_camera_get_exposure_time_bounds(m_camera, &tmin, &tmax, &error);
+
+        if (error != nullptr) {
+            KARABO_LOG_FRAMEWORK_ERROR << deviceId << ": arv_camera_get_exposure_time_bounds failed: " << error->message;
+            g_clear_error(&error);
+            return false; // failure
+        }
+
+        // Apply upper bound
+        exposure_time = min(exposure_time, tmax);
+
+        if (tmin > 0.) {
+            // exposure time must be congruent to tmin modulo 3 * tmin (or at least to 12 mod 36 in the case of QR 52162)
+            exposure_time = tmin + 3 * tmin * floor((exposure_time-tmin) / (3 * tmin));
+        }
+
+        // Apply lower bound
+        exposure_time = max(exposure_time, tmin);
+
+        arv_camera_set_exposure_time(m_camera, exposure_time, &error);
+        if (error != nullptr) {
+            KARABO_LOG_FRAMEWORK_ERROR << deviceId << ": arv_camera_set_exposure_time("
+                                       << exposure_time << ")" << error->message;
+            g_clear_error(&error);
+            return false; // failure
+        }
+
+        return true; // success
+    }
+
     bool AravisBasler2Camera::synchronize_timestamp() {
         GError* error = nullptr;
 

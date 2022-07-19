@@ -40,6 +40,7 @@ namespace karabo {
 
     private:
         void resetCamera() override;
+        bool set_exposure_time(double exposure_time) override;
     };
 
 } // namespace karabo

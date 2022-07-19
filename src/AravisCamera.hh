@@ -127,7 +127,7 @@ namespace karabo {
         bool verify_vendor_and_model(const std::string& vendor, const std::string& model);
 
         bool set_auto_packet_size();
-        bool set_exposure_time(double exposure_time);
+        virtual bool set_exposure_time(double exposure_time);
         bool set_frame_rate(bool enable, double frame_rate=0.);
         bool get_gain(double& gain);
         bool set_gain(double gain);
