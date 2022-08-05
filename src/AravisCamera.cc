@@ -525,6 +525,10 @@ namespace karabo {
 
 
     bool AravisCamera::isFeatureAvailable(const std::string& feature) {
+        if (std::find(m_unavailable_features.begin(), m_unavailable_features.end(), feature) != m_unavailable_features.end()) {
+            return false; // Already known as not available
+        }
+
         if (m_device != nullptr) {
             boost::mutex::scoped_lock lock(m_camera_mtx);
             ArvGcNode* node = arv_device_get_feature(m_device, feature.c_str());
@@ -532,7 +536,7 @@ namespace karabo {
                 return true;
             }
         }
-
+        m_unavailable_features.push_back(feature); // Add to the list of not available ones
         return false;
     }
 
@@ -547,6 +551,8 @@ namespace karabo {
 
 
     bool AravisCamera::getBoolFeature(const std::string& feature, bool& value) {
+        if (!this->isFeatureAvailable(feature)) return false;
+
         GError* error = nullptr;
         boost::mutex::scoped_lock lock(m_camera_mtx);
         value = arv_device_get_boolean_feature_value(m_device, feature.c_str(), &error);
@@ -562,6 +568,11 @@ namespace karabo {
 
 
     bool AravisCamera::getStringFeature(const std::string& feature, std::string& value) {
+        // XXX
+        // Verify in CASLAB a standalone program that "TemperatureSelector" returns false
+        // The device crashes on arv_device_get_string_feature_value!!!
+        if (!this->isFeatureAvailable(feature)) return false;
+
         GError* error = nullptr;
         boost::mutex::scoped_lock lock(m_camera_mtx);
         value = arv_device_get_string_feature_value(m_device, feature.c_str(), &error);
@@ -577,6 +588,8 @@ namespace karabo {
 
 
     bool AravisCamera::getIntFeature(const std::string& feature, long long& value) {
+        if (!this->isFeatureAvailable(feature)) return false;
+
         GError* error = nullptr;
         boost::mutex::scoped_lock lock(m_camera_mtx);
         value = arv_device_get_integer_feature_value(m_device, feature.c_str(), &error);
@@ -592,6 +605,8 @@ namespace karabo {
 
 
     bool AravisCamera::getFloatFeature(const std::string& feature, double& value) {
+        if (!this->isFeatureAvailable(feature)) return false;
+
         GError* error = nullptr;
         boost::mutex::scoped_lock lock(m_camera_mtx);
         value = arv_device_get_float_feature_value(m_device, feature.c_str(), &error);
@@ -607,6 +622,8 @@ namespace karabo {
 
 
     bool AravisCamera::setBoolFeature(const std::string& feature, bool& value) {
+        if (!this->isFeatureAvailable(feature)) return false;
+
         GError* error = nullptr;
         const std::string& deviceId = this->getInstanceId();
         boost::mutex::scoped_lock lock(m_camera_mtx);
@@ -634,6 +651,8 @@ namespace karabo {
 
 
     bool AravisCamera::setStringFeature(const std::string& feature, std::string& value) {
+        if (!this->isFeatureAvailable(feature)) return false;
+
         GError* error = nullptr;
         const std::string& deviceId = this->getInstanceId();
         boost::mutex::scoped_lock lock(m_camera_mtx);
@@ -661,6 +680,8 @@ namespace karabo {
 
 
     bool AravisCamera::setIntFeature(const std::string& feature, long long& value) {
+        if (!this->isFeatureAvailable(feature)) return false;
+
         GError* error = nullptr;
         const std::string& deviceId = this->getInstanceId();
         boost::mutex::scoped_lock lock(m_camera_mtx);
@@ -688,6 +709,8 @@ namespace karabo {
 
 
     bool AravisCamera::setFloatFeature(const std::string& feature, double& value) {
+        if (!this->isFeatureAvailable(feature)) return false;
+
         GError* error = nullptr;
         const std::string& deviceId = this->getInstanceId();
         boost::mutex::scoped_lock lock(m_camera_mtx);
@@ -2192,7 +2215,7 @@ namespace karabo {
     void AravisCamera::pollCamera(const boost::system::error_code & ec) {
         if (ec == boost::asio::error::operation_aborted) return;
 
-        if (!m_camera) {
+        if (!m_is_connected) {
             // Not connected
             m_poll_timer.expires_from_now(boost::posix_time::seconds(5l));
             m_poll_timer.async_wait(karabo::util::bind_weak(&AravisCamera::pollCamera, this, boost::asio::placeholders::error));

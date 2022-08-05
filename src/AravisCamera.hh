@@ -144,6 +144,7 @@ namespace karabo {
 
         void getPathsByTag(std::vector<std::string >& paths, const std::string& tags);
 
+        std::vector<std::string> m_unavailable_features; // cache unavailable features
         bool isFeatureAvailable(const std::string& feature);
         void disableElement(const std::string& key, const std::string& feature, karabo::util::Schema& schemaUpdate);
 
