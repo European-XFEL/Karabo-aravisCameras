@@ -28,6 +28,32 @@ namespace karabo {
         OVERWRITE_ELEMENT(expected).key("supportedModels")
                 .setNewDefaultValue(supportedModels)
                 .commit();
+
+        STRING_ELEMENT(expected).key("temperatureSelector")
+                .alias("TemperatureSelector")
+                .tags("genicam")
+                .displayedName("Temperature Selector")
+                .description("Lists the temperature sources available for readout")
+                .assignmentOptional().defaultValue("Sensorboard")
+                .reconfigurable()
+                .allowedStates(State::UNKNOWN, State::ON)
+                .commit();
+
+        FLOAT_ELEMENT(expected).key("temperature")
+                .alias("TemperatureAbs")
+                .tags("poll")
+                .displayedName("Temperature")
+                .description("Shows the current temperature of the selected target.")
+                .unit(Unit::DEGREE_CELSIUS)
+                .readOnly()
+                .commit();
+
+        STRING_ELEMENT(expected).key("temperatureState")
+                .alias("TemperatureState")
+                .tags("poll")
+                .displayedName("Temperature State")
+                .readOnly()
+                .commit();
     }
 
     AravisBaslerCamera::AravisBaslerCamera(const karabo::util::Hash& config) : AravisBaslerBase(config) {
