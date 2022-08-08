@@ -223,38 +223,15 @@ namespace karabo {
 
         const std::string feature = this->getAliasFromKey<std::string>("flip.Y");
 
+        // XXX possibly use isFeatureAvailable from base class
+
         boost::mutex::scoped_lock lock(m_camera_mtx);
 
-        // Try to read flip.Y
-        value = arv_device_get_boolean_feature_value(m_device, feature.c_str(), &error);
-        if (error != nullptr) {
-            KARABO_LOG_FRAMEWORK_ERROR << deviceId << ": arv_device_get_boolean_feature_value failed: " << error->message;
-            g_clear_error(&error);
-            return false;
-        } else if (value) { // Flip Y is set, thus available
-            return true;
-        }
+        ArvGcNode* node = arv_device_get_feature(m_device, feature.c_str());
+        const gboolean is_available = arv_gc_feature_node_is_available(ARV_GC_FEATURE_NODE (node), NULL);
+        const gboolean is_implemented = arv_gc_feature_node_is_implemented(ARV_GC_FEATURE_NODE (node), NULL);
 
-        // Try to set flip.Y
-        arv_device_set_boolean_feature_value(m_device, feature.c_str(), true, &error);
-        if (error != nullptr) {
-            KARABO_LOG_FRAMEWORK_ERROR << deviceId << ": arv_device_set_boolean_feature_value failed: " << error->message;
-            g_clear_error(&error);
-            return false;
-        }
-
-        // Verify that flip.Y has been set: the parameter is available but not settable on some models
-        value = arv_device_get_boolean_feature_value(m_device, feature.c_str(), &error);
-        if (error != nullptr) {
-            KARABO_LOG_FRAMEWORK_ERROR << deviceId << ": arv_device_get_boolean_feature_value failed: " << error->message;
-            g_clear_error(&error);
-            return false;
-        } else if (value) { // Flip Y is set, thus available
-            arv_device_set_boolean_feature_value(m_device, feature.c_str(), false, &error); // Set back
-            return true;
-        } else {
-            return false;
-        }
+        return (is_available & is_implemented);
     }
 
     void AravisBaslerBase::resetCamera() {

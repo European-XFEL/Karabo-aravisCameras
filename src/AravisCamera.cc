@@ -2608,13 +2608,19 @@ namespace karabo {
                     .commit();
         }
 
+        // Needed in case flip.X or flip.Y are disabled in the next step
+        NODE_ELEMENT(schemaUpdate).key("flip")
+                .displayedName("Image Flip")
+                .description("Enables mirroring of the image.")
+                .commit();
+
         // Disable features which are unavailable on the camera
         std::vector<std::string> paths;
         this->getPathsByTag(paths, "genicam,poll");
         lock.unlock(); // must unlock m_camera_mtx before calling isFeatureAvailable(
         for (const auto& key : paths) {
             const std::string feature = this->getAliasFromKey<std::string>(key);
-            if (!this->isFeatureAvailable(feature)) {
+            if (!this->keyHasAlias(key) || !this->isFeatureAvailable(feature)) {
                 // This feature is not available on the camera
                 this->disableElement(key, feature, schemaUpdate);
             }
@@ -2622,11 +2628,6 @@ namespace karabo {
 
         if (!m_is_flip_x_available) {
             // Flip will be done on software
-            NODE_ELEMENT(schemaUpdate).key("flip")
-                    .displayedName("Image Flip")
-                    .description("Enables mirroring of the image.")
-                    .commit();
-
             BOOL_ELEMENT(schemaUpdate).key("flip.X")
                     .displayedName("Horizonzal Flip")
                     .description("Enable horizontal flip. This is done before the image rotation.")
@@ -2638,11 +2639,6 @@ namespace karabo {
 
         if (!m_is_flip_y_available) {
             // Flip will be done on software
-            NODE_ELEMENT(schemaUpdate).key("flip")
-                    .displayedName("Image Flip")
-                    .description("Enables mirroring of the image.")
-                    .commit();
-
             BOOL_ELEMENT(schemaUpdate).key("flip.Y")
                     .displayedName("Vertical Flip")
                     .description("Enable vertical flip. This is done before the image rotation.")
