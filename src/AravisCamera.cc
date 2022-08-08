@@ -525,18 +525,16 @@ namespace karabo {
 
 
     bool AravisCamera::isFeatureAvailable(const std::string& feature) {
-        if (std::find(m_unavailable_features.begin(), m_unavailable_features.end(), feature) != m_unavailable_features.end()) {
-            return false; // Already known as not available
-        }
-
         if (m_device != nullptr) {
             boost::mutex::scoped_lock lock(m_camera_mtx);
             ArvGcNode* node = arv_device_get_feature(m_device, feature.c_str());
-            if (node != nullptr) {
+            if (arv_gc_feature_node_is_available(ARV_GC_FEATURE_NODE (node), NULL) &&
+                arv_gc_feature_node_is_implemented(ARV_GC_FEATURE_NODE (node), NULL)) {
+                // The feature is available and implemented
                 return true;
             }
         }
-        m_unavailable_features.push_back(feature); // Add to the list of not available ones
+
         return false;
     }
 
@@ -568,9 +566,6 @@ namespace karabo {
 
 
     bool AravisCamera::getStringFeature(const std::string& feature, std::string& value) {
-        // XXX
-        // Verify in CASLAB a standalone program that "TemperatureSelector" returns false
-        // The device crashes on arv_device_get_string_feature_value!!!
         if (!this->isFeatureAvailable(feature)) return false;
 
         GError* error = nullptr;
