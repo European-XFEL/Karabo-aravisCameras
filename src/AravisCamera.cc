@@ -524,7 +524,7 @@ namespace karabo {
     }
 
 
-    bool AravisCamera::isFeatureAvailable(const std::string& feature) {
+    bool AravisCamera::isFeatureAvailable(const std::string& feature) const {
         if (m_device != nullptr) {
             boost::mutex::scoped_lock lock(m_camera_mtx);
             ArvGcNode* node = arv_device_get_feature(m_device, feature.c_str());

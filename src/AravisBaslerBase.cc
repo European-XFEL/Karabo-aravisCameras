@@ -214,24 +214,11 @@ namespace karabo {
     }
 
     bool AravisBaslerBase::is_flip_y_available() const {
-        GError* error = nullptr;
-        bool value;
-        const std::string& deviceId = this->getInstanceId();
-
-        // After first connection alias is removed. The check is needed in case of re-connection.
+        // After first connection alias is removed. This check is needed in case of re-connection.
         if (!keyHasAlias("flip.Y")) return false;
 
         const std::string feature = this->getAliasFromKey<std::string>("flip.Y");
-
-        // XXX possibly use isFeatureAvailable from base class
-
-        boost::mutex::scoped_lock lock(m_camera_mtx);
-
-        ArvGcNode* node = arv_device_get_feature(m_device, feature.c_str());
-        const gboolean is_available = arv_gc_feature_node_is_available(ARV_GC_FEATURE_NODE (node), NULL);
-        const gboolean is_implemented = arv_gc_feature_node_is_implemented(ARV_GC_FEATURE_NODE (node), NULL);
-
-        return (is_available & is_implemented);
+        return this->isFeatureAvailable(feature);
     }
 
     void AravisBaslerBase::resetCamera() {
