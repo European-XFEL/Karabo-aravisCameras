@@ -524,13 +524,17 @@ namespace karabo {
     }
 
 
+    // Check that a feature is implemented and available on the camera
+    // XXX For getting/setting a feature we should check that the feature is available
+    //     (it could be implemented but temporarily unavailable.)
+    //     For updating the schema we should only check that it is implemented.
     bool AravisCamera::isFeatureAvailable(const std::string& feature) const {
         if (m_device != nullptr) {
             boost::mutex::scoped_lock lock(m_camera_mtx);
             ArvGcNode* node = arv_device_get_feature(m_device, feature.c_str());
-            if (arv_gc_feature_node_is_available(ARV_GC_FEATURE_NODE (node), NULL) &&
-                arv_gc_feature_node_is_implemented(ARV_GC_FEATURE_NODE (node), NULL)) {
-                // The feature is available and implemented
+            if (arv_gc_feature_node_is_implemented(ARV_GC_FEATURE_NODE (node), NULL) &&
+                arv_gc_feature_node_is_available(ARV_GC_FEATURE_NODE (node), NULL)) {
+                // The feature is implemented and available
                 return true;
             }
         }
