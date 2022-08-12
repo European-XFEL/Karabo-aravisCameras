@@ -218,7 +218,7 @@ namespace karabo {
         // Vertical flip is available only on some Basler cameras
 
         // After the first connection, alias is removed, so that the flip is
-        // done on software. This check is needed in case of a re-connection.
+        // done in software. This check is needed in case of a re-connection.
         if (!keyHasAlias("flip.Y")) return false;
 
         const std::string feature = this->getAliasFromKey<std::string>("flip.Y");
