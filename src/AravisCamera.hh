@@ -102,8 +102,8 @@ namespace karabo {
         virtual bool is_flip_x_available() const;
         virtual bool is_flip_y_available() const;
 
-        bool set_region(int x, int y, int width, int height);
-        bool set_binning(int bin_x, int bin_y);
+        bool set_region(int& x, int& y, int& width, int& height);
+        bool set_binning(int& bin_x, int& bin_y);
  
         unsigned int m_max_correction_time;
         double m_min_latency;
@@ -125,11 +125,11 @@ namespace karabo {
         bool verify_vendor_and_model(const std::string& vendor, const std::string& model);
 
         bool set_auto_packet_size();
-        bool set_exposure_time(double exposure_time);
+        bool set_exposure_time(double& exposure_time);
         bool set_frame_rate(bool enable, double frame_rate=0.);
         bool get_gain(double& gain);
         bool set_gain(double gain);
-        bool set_frame_count(gint64 frame_count);
+        bool set_frame_count(gint64& frame_count);
 
         boost::asio::deadline_timer m_poll_timer;
 
@@ -183,6 +183,8 @@ namespace karabo {
         bool m_is_frame_rate_available;
         bool m_is_gain_available;
         bool m_is_gain_auto_available;
+
+        std::string m_exposure_time_feature;
 
         std::unordered_map<ArvPixelFormat, std::string> m_pixelFormatOptions;
 
