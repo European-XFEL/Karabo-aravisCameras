@@ -102,8 +102,6 @@ namespace karabo {
         virtual bool is_flip_x_available() const;
         virtual bool is_flip_y_available() const;
 
-        boost::function<void()> m_post_connection_cb;
-
         bool set_region(int x, int y, int width, int height);
         bool set_binning(int bin_x, int bin_y);
  

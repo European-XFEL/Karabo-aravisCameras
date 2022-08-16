@@ -455,7 +455,7 @@ namespace karabo {
     AravisCamera::AravisCamera(const karabo::util::Hash& config) : CameraImageSource(config),
             m_is_base_class(true), m_arv_camera_trigger(true), m_is_device_reset_available(false),
             m_is_frame_count_available(false), m_camera(nullptr), m_device(nullptr), m_parser(nullptr),
-            m_chunk_mode(false), m_post_connection_cb(0), m_max_correction_time(0), m_min_latency(0.),
+            m_chunk_mode(false), m_max_correction_time(0), m_min_latency(0.),
             m_max_latency(0.), m_connect(true), m_is_connected(false),
             m_reconnect_timer(EventLoop::getIOService()), m_failed_connections(0u), m_is_acquiring(false),
             m_poll_timer(EventLoop::getIOService()), m_stream(nullptr),
@@ -910,11 +910,6 @@ namespace karabo {
         if (!success) {
             this->connection_failed_helper("Could not update output schema");
             return;
-        }
-
-        if (m_post_connection_cb) {
-           m_post_connection_cb();
-           m_post_connection_cb = 0;
         }
 
         if (m_is_acquiring) {
@@ -1373,6 +1368,19 @@ namespace karabo {
             m_need_schema_update = true; // Schema update is needes as data type changed
         }
 
+        if (configuration.has("bin") && m_is_binning_available) {
+            const int bin_x = GET_PATH(configuration, "bin.x", int);
+            const int bin_y = GET_PATH(configuration, "bin.y", int);
+
+            const bool success = this->set_binning(bin_x, bin_y);
+            if (!success) {
+                configuration.erase("bin");
+            }
+            m_need_schema_update = true; // Schema update is needed as image shape changed
+        }
+
+        // The ROI must be applied after binning, as the values for the former
+        // are after applying the latter.
         if (configuration.has("roi")) {
             const int x = GET_PATH(configuration, "roi.x", int);
             const int y = GET_PATH(configuration, "roi.y", int);
@@ -1382,17 +1390,6 @@ namespace karabo {
             const bool success = this->set_region(x, y, width, height);
             if (!success) {
                 configuration.erase("roi");
-            }
-            m_need_schema_update = true; // Schema update is needed as image shape changed
-        }
-
-        if (configuration.has("bin") && m_is_binning_available) {
-            const int bin_x = GET_PATH(configuration, "bin.x", int);
-            const int bin_y = GET_PATH(configuration, "bin.y", int);
-
-            const bool success = this->set_binning(bin_x, bin_y);
-            if (!success) {
-                configuration.erase("bin");
             }
             m_need_schema_update = true; // Schema update is needed as image shape changed
         }
