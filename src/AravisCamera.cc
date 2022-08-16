@@ -1013,15 +1013,18 @@ namespace karabo {
         const std::string& deviceId = this->getInstanceId();
         boost::mutex::scoped_lock lock(m_camera_mtx);
 
-        // Get bounds
-        gint xmin, xmax, ymin, ymax, wmin, wmax, hmin, hmax;
-        arv_camera_get_x_offset_bounds(m_camera, &xmin, &xmax, &error);
-        if (error == nullptr) {
-            arv_camera_get_y_offset_bounds(m_camera, &ymin, &ymax, &error);
+        // Before getting width and height bounds, reset x and y offsets.
+        arv_camera_set_region(m_camera, 0, 0, width, height, &error);
+        if (error != nullptr) {
+            KARABO_LOG_FRAMEWORK_ERROR << deviceId << ": arv_camera_set_region failed: " << error->message;
+            g_clear_error(&error);
+            return false; // failure
         }
-        if (error == nullptr) {
-            arv_camera_get_width_bounds(m_camera, &wmin, &wmax, &error);
-        }
+
+        // Get bounds for width and height.
+        // x and y bounds can only be gotten after width and height are applied.
+        gint wmin, wmax, hmin, hmax;
+        arv_camera_get_width_bounds(m_camera, &wmin, &wmax, &error);
         if (error == nullptr) {
             arv_camera_get_height_bounds(m_camera, &hmin, &hmax, &error);
         }
@@ -1032,11 +1035,6 @@ namespace karabo {
             return false; // failure
         }
 
-        // Apply bounds
-        x = max(x, xmin);
-        x = min(x, xmax);
-        y = max(y, ymin);
-        y = min(y, ymax);
         if (width == 0) {
             // Whole sensor width
             width = wmax;
@@ -1044,6 +1042,7 @@ namespace karabo {
             width = max(width, wmin);
             width = min(width, wmax);
         }
+
         if (height == 0) {
             // Whole sensor height
             height = hmax;
@@ -1052,6 +1051,33 @@ namespace karabo {
             height = min(height, hmax);
         }
 
+        // Apply width and height settings
+        arv_camera_set_region(m_camera, 0, 0, width, height, &error);
+        if (error != nullptr) {
+            KARABO_LOG_FRAMEWORK_ERROR << deviceId << ": arv_camera_set_region failed: " << error->message;
+            g_clear_error(&error);
+            return false; // failure
+        }
+
+        // Get x and y bounds
+        gint xmin, xmax, ymin, ymax;
+        arv_camera_get_x_offset_bounds(m_camera, &xmin, &xmax, &error);
+        if (error == nullptr) {
+            arv_camera_get_y_offset_bounds(m_camera, &ymin, &ymax, &error);
+        }
+
+        if (error != nullptr) {
+            KARABO_LOG_FRAMEWORK_ERROR << deviceId << "Could not get ROI bounds: " << error->message;
+            g_clear_error(&error);
+            return false; // failure
+        }
+
+        x = max(x, xmin);
+        x = min(x, xmax);
+        y = max(y, ymin);
+        y = min(y, ymax);
+
+        // Finally x and y offsets too
         arv_camera_set_region(m_camera, x, y, width, height, &error);
         if (error != nullptr) {
             KARABO_LOG_FRAMEWORK_ERROR << deviceId << ": arv_camera_set_region failed: " << error->message;
