@@ -40,22 +40,6 @@ namespace karabo {
         m_is_frame_count_available = false;
     }
 
-    void AravisBasler2Camera::resetCamera() {
-        GError* error = nullptr;
-        boost::mutex::scoped_lock lock(m_camera_mtx);
-
-        arv_camera_execute_command(m_camera, "DeviceReset", &error);
-
-        if (error != nullptr) {
-            const std::string message("Could not reset camera");
-            KARABO_LOG_ERROR << message << ": " << error->message;
-            this->set("status", message);
-            g_clear_error(&error);
-        } else {
-            this->set("status", "Camera reset");
-        }
-    }
-
     bool AravisBasler2Camera::synchronize_timestamp() {
         GError* error = nullptr;
 

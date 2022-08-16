@@ -40,9 +40,6 @@ namespace karabo {
         bool get_timestamp(ArvBuffer* buffer, karabo::util::Timestamp& ts) override;
 
     private:
-        void resetCamera() override;
-        void reset_roi_and_binning(int x, int y, int width, int height, int bin_x, int bin_y);
-
         karabo::util::Epochstamp m_last_clock_reset;
     };
 

@@ -38,8 +38,6 @@ namespace karabo {
 
         bool get_timestamp(ArvBuffer* buffer, karabo::util::Timestamp& ts) override;
 
-    private:
-        void resetCamera() override;
     };
 
 } // namespace karabo
