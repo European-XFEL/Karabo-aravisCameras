@@ -892,6 +892,16 @@ namespace karabo {
         m_is_flip_x_available = this->is_flip_x_available();
         m_is_flip_y_available = this->is_flip_y_available();
 
+        // The exposure time feature name is used to read out the increment
+        std::vector<std::string> features = {"ExposureTime", // e.g. Basler a2A
+            "ExposureTimeRaw"}; // e.g. Basler acA
+        for (const std::string feat : features) {
+            if (this->isFeatureAvailable(feat)) {
+                m_exposure_time_feature = feat;
+                break;
+            }
+        }
+
         if (error != nullptr) {
             const std::string detailed_msg(error->message);
             this->connection_failed_helper("An error occurred whilst connecting to " + cameraIp, detailed_msg);
@@ -998,7 +1008,7 @@ namespace karabo {
     }
 
 
-    bool AravisCamera::set_region(int x, int y, int width, int height) {
+    bool AravisCamera::set_region(int& x, int& y, int& width, int& height) {
         GError* error = nullptr;
         const std::string& deviceId = this->getInstanceId();
         boost::mutex::scoped_lock lock(m_camera_mtx);
@@ -1053,7 +1063,7 @@ namespace karabo {
     }
 
 
-    bool AravisCamera::set_binning(int bin_x, int bin_y) {
+    bool AravisCamera::set_binning(int& bin_x, int& bin_y) {
         GError* error = nullptr;
         const std::string& deviceId = this->getInstanceId();
         boost::mutex::scoped_lock lock(m_camera_mtx);
@@ -1088,7 +1098,7 @@ namespace karabo {
     }
 
 
-    bool AravisCamera::set_exposure_time(double exposure_time) {
+    bool AravisCamera::set_exposure_time(double& exposure_time) {
         GError* error = nullptr;
         const std::string& deviceId = this->getInstanceId();
         boost::mutex::scoped_lock lock(m_camera_mtx);
@@ -1103,9 +1113,27 @@ namespace karabo {
             return false; // failure
         }
 
-        if (tmin > 0.) {
-            // exposure time must be multiple of tmin
-            exposure_time = tmin * floor(exposure_time / tmin);
+        // Get increment
+        double incr = G_MINDOUBLE;
+        ArvGcNode* exptime_node = arv_device_get_feature(m_device, m_exposure_time_feature.c_str());
+        if (ARV_IS_GC_INTEGER(exptime_node)) {
+            incr = arv_camera_get_integer_increment(m_camera, m_exposure_time_feature.c_str(), &error);
+        } else if (ARV_IS_GC_FLOAT(exptime_node)) {
+            incr = arv_camera_get_float_increment(m_camera, m_exposure_time_feature.c_str(), &error);
+        }
+
+        if (error != nullptr) {
+            KARABO_LOG_FRAMEWORK_ERROR << deviceId << ": arv_camera_get_xxx_increment failed: " << error->message;
+            g_clear_error(&error);
+            return false; // failure
+        } else if (incr == G_MINDOUBLE) {
+            KARABO_LOG_FRAMEWORK_ERROR << deviceId << ": could not read exposure time increment";
+            return false; // failure
+        }
+
+        if (incr > 0.) {
+            // Exposure time must be incremented in steps.
+            exposure_time = tmin + incr * round((exposure_time - tmin) / incr);
         }
 
         // Apply bounds
@@ -1278,7 +1306,7 @@ namespace karabo {
     }
 
 
-    bool AravisCamera::set_frame_count(gint64 frame_count) {
+    bool AravisCamera::set_frame_count(gint64& frame_count) {
         GError* error = nullptr;
         const std::string& deviceId = this->getInstanceId();
         boost::mutex::scoped_lock lock(m_camera_mtx);
@@ -1369,11 +1397,14 @@ namespace karabo {
         }
 
         if (configuration.has("bin") && m_is_binning_available) {
-            const int bin_x = GET_PATH(configuration, "bin.x", int);
-            const int bin_y = GET_PATH(configuration, "bin.y", int);
+            int bin_x = GET_PATH(configuration, "bin.x", int);
+            int bin_y = GET_PATH(configuration, "bin.y", int);
 
             const bool success = this->set_binning(bin_x, bin_y);
-            if (!success) {
+            if (success) { // update values
+                configuration.set("bin.x", bin_x);
+                configuration.set("bin.y", bin_y);
+            } else {
                 configuration.erase("bin");
             }
             m_need_schema_update = true; // Schema update is needed as image shape changed
@@ -1382,23 +1413,30 @@ namespace karabo {
         // The ROI must be applied after binning, as the values for the former
         // are after applying the latter.
         if (configuration.has("roi")) {
-            const int x = GET_PATH(configuration, "roi.x", int);
-            const int y = GET_PATH(configuration, "roi.y", int);
-            const int width = GET_PATH(configuration, "roi.width", int);
-            const int height = GET_PATH(configuration, "roi.height", int);
+            int x = GET_PATH(configuration, "roi.x", int);
+            int y = GET_PATH(configuration, "roi.y", int);
+            int width = GET_PATH(configuration, "roi.width", int);
+            int height = GET_PATH(configuration, "roi.height", int);
 
             const bool success = this->set_region(x, y, width, height);
-            if (!success) {
+            if (success) { // update values
+                configuration.set("roi.x", x);
+                configuration.set("roi.y", y);
+                configuration.set("roi.width", width);
+                configuration.set("roi.height", height);
+            } else {
                 configuration.erase("roi");
             }
             m_need_schema_update = true; // Schema update is needed as image shape changed
         }
 
         if (configuration.has("exposureTime") && m_is_exposure_time_available) {
-            const double exposureTime = configuration.get<double>("exposureTime");
+            double exposureTime = configuration.get<double>("exposureTime");
 
             const bool success = this->set_exposure_time(exposureTime);
-            if (!success) {
+            if (success) { // update the value
+                configuration.set("exposureTime", exposureTime);
+            } else {
                 configuration.erase("exposureTime");
             }
         }
@@ -1493,7 +1531,9 @@ namespace karabo {
             gint64 frameCount = configuration.get<long long>("frameCount");
 
             const bool success = this->set_frame_count(frameCount);
-            if (!success) {
+            if (success) { // update value
+                configuration.set("frameCount", frameCount);
+            } else {
                 configuration.erase("frameCount");
             }
         }
