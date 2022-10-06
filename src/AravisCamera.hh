@@ -84,6 +84,7 @@ namespace karabo {
         bool m_is_frame_count_available;
 
         mutable boost::mutex m_camera_mtx; // Object lock is needed for ArvCamera etc.
+        mutable boost::mutex m_stream_mtx;
         ArvCamera* m_camera;
         ArvDevice* m_device;
         ArvChunkParser* m_parser;
