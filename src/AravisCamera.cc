@@ -1716,6 +1716,7 @@ namespace karabo {
 
         {
             boost::mutex::scoped_lock lock(m_camera_mtx);
+            boost::mutex::scoped_lock lock2(m_stream_mtx);
             m_stream = arv_camera_create_stream(m_camera, AravisCamera::stream_cb, static_cast<void*>(this), &error);
 
             if (error != nullptr) {
@@ -1759,7 +1760,10 @@ namespace karabo {
                 g_clear_error(&error);
                 return;
             }
+        }
 
+        {
+            boost::mutex::scoped_lock lock2(m_stream_mtx);
             // Connect the 'new-buffer' signal
             g_signal_connect(m_stream, "new-buffer", G_CALLBACK(AravisCamera::new_buffer_cb), static_cast<void*>(this));
         }
@@ -1781,8 +1785,6 @@ namespace karabo {
 
 
     void AravisCamera::stop() {
-        this->clear_stream();
-
         Hash h;
         h.set("frameRate.actual", 0.);
         h.set("errorCount", 0ull);
@@ -1792,8 +1794,10 @@ namespace karabo {
         h.set("latency.max", 0.);
 
         GError* error = nullptr;
-        boost::mutex::scoped_lock lock(m_camera_mtx);
-        arv_camera_stop_acquisition(m_camera, &error);
+        {
+            boost::mutex::scoped_lock lock(m_camera_mtx);
+            arv_camera_stop_acquisition(m_camera, &error);
+        }
         m_is_acquiring = false;
         m_errorCount = 0;
         m_lastError = ARV_BUFFER_STATUS_SUCCESS;
@@ -1808,6 +1812,8 @@ namespace karabo {
             this->updateState(State::ERROR);
             return;
         }
+
+        this->clear_stream();
 
         h.set("status", "Acquisition stopped");
         this->signalEOS(); // End-of-Stream signal
@@ -1883,10 +1889,14 @@ namespace karabo {
         if (m_stream != nullptr) {
             // TODO possibly disconnect signal, see https://developer.gnome.org/gobject/stable/gobject-Signals.html#g-signal-handler-disconnect
 
+            KARABO_LOG_FRAMEWORK_INFO << "#### AravisCamera::clear_stream before lock2(m_stream_mtx)"; // XXX
             // Disable emission of signals and free resource
-            boost::mutex::scoped_lock lock(m_camera_mtx);
+            boost::mutex::scoped_lock lock2(m_stream_mtx);
+            KARABO_LOG_FRAMEWORK_INFO << "#### AravisCamera::clear_stream after lock2(m_stream_mtx)"; // XXX
             arv_stream_set_emit_signals(m_stream, FALSE);
+            KARABO_LOG_FRAMEWORK_INFO << "#### AravisCamera::clear_stream after arv_stream_set_emit_signals"; // XXX
             g_clear_object(&m_stream);
+            KARABO_LOG_FRAMEWORK_INFO << "#### AravisCamera::clear_stream after g_clear_object"; // XXX
         }
     }
 
@@ -1904,8 +1914,9 @@ namespace karabo {
     }
 
 
-    void AravisCamera::new_buffer_cb(ArvStream* stream, void* context) { // XXX is locking needed?
+    void AravisCamera::new_buffer_cb(ArvStream* stream, void* context) {
         Self* self = static_cast<Self*>(context);
+        boost::mutex::scoped_lock lock2(self->m_stream_mtx); // XXX
 
         const karabo::util::Timestamp dev_ts = self->getActualTimestamp();
         const std::string& deviceId = self->getInstanceId();
@@ -1925,7 +1936,7 @@ namespace karabo {
             try {
                 const bool success = self->get_shape_and_format(arv_buffer, width, height, pixel_format);
                 if (!success) {
-                    // XXX Possibly stop the acqisition if the error persists...
+                    // XXX Possibly stop the acquisition if the error persists...
                     return;
                 }
             } catch (const karabo::util::LogicException& e) {
