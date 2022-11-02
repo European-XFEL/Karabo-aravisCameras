@@ -174,6 +174,7 @@ namespace karabo {
 
         bool resolveHostname(const std::string& hostname, std::string& ip_address, std::string& message);
 
+        mutable boost::mutex m_stream_mtx; // Object lock for ArvStream
         ArvStream* m_stream;
 
         bool m_is_binning_available;
