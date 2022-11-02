@@ -747,6 +747,11 @@ namespace karabo {
         boost::mutex::scoped_lock class_lock(AravisCamera::m_connect_mtx);
 
         if (idType == "IP") { // IP address
+            if (cameraId.size() == 0) {
+                this->connection_failed_helper("Cannot connect: the provided IP is empty");
+                return;
+            }
+
             cameraIp = cameraId;
 
         } else if (idType == "HOST") { // IP name
