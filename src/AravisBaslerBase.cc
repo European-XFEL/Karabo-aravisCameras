@@ -164,7 +164,7 @@ namespace karabo {
         // Get timestamp from buffer
         gint64 timestamp;
         {
-            boost::mutex::scoped_lock lock(m_camera_mtx);
+            boost::mutex::scoped_lock camera_lock(m_camera_mtx);
             timestamp = arv_chunk_parser_get_integer_value(m_parser, buffer, tsFeature.c_str(), &error);
         }
         if (error != nullptr) {
@@ -223,7 +223,7 @@ namespace karabo {
 
         const std::string feature = this->getAliasFromKey<std::string>("flip.Y");
 
-        boost::mutex::scoped_lock lock(m_camera_mtx);
+        boost::mutex::scoped_lock camera_lock(m_camera_mtx);
 
         // Try to read flip.Y
         value = arv_device_get_boolean_feature_value(m_device, feature.c_str(), &error);
@@ -259,7 +259,7 @@ namespace karabo {
 
     void AravisBaslerBase::resetCamera() {
         GError* error = nullptr;
-        boost::mutex::scoped_lock lock(m_camera_mtx);
+        boost::mutex::scoped_lock camera_lock(m_camera_mtx);
         arv_camera_execute_command(m_camera, "DeviceReset", &error);
 
         if (error != nullptr) {
