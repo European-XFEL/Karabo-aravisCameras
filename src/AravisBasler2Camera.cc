@@ -55,7 +55,7 @@ namespace karabo {
         // Karabo current timestamp
         m_reference_karabo_time = this->getActualTimestamp();
 
-        boost::mutex::scoped_lock lock(m_camera_mtx);
+        boost::mutex::scoped_lock camera_lock(m_camera_mtx);
 
         // Get current timestamp on the camera.
         // It has been verified on an a2A2590-22gmPRO that this takes 4 ms ca.,
@@ -75,7 +75,7 @@ namespace karabo {
     bool AravisBasler2Camera::configure_timestamp_chunk() {
         GError* error = nullptr;
         const std::string& deviceId = this->getInstanceId();
-        boost::mutex::scoped_lock lock(m_camera_mtx);
+        boost::mutex::scoped_lock camera_lock(m_camera_mtx);
 
         // Enable chunk data
         arv_camera_set_chunk_mode(m_camera, true, &error);

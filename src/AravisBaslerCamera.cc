@@ -37,7 +37,7 @@ namespace karabo {
 
     bool AravisBaslerCamera::get_shape_and_format(ArvBuffer* buffer, gint& width, gint& height, ArvPixelFormat& format) const {
         GError* error = nullptr;
-        boost::mutex::scoped_lock lock(m_camera_mtx);
+        boost::mutex::scoped_lock camera_lock(m_camera_mtx);
 
         width = arv_chunk_parser_get_integer_value(m_parser, buffer, "ChunkWidth", &error);
         if (error == nullptr) height = arv_chunk_parser_get_integer_value(m_parser, buffer, "ChunkHeight", &error);
@@ -56,7 +56,7 @@ namespace karabo {
     bool AravisBaslerCamera::synchronize_timestamp() {
         GError* error = nullptr;
         const std::string& deviceId = this->getInstanceId();
-        boost::mutex::scoped_lock lock(m_camera_mtx);
+        boost::mutex::scoped_lock camera_lock(m_camera_mtx);
 
         // XXX Possibly use PTP in the future
         m_ptp_enabled = false;
@@ -107,7 +107,7 @@ namespace karabo {
 
     bool AravisBaslerCamera::configure_timestamp_chunk() {
         GError* error = nullptr;
-        boost::mutex::scoped_lock lock(m_camera_mtx);
+        boost::mutex::scoped_lock camera_lock(m_camera_mtx);
 
         // Enable chunk data
         arv_camera_set_chunk_mode(m_camera, true, &error);

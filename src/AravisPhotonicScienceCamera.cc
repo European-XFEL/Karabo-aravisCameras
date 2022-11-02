@@ -453,7 +453,7 @@ namespace karabo {
 
         const int tick_frequency = this->get<int>("gevTimestampTickFrequency");
 
-        boost::mutex::scoped_lock lock(m_camera_mtx);
+        boost::mutex::scoped_lock camera_lock(m_camera_mtx);
 
         // Get current timestamp on the camera (GevTimestampValue).
         // GevTimestampValue counts the number of ticks since the last reset of the counter.
@@ -481,7 +481,7 @@ namespace karabo {
 
     bool AravisPhotonicScienceCamera::configure_timestamp_chunk() {
         GError* error = nullptr;
-        boost::mutex::scoped_lock lock(m_camera_mtx);
+        boost::mutex::scoped_lock camera_lock(m_camera_mtx);
 
         arv_device_set_string_feature_value(m_device, "GevTimestampCounterSelector", "GevTimestamp", &error);
 
@@ -496,7 +496,7 @@ namespace karabo {
 
     bool AravisPhotonicScienceCamera::get_region(gint& x, gint& y, gint& width, gint& height) const {
         GError* error = nullptr;
-        boost::mutex::scoped_lock lock(m_camera_mtx);
+        boost::mutex::scoped_lock camera_lock(m_camera_mtx);
 
         x = arv_device_get_integer_feature_value(m_device, "OffsetX_in_camera", &error);
         if (error == nullptr) y = arv_device_get_integer_feature_value(m_device, "OffsetY_in_camera", &error);
@@ -581,7 +581,7 @@ namespace karabo {
         const std::string& triggerMode = this->get<std::string>("triggerMode");
         if (triggerMode == "SW_Trigger") {
             GError* error = nullptr;
-            boost::mutex::scoped_lock lock(m_camera_mtx);
+            boost::mutex::scoped_lock camera_lock(m_camera_mtx);
             arv_camera_software_trigger(m_camera, &error);
 
             if (error != nullptr) {
