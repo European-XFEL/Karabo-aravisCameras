@@ -457,8 +457,8 @@ namespace karabo {
             m_is_frame_count_available(false), m_camera(nullptr), m_device(nullptr), m_parser(nullptr),
             m_chunk_mode(false), m_max_correction_time(0), m_min_latency(0.),
             m_max_latency(0.), m_connect(true), m_is_connected(false),
-            m_reconnect_timer(EventLoop::getIOService()), m_failed_connections(0u), m_is_acquiring(false),
-            m_poll_timer(EventLoop::getIOService()), m_stream(nullptr),
+            m_reconnect_timer(EventLoop::getIOService()), m_failed_connections(0u),
+            m_poll_timer(EventLoop::getIOService()), m_is_acquiring(false), m_stream(nullptr),
             m_is_binning_available(false), m_is_exposure_time_available(false),
             m_is_flip_x_available(false), m_is_flip_y_available(false),
             m_is_frame_rate_available(false), m_is_gain_available(false), m_is_gain_auto_available(false),
@@ -1924,7 +1924,7 @@ namespace karabo {
 
         ArvBufferStatus lastError = arv_buffer_get_status(arv_buffer);
         if (lastError == ARV_BUFFER_STATUS_SUCCESS) {
-            gint x, y, width, height;
+            gint width, height;
             size_t buffer_size;
             ArvPixelFormat pixel_format;
 
@@ -2689,7 +2689,6 @@ namespace karabo {
         const unsigned short bpp = this->get<unsigned short>("bpp");
         Dims binning(this->get<int>("bin.y"), this->get<int>("bin.x"));
         Dims roiOffsets(this->get<int>("roi.y"), this->get<int>("roi.x"));
-        void* buffer = nullptr;
         const Hash header;
 
         // Apply flip on software if not available on camera
