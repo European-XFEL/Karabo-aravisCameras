@@ -210,51 +210,19 @@ namespace karabo {
     }
 
     bool AravisBaslerBase::is_flip_x_available() const {
+        // Horizontal flip is available on all known Basler cameras
         return true;
     }
 
     bool AravisBaslerBase::is_flip_y_available() const {
-        GError* error = nullptr;
-        bool value;
-        const std::string& deviceId = this->getInstanceId();
+        // Vertical flip is available only on some Basler cameras
 
-        // After first connection alias is removed. The check is needed in case of re-connection.
+        // After the first connection, alias is removed, so that the flip is
+        // done in software. This check is needed in case of a re-connection.
         if (!keyHasAlias("flip.Y")) return false;
 
         const std::string feature = this->getAliasFromKey<std::string>("flip.Y");
-
-        boost::mutex::scoped_lock camera_lock(m_camera_mtx);
-
-        // Try to read flip.Y
-        value = arv_device_get_boolean_feature_value(m_device, feature.c_str(), &error);
-        if (error != nullptr) {
-            KARABO_LOG_FRAMEWORK_ERROR << deviceId << ": arv_device_get_boolean_feature_value failed: " << error->message;
-            g_clear_error(&error);
-            return false;
-        } else if (value) { // Flip Y is set, thus available
-            return true;
-        }
-
-        // Try to set flip.Y
-        arv_device_set_boolean_feature_value(m_device, feature.c_str(), true, &error);
-        if (error != nullptr) {
-            KARABO_LOG_FRAMEWORK_ERROR << deviceId << ": arv_device_set_boolean_feature_value failed: " << error->message;
-            g_clear_error(&error);
-            return false;
-        }
-
-        // Verify that flip.Y has been set: the parameter is available but not settable on some models
-        value = arv_device_get_boolean_feature_value(m_device, feature.c_str(), &error);
-        if (error != nullptr) {
-            KARABO_LOG_FRAMEWORK_ERROR << deviceId << ": arv_device_get_boolean_feature_value failed: " << error->message;
-            g_clear_error(&error);
-            return false;
-        } else if (value) { // Flip Y is set, thus available
-            arv_device_set_boolean_feature_value(m_device, feature.c_str(), false, &error); // Set back
-            return true;
-        } else {
-            return false;
-        }
+        return this->isFeatureAvailable(feature);
     }
 
     void AravisBaslerBase::resetCamera() {

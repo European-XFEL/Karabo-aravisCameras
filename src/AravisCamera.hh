@@ -26,6 +26,12 @@ extern "C" {
  */
 namespace karabo {
 
+    enum class Result {
+        SUCCESS,
+        FAIL,
+        NOT_AVAILABLE
+    };
+
     class AravisCamera : public CameraImageSource {
 
     public:
@@ -88,6 +94,7 @@ namespace karabo {
         ArvDevice* m_device;
         ArvChunkParser* m_parser;
 
+        bool isFeatureAvailable(const std::string& feature) const;
         virtual void configure(karabo::util::Hash& configuration);
 
         virtual bool synchronize_timestamp();
@@ -144,18 +151,17 @@ namespace karabo {
 
         void getPathsByTag(std::vector<std::string >& paths, const std::string& tags);
 
-        bool isFeatureAvailable(const std::string& feature);
         void disableElement(const std::string& key, const std::string& feature, karabo::util::Schema& schemaUpdate);
 
-        bool getBoolFeature(const std::string& feature, bool& value);
-        bool getStringFeature(const std::string& feature, std::string& value);
-        bool getIntFeature(const std::string& feature, long long& value);
-        bool getFloatFeature(const std::string& feature, double& value);
+        Result getBoolFeature(const std::string& feature, bool& value);
+        Result getStringFeature(const std::string& feature, std::string& value);
+        Result getIntFeature(const std::string& feature, long long& value);
+        Result getFloatFeature(const std::string& feature, double& value);
 
-        bool setBoolFeature(const std::string& feature, bool& value);
-        bool setStringFeature(const std::string& feature, std::string& value);
-        bool setIntFeature(const std::string& feature, long long& value);
-        bool setFloatFeature(const std::string& feature, double& value);
+        Result setBoolFeature(const std::string& feature, bool& value);
+        Result setStringFeature(const std::string& feature, std::string& value);
+        Result setIntFeature(const std::string& feature, long long& value);
+        Result setFloatFeature(const std::string& feature, double& value);
 
         void clear_camera();
         void clear_stream();

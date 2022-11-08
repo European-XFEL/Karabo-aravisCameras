@@ -22,7 +22,6 @@ USING_KARABO_NAMESPACES;
 
 namespace karabo {
 
-
     KARABO_REGISTER_FOR_CONFIGURATION(BaseDevice, Device<>, ImageSource, CameraImageSource, AravisCamera)
 
     boost::mutex AravisCamera::m_connect_mtx;
@@ -524,11 +523,17 @@ namespace karabo {
     }
 
 
-    bool AravisCamera::isFeatureAvailable(const std::string& feature) {
+    // Check that a feature is implemented and available on the camera
+    // XXX For getting/setting a feature we should check that the feature is available
+    //     (it could be implemented but temporarily unavailable.)
+    //     For updating the schema we should only check that it is implemented.
+    bool AravisCamera::isFeatureAvailable(const std::string& feature) const {
         if (m_device != nullptr) {
             boost::mutex::scoped_lock camera_lock(m_camera_mtx);
             ArvGcNode* node = arv_device_get_feature(m_device, feature.c_str());
-            if (node != nullptr) {
+            if (node != nullptr && arv_gc_feature_node_is_implemented(ARV_GC_FEATURE_NODE (node), NULL) &&
+                arv_gc_feature_node_is_available(ARV_GC_FEATURE_NODE (node), NULL)) {
+                // The feature is implemented and available
                 return true;
             }
         }
@@ -546,7 +551,9 @@ namespace karabo {
     }
 
 
-    bool AravisCamera::getBoolFeature(const std::string& feature, bool& value) {
+    Result AravisCamera::getBoolFeature(const std::string& feature, bool& value) {
+        if (!this->isFeatureAvailable(feature)) return Result::NOT_AVAILABLE;
+
         GError* error = nullptr;
         boost::mutex::scoped_lock camera_lock(m_camera_mtx);
         value = arv_device_get_boolean_feature_value(m_device, feature.c_str(), &error);
@@ -554,14 +561,16 @@ namespace karabo {
         if (error != nullptr) {
             KARABO_LOG_FRAMEWORK_ERROR << this->getInstanceId() << ": arv_device_get_boolean_feature_value failed: " << error->message;
             g_clear_error(&error);
-            return false;
+            return Result::FAIL;
         }
 
-        return true;
+        return Result::SUCCESS;
     }
 
 
-    bool AravisCamera::getStringFeature(const std::string& feature, std::string& value) {
+    Result AravisCamera::getStringFeature(const std::string& feature, std::string& value) {
+        if (!this->isFeatureAvailable(feature)) return Result::NOT_AVAILABLE;
+
         GError* error = nullptr;
         boost::mutex::scoped_lock camera_lock(m_camera_mtx);
         value = arv_device_get_string_feature_value(m_device, feature.c_str(), &error);
@@ -569,14 +578,16 @@ namespace karabo {
         if (error != nullptr) {
             KARABO_LOG_FRAMEWORK_ERROR << this->getInstanceId() << ": arv_device_get_string_feature_value failed: " << error->message;
             g_clear_error(&error);
-            return false;
+            return Result::FAIL;
         }
 
-        return true;
+        return Result::SUCCESS;
     }
 
 
-    bool AravisCamera::getIntFeature(const std::string& feature, long long& value) {
+    Result AravisCamera::getIntFeature(const std::string& feature, long long& value) {
+        if (!this->isFeatureAvailable(feature)) return Result::NOT_AVAILABLE;
+
         GError* error = nullptr;
         boost::mutex::scoped_lock camera_lock(m_camera_mtx);
         value = arv_device_get_integer_feature_value(m_device, feature.c_str(), &error);
@@ -584,14 +595,16 @@ namespace karabo {
         if (error != nullptr) {
             KARABO_LOG_FRAMEWORK_ERROR << this->getInstanceId() << ": arv_device_get_integer_feature_value failed: " << error->message;
             g_clear_error(&error);
-            return false;
+            return Result::FAIL;
         }
 
-        return true;
+        return Result::SUCCESS;
     }
 
 
-    bool AravisCamera::getFloatFeature(const std::string& feature, double& value) {
+    Result AravisCamera::getFloatFeature(const std::string& feature, double& value) {
+        if (!this->isFeatureAvailable(feature)) return Result::NOT_AVAILABLE;
+
         GError* error = nullptr;
         boost::mutex::scoped_lock camera_lock(m_camera_mtx);
         value = arv_device_get_float_feature_value(m_device, feature.c_str(), &error);
@@ -599,14 +612,16 @@ namespace karabo {
         if (error != nullptr) {
             KARABO_LOG_FRAMEWORK_ERROR << this->getInstanceId() << ": arv_device_get_float_feature_value failed: " << error->message;
             g_clear_error(&error);
-            return false;
+            return Result::FAIL;
         }
 
-        return true;
+        return Result::SUCCESS;
     }
 
 
-    bool AravisCamera::setBoolFeature(const std::string& feature, bool& value) {
+    Result AravisCamera::setBoolFeature(const std::string& feature, bool& value) {
+        if (!this->isFeatureAvailable(feature)) return Result::NOT_AVAILABLE;
+
         GError* error = nullptr;
         const std::string& deviceId = this->getInstanceId();
         boost::mutex::scoped_lock camera_lock(m_camera_mtx);
@@ -615,7 +630,7 @@ namespace karabo {
             KARABO_LOG_FRAMEWORK_ERROR << deviceId << ": arv_device_set_boolean_feature_value failed: " << error->message;
             g_clear_error(&error);
         } else {
-            return true; // success
+            return Result::SUCCESS; // success
         }
 
         // read back value
@@ -623,17 +638,19 @@ namespace karabo {
         if (error != nullptr) { // Could not read back value
             KARABO_LOG_FRAMEWORK_ERROR << deviceId << ": arv_device_get_boolean_feature_value failed: " << error->message;
             g_clear_error(&error);
-            return false;
+            return Result::FAIL;
         } else if (rvalue != value) { // The value was not set
             value = rvalue;
-            return false;
+            return Result::FAIL;
         } else { // The value was set
-            return true;
+            return Result::SUCCESS;
         }
     }
 
 
-    bool AravisCamera::setStringFeature(const std::string& feature, std::string& value) {
+    Result AravisCamera::setStringFeature(const std::string& feature, std::string& value) {
+        if (!this->isFeatureAvailable(feature)) return Result::NOT_AVAILABLE;
+
         GError* error = nullptr;
         const std::string& deviceId = this->getInstanceId();
         boost::mutex::scoped_lock camera_lock(m_camera_mtx);
@@ -642,7 +659,7 @@ namespace karabo {
             KARABO_LOG_FRAMEWORK_ERROR << deviceId << ": arv_device_set_string_feature_value failed: " << error->message;
             g_clear_error(&error);
         } else {
-            return true; // success
+            return Result::SUCCESS; // success
         }
 
         // read back value
@@ -650,17 +667,19 @@ namespace karabo {
         if (error != nullptr) { // Could not read back value
             KARABO_LOG_FRAMEWORK_ERROR << deviceId << ": arv_device_get_string_feature_value failed: " << error->message;
             g_clear_error(&error);
-            return false;
+            return Result::FAIL;
         } else if (rvalue != value) { // The value was not set
             value = rvalue;
-            return false;
+            return Result::FAIL;
         } else { // The value was set
-            return true;
+            return Result::SUCCESS;
         }
     }
 
 
-    bool AravisCamera::setIntFeature(const std::string& feature, long long& value) {
+    Result AravisCamera::setIntFeature(const std::string& feature, long long& value) {
+        if (!this->isFeatureAvailable(feature)) return Result::NOT_AVAILABLE;
+
         GError* error = nullptr;
         const std::string& deviceId = this->getInstanceId();
         boost::mutex::scoped_lock camera_lock(m_camera_mtx);
@@ -669,7 +688,7 @@ namespace karabo {
             KARABO_LOG_FRAMEWORK_ERROR << deviceId << ": arv_device_set_integer_feature_value failed: " << error->message;
             g_clear_error(&error);
         } else {
-            return true; // success
+            return Result::SUCCESS; // success
         }
 
         // read back value
@@ -677,17 +696,19 @@ namespace karabo {
         if (error != nullptr) { // Could not read back value
             KARABO_LOG_FRAMEWORK_ERROR << deviceId << ": arv_device_get_integer_feature_value failed: " << error->message;
             g_clear_error(&error);
-            return false;
+            return Result::FAIL;
         } else if (rvalue != value) { // The value was not set
             value = rvalue;
-            return false;
+            return Result::FAIL;
         } else { // The value was set
-            return true;
+            return Result::SUCCESS;
         }
     }
 
 
-    bool AravisCamera::setFloatFeature(const std::string& feature, double& value) {
+    Result AravisCamera::setFloatFeature(const std::string& feature, double& value) {
+        if (!this->isFeatureAvailable(feature)) return Result::NOT_AVAILABLE;
+
         GError* error = nullptr;
         const std::string& deviceId = this->getInstanceId();
         boost::mutex::scoped_lock camera_lock(m_camera_mtx);
@@ -696,7 +717,7 @@ namespace karabo {
             KARABO_LOG_FRAMEWORK_ERROR << deviceId << ":arv_device_set_float_feature_value failed: " << error->message;
             g_clear_error(&error);
         } {
-            return true; // success
+            return Result::SUCCESS; // success
         }
 
         // read back value
@@ -704,12 +725,12 @@ namespace karabo {
         if (error != nullptr) { // The value was not set
             KARABO_LOG_FRAMEWORK_ERROR << deviceId << ": arv_device_get_float_feature_value failed: " << error->message;
             g_clear_error(&error);
-            return false;
+            return Result::FAIL;
         } else if (rvalue != value) { // The value was not set
             value = rvalue;
-            return false;
+            return Result::FAIL;
         } else { // The value was set
-            return true;
+            return Result::SUCCESS;
         }
     }
 
@@ -1490,12 +1511,12 @@ namespace karabo {
 
         if (m_arv_camera_trigger) {
             // trigger properties can be accessed with the arv_camera interface
-            bool success;
+            Result success;
 
             if (configuration.has("triggerSelector")) {
                 std::string triggerSelector = configuration.get<std::string>("triggerSelector");
                 success = this->setStringFeature("TriggerSelector", triggerSelector);
-                if (!success) {
+                if (success != Result::SUCCESS) {
                     configuration.erase("triggerSelector");
                 }
                 m_need_schema_update = true; // Schema update is needed as trigger mode, source and activation must be updated.
@@ -1504,7 +1525,7 @@ namespace karabo {
             if (configuration.has("triggerMode")) {
                 std::string triggerMode = configuration.get<std::string>("triggerMode");
                 success = this->setStringFeature("TriggerMode", triggerMode);
-                if (!success) {
+                if (success != Result::SUCCESS) {
                     configuration.erase("triggerMode");
                 }
             }
@@ -1512,7 +1533,7 @@ namespace karabo {
             if (configuration.has("triggerSource")) {
                 std::string triggerSource = configuration.get<std::string>("triggerSource");
                 success = this->setStringFeature("TriggerSource", triggerSource);
-                if (!success) {
+                if (success != Result::SUCCESS) {
                     configuration.erase("triggerSource");
                 }
             }
@@ -1520,7 +1541,7 @@ namespace karabo {
             if (configuration.has("triggerActivation")) {
                 std::string triggerActivation = configuration.get<std::string>("triggerActivation");
                 success = this->setStringFeature("TriggerActivation", triggerActivation);
-                if (!success) {
+                if (success != Result::SUCCESS) {
                     configuration.erase("triggerActivation");
                 }
             }
@@ -1576,7 +1597,7 @@ namespace karabo {
         std::vector<std::string> paths;
         filtered.getPaths(paths);
         for (const auto& key : paths) {
-            bool success = false;
+            Result success = Result::FAIL;
             const auto feature = this->getAliasFromKey<std::string>(key);
             const auto valueType = this->getValueType(key);
             const auto accessMode = schema.getAccessMode(key);
@@ -1625,7 +1646,7 @@ namespace karabo {
                     throw KARABO_NOT_IMPLEMENTED_EXCEPTION(key + " datatype not available in GenICam");
             }
 
-            if (!success) {
+            if (success == Result::FAIL) {
                 const std::string message("Setting value for " + key + " may not have been successful");
                 KARABO_LOG_WARN << message << ". Value on device updated according to camera.";
                 this->set("status", message);
@@ -2230,7 +2251,7 @@ namespace karabo {
     void AravisCamera::pollCamera(const boost::system::error_code & ec) {
         if (ec == boost::asio::error::operation_aborted) return;
 
-        if (!m_camera) {
+        if (!m_is_connected) {
             // Not connected
             m_poll_timer.expires_from_now(boost::posix_time::seconds(5l));
             m_poll_timer.async_wait(karabo::util::bind_weak(&AravisCamera::pollCamera, this, boost::asio::placeholders::error));
@@ -2261,24 +2282,24 @@ namespace karabo {
             std::string stringValue;
             switch(valueType) {
                 case Types::BOOL:
-                    if (this->getBoolFeature(feature, boolValue)) {
+                    if (this->getBoolFeature(feature, boolValue) == Result::SUCCESS) {
                         h.set(key, boolValue);
                     }
                     break;
                 case Types::STRING:
-                    if (this->getStringFeature(feature, stringValue)) {
+                    if (this->getStringFeature(feature, stringValue) == Result::SUCCESS) {
                         h.set(key, stringValue);
                     }
                     break;
                 case Types::INT32:
                 case Types::INT64:
-                    if (this->getIntFeature(feature, intValue)) {
+                    if (this->getIntFeature(feature, intValue) == Result::SUCCESS) {
                         h.set(key, intValue);
                     }
                     break;
                 case Types::FLOAT:
                 case Types::DOUBLE:
-                    if (this->getFloatFeature(feature, doubleValue)) {
+                    if (this->getFloatFeature(feature, doubleValue) == Result::SUCCESS) {
                         h.set(key, doubleValue);
                     }
                     break;
@@ -2628,13 +2649,19 @@ namespace karabo {
                     .commit();
         }
 
+        // Needed in case flip.X or flip.Y are disabled in the next step
+        NODE_ELEMENT(schemaUpdate).key("flip")
+                .displayedName("Image Flip")
+                .description("Enables mirroring of the image.")
+                .commit();
+
         // Disable features which are unavailable on the camera
         std::vector<std::string> paths;
         this->getPathsByTag(paths, "genicam,poll");
         camera_lock.unlock(); // must unlock m_camera_mtx before calling isFeatureAvailable(
         for (const auto& key : paths) {
             const std::string feature = this->getAliasFromKey<std::string>(key);
-            if (!this->isFeatureAvailable(feature)) {
+            if (!this->keyHasAlias(key) || !this->isFeatureAvailable(feature)) {
                 // This feature is not available on the camera
                 this->disableElement(key, feature, schemaUpdate);
             }
@@ -2642,11 +2669,6 @@ namespace karabo {
 
         if (!m_is_flip_x_available) {
             // Flip will be done on software
-            NODE_ELEMENT(schemaUpdate).key("flip")
-                    .displayedName("Image Flip")
-                    .description("Enables mirroring of the image.")
-                    .commit();
-
             BOOL_ELEMENT(schemaUpdate).key("flip.X")
                     .displayedName("Horizonzal Flip")
                     .description("Enable horizontal flip. This is done before the image rotation.")
@@ -2658,11 +2680,6 @@ namespace karabo {
 
         if (!m_is_flip_y_available) {
             // Flip will be done on software
-            NODE_ELEMENT(schemaUpdate).key("flip")
-                    .displayedName("Image Flip")
-                    .description("Enables mirroring of the image.")
-                    .commit();
-
             BOOL_ELEMENT(schemaUpdate).key("flip.Y")
                     .displayedName("Vertical Flip")
                     .description("Enable vertical flip. This is done before the image rotation.")
