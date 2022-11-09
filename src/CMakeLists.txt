@@ -101,8 +101,6 @@ if (BUILD_TESTS)
         Threads::Threads
         ${CMAKE_PROJECT_NAME}
         ${gtest_LIB}
-        imageSource
-        ${ARV_LIBRARIES}
     )
 
     add_test(NAME ${CMAKE_PROJECT_NAME}Tests COMMAND test-${CMAKE_PROJECT_NAME})

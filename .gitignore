@@ -55,3 +55,7 @@ src/version.hh
 !.install.sh
 
 report.xml
+
+# Backward compatibility with Netbeans
+.dep.inc
+nbproject/

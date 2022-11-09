@@ -17,6 +17,11 @@ BUILD_OPT="--build ."
 unset MAKEFLAGS
 if [[ "${2}" != "" ]]; then
   BUILD_OPT="--build . -j ${2}"
+# or use all but 4 procs on system
+# (minimum nproc is always 1)
+elif command -v nproc &> /dev/null; then
+  NPROC=$(nproc --all --ignore=4)
+  BUILD_OPT="--build . -j${NPROC}"
 fi
 
 
