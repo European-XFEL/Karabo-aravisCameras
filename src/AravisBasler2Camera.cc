@@ -126,16 +126,6 @@ namespace karabo {
         return true; // success
     }
 
-    bool AravisBasler2Camera::get_shape_and_format(ArvBuffer* buffer, gint& width, gint& height, ArvPixelFormat& format) const {
-        // For ACE2, shape and format must be read from buffer, independently from data chunks being enabled
-
-        gint x, y;
-        arv_buffer_get_image_region(buffer, &x, &y, &width, &height);
-        format = arv_buffer_get_image_pixel_format(buffer); // e.g. ARV_PIXEL_FORMAT_MONO_8
-
-        return true; // success
-    }
-
     bool AravisBasler2Camera::get_timestamp(ArvBuffer* buffer, karabo::util::Timestamp& ts) {
         return AravisBaslerBase::get_timestamp(buffer, ts, "BslChunkTimestampValue");
     }

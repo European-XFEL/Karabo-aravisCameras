@@ -454,7 +454,8 @@ namespace karabo {
     AravisCamera::AravisCamera(const karabo::util::Hash& config) : CameraImageSource(config),
             m_is_base_class(true), m_arv_camera_trigger(true), m_is_device_reset_available(false),
             m_is_frame_count_available(false), m_camera(nullptr), m_device(nullptr), m_parser(nullptr),
-            m_chunk_mode(false), m_max_correction_time(0), m_min_latency(0.),
+            m_chunk_mode(false), m_width(0), m_height(0), m_format(0),
+            m_max_correction_time(0), m_min_latency(0.),
             m_max_latency(0.), m_connect(true), m_is_connected(false),
             m_reconnect_timer(EventLoop::getIOService()), m_failed_connections(0u),
             m_poll_timer(EventLoop::getIOService()), m_is_acquiring(false), m_stream(nullptr),
@@ -1043,6 +1044,8 @@ namespace karabo {
         arv_camera_set_region(m_camera, 0, 0, width, height, &error);
         if (error != nullptr) {
             KARABO_LOG_FRAMEWORK_ERROR << deviceId << ": arv_camera_set_region failed: " << error->message;
+            m_width = 0;
+            m_height = 0;
             g_clear_error(&error);
             return false; // failure
         }
@@ -1057,6 +1060,8 @@ namespace karabo {
 
         if (error != nullptr) {
             KARABO_LOG_FRAMEWORK_ERROR << deviceId << "Could not get ROI bounds: " << error->message;
+            m_width = 0;
+            m_height = 0;
             g_clear_error(&error);
             return false; // failure
         }
@@ -1081,6 +1086,8 @@ namespace karabo {
         arv_camera_set_region(m_camera, 0, 0, width, height, &error);
         if (error != nullptr) {
             KARABO_LOG_FRAMEWORK_ERROR << deviceId << ": arv_camera_set_region failed: " << error->message;
+            m_width = 0;
+            m_height = 0;
             g_clear_error(&error);
             return false; // failure
         }
@@ -1094,6 +1101,8 @@ namespace karabo {
 
         if (error != nullptr) {
             KARABO_LOG_FRAMEWORK_ERROR << deviceId << "Could not get ROI bounds: " << error->message;
+            m_width = 0;
+            m_height = 0;
             g_clear_error(&error);
             return false; // failure
         }
@@ -1107,10 +1116,14 @@ namespace karabo {
         arv_camera_set_region(m_camera, x, y, width, height, &error);
         if (error != nullptr) {
             KARABO_LOG_FRAMEWORK_ERROR << deviceId << ": arv_camera_set_region failed: " << error->message;
+            m_width = 0;
+            m_height = 0;
             g_clear_error(&error);
             return false; // failure
         }
 
+        m_width = width;
+        m_height = height;
         return true; // success
     }
 
@@ -1440,8 +1453,11 @@ namespace karabo {
             const char* pixelFormat = configuration.get<std::string>("pixelFormat").c_str();
             boost::mutex::scoped_lock camera_lock(m_camera_mtx);
             arv_camera_set_pixel_format_from_string(m_camera, pixelFormat, &error);
+            if (error == nullptr) m_format = arv_camera_get_pixel_format(m_camera, &error);
             if (error != nullptr) {
-                KARABO_LOG_FRAMEWORK_ERROR << deviceId << ": arv_camera_set_pixel_format_from_string failed: " << error->message;
+                KARABO_LOG_FRAMEWORK_ERROR << deviceId << ": cold not set pixel format to "
+                    << pixelFormat << ": " << error->message;
+                m_format = 0;
                 configuration.erase("pixelFormat");
                 g_clear_error(&error);
             }
@@ -1674,7 +1690,7 @@ namespace karabo {
     }
 
 
-    bool AravisCamera::get_region(gint& x, gint& y, gint& width, gint& height) const {
+    bool AravisCamera::get_region(gint& x, gint& y, gint& width, gint& height) {
         GError* error = nullptr;
         boost::mutex::scoped_lock camera_lock(m_camera_mtx);
 
@@ -1682,29 +1698,15 @@ namespace karabo {
 
         if (error != nullptr) {
             KARABO_LOG_FRAMEWORK_WARN << this->getInstanceId() << ": arv_camera_get_region failed: " << error->message;
+            m_width = 0;
+            m_height = 0;
             g_clear_error(&error);
             return false; // failure
         }
 
+        m_width = width;
+        m_height = height;
         return true; // success
-    }
-
-
-    bool AravisCamera::get_shape_and_format(ArvBuffer* buffer, gint& width, gint& height, ArvPixelFormat& format) const {
-        if (m_chunk_mode) {
-            // arv_buffer_get_image_region and arv_buffer_get_image_pixel_format does not always work
-            // in this case; e.g. for Basler shape and format must be read from data chunks.
-            throw KARABO_LOGIC_EXCEPTION("Camera specific code for get_shape_and_format needs "
-                                        "to be implemented.");
-        }
-
-        gint x, y;
-        arv_buffer_get_image_region(buffer, &x, &y, &width, &height);
-        format = arv_buffer_get_image_pixel_format(buffer); // e.g. ARV_PIXEL_FORMAT_MONO_8
-        // const guint32 frame_id = arv_buffer_get_frame_id(buffer);
-        // KARABO_LOG_FRAMEWORK_DEBUG << this->getInstanceId() << ": Got frame " << frame_id;
-
-        return true;
     }
 
 
@@ -1945,23 +1947,12 @@ namespace karabo {
 
         ArvBufferStatus lastError = arv_buffer_get_status(arv_buffer);
         if (lastError == ARV_BUFFER_STATUS_SUCCESS) {
-            gint width, height;
+            gint width = self->m_width;
+            gint height = self->m_height;
             size_t buffer_size;
-            ArvPixelFormat pixel_format;
+            ArvPixelFormat pixel_format = self->m_format;
 
             const void* buffer_data = arv_buffer_get_data(arv_buffer, &buffer_size);
-            try {
-                const bool success = self->get_shape_and_format(arv_buffer, width, height, pixel_format);
-                if (!success) {
-                    // XXX Possibly stop the acquisition if the error persists...
-                    return;
-                }
-            } catch (const karabo::util::LogicException& e) {
-                KARABO_LOG_FRAMEWORK_ERROR << deviceId << ": " << e.what();
-                if (self->getState() == State::ACQUIRING) {
-                    self->execute("stop");
-                }
-            }
 
             karabo::util::Timestamp ts;
             if (self->get_timestamp(arv_buffer, ts)) {
@@ -2121,10 +2112,12 @@ namespace karabo {
         {
             boost::mutex::scoped_lock camera_lock(m_camera_mtx);
             const std::string pixelFormat = arv_camera_get_pixel_format_as_string(m_camera, &error);
+            if (error == nullptr) m_format = arv_camera_get_pixel_format(m_camera, &error);
             if (error == nullptr) {
                 h.set("pixelFormat", pixelFormat);
             } else {
-                KARABO_LOG_FRAMEWORK_WARN << deviceId << ": arv_camera_get_pixel_format_as_string failed: " << error->message;
+                m_format = 0;
+                KARABO_LOG_FRAMEWORK_WARN << deviceId << ": arv_camera_get_pixel_format* failed: " << error->message;
                 g_clear_error(&error);
             }
         }
@@ -2337,17 +2330,8 @@ namespace karabo {
         const std::string& deviceId = this->getInstanceId();
         boost::mutex::scoped_lock camera_lock(m_camera_mtx);
 
-        const ArvPixelFormat pixelFormat = arv_camera_get_pixel_format(m_camera, &error);
-        if (error != nullptr) {
-            KARABO_LOG_ERROR << errorMsg;
-            KARABO_LOG_FRAMEWORK_ERROR << deviceId << ": arv_camera_get_pixel_format failed: " << error->message;
-            g_clear_error(&error);
-            this->set("status", errorMsg);
-            return false; // failure
-        }
-
         Types::ReferenceType kType;
-        switch(pixelFormat) {
+        switch(m_format) {
             case ARV_PIXEL_FORMAT_MONO_8:
                 m_encoding = Encoding::GRAY;
                 kType = Types::UINT8;
@@ -2398,7 +2382,7 @@ namespace karabo {
                 break;
         }
 
-        const unsigned short bpp = ARV_PIXEL_FORMAT_BIT_PER_PIXEL(pixelFormat);
+        const unsigned short bpp = ARV_PIXEL_FORMAT_BIT_PER_PIXEL(m_format);
         h.set("bpp", bpp);
 
         this->set(h);

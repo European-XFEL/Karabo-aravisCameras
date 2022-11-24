@@ -63,24 +63,6 @@ namespace karabo {
         m_last_clock_reset.now();
     }
 
-    bool AravisBaslerCamera::get_shape_and_format(ArvBuffer* buffer, gint& width, gint& height, ArvPixelFormat& format) const {
-        GError* error = nullptr;
-        boost::mutex::scoped_lock camera_lock(m_camera_mtx);
-
-        width = arv_chunk_parser_get_integer_value(m_parser, buffer, "ChunkWidth", &error);
-        if (error == nullptr) height = arv_chunk_parser_get_integer_value(m_parser, buffer, "ChunkHeight", &error);
-        if (error == nullptr) format = arv_chunk_parser_get_integer_value(m_parser, buffer, "ChunkPixelFormat", &error);
-
-        if (error != nullptr) {
-            KARABO_LOG_FRAMEWORK_ERROR << this->getInstanceId() << ": Could not get image shape or format: " << error->message;
-            g_clear_error(&error);
-            return false; // failure
-        }
-
-        return true; // success
-    }
-
-
     bool AravisBaslerCamera::synchronize_timestamp() {
         GError* error = nullptr;
         const std::string& deviceId = this->getInstanceId();
@@ -140,11 +122,8 @@ namespace karabo {
         // Enable chunk data
         arv_camera_set_chunk_mode(m_camera, true, &error);
 
-        // Those will be needed to get frame shape and pixel format
+        // Enable timestamp chunk
         if (error == nullptr) arv_camera_set_chunk_state(m_camera, "Timestamp", true, &error);
-        if (error == nullptr) arv_camera_set_chunk_state(m_camera, "Width", true, &error);
-        if (error == nullptr) arv_camera_set_chunk_state(m_camera, "Height", true, &error);
-        if (error == nullptr) arv_camera_set_chunk_state(m_camera, "PixelFormat", true, &error);
 
         if (error != nullptr) {
             arv_camera_set_chunk_mode(m_camera, false, nullptr);
