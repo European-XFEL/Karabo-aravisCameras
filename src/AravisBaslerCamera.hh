@@ -31,8 +31,6 @@ namespace karabo {
 
         virtual ~AravisBaslerCamera() = default;
 
-        bool get_shape_and_format(ArvBuffer* buffer, gint& width, gint& height, ArvPixelFormat& format) const override;
-
         bool synchronize_timestamp() override;
 
         bool configure_timestamp_chunk() override;

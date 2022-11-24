@@ -34,9 +34,7 @@ namespace karabo {
 
         bool configure_timestamp_chunk() override;
 
-        bool get_region(gint& x, gint& y, gint& width, gint& height) const override;
-
-        bool get_shape_and_format(ArvBuffer* buffer, gint& width, gint& height, ArvPixelFormat& format) const override;
+        bool get_region(gint& x, gint& y, gint& width, gint& height) override;
 
         bool get_timestamp(ArvBuffer* buffer, karabo::util::Timestamp& ts) override;
 

@@ -102,8 +102,10 @@ namespace karabo {
         bool m_chunk_mode;
         karabo::util::Timestamp m_reference_karabo_time;
 
-        virtual bool get_region(gint& x, gint& y, gint& width, gint& height) const;
-        virtual bool get_shape_and_format(ArvBuffer* buffer, gint& width, gint& height, ArvPixelFormat& format) const;
+        gint m_width;
+        gint m_height;
+        ArvPixelFormat m_format;
+        virtual bool get_region(gint& x, gint& y, gint& width, gint& height);
         virtual bool get_timestamp(ArvBuffer* buffer, karabo::util::Timestamp& ts);
 
         virtual bool is_flip_x_available() const;

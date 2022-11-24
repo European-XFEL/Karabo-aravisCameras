@@ -494,7 +494,7 @@ namespace karabo {
         return true; // success
     }
 
-    bool AravisPhotonicScienceCamera::get_region(gint& x, gint& y, gint& width, gint& height) const {
+    bool AravisPhotonicScienceCamera::get_region(gint& x, gint& y, gint& width, gint& height) {
         GError* error = nullptr;
         boost::mutex::scoped_lock camera_lock(m_camera_mtx);
 
@@ -509,17 +509,9 @@ namespace karabo {
             return false; // failure
         }
 
+        m_width = width;
+        m_height = height;
         return true; // success
-    }
-
-    bool AravisPhotonicScienceCamera::get_shape_and_format(ArvBuffer* buffer, gint& width, gint& height, ArvPixelFormat& format) const {
-        gint x, y;
-        arv_buffer_get_image_region(buffer, &x, &y, &width, &height);
-        format = arv_buffer_get_image_pixel_format(buffer); // e.g. ARV_PIXEL_FORMAT_MONO_8
-        // const guint32 frame_id = arv_buffer_get_frame_id(buffer);
-        // KARABO_LOG_FRAMEWORK_DEBUG << this->getInstanceId() << ": Got frame " << frame_id;
-
-        return true;
     }
 
     bool AravisPhotonicScienceCamera::get_timestamp(ArvBuffer* buffer, karabo::util::Timestamp& ts) {
