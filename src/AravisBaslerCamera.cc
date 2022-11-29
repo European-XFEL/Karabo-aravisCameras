@@ -35,7 +35,7 @@ namespace karabo {
                 .displayedName("Temperature Selector")
                 .description("Lists the temperature sources available for readout.")
                 .assignmentOptional().defaultValue("Sensorboard")
-                .options("Sensorboard")
+                .options("Sensorboard,Coreboard")
                 .reconfigurable()
                 .allowedStates(State::UNKNOWN, State::ON)
                 .commit();
