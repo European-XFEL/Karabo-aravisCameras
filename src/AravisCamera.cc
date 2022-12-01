@@ -400,13 +400,25 @@ namespace karabo {
                 .allowedStates(State::UNKNOWN, State::ON)
                 .commit();
 
+        BOOL_ELEMENT(expected).key("isNormGain")
+                .displayedName("Enable Normalized Gain")
+                .description("The 'gain' parameter will be interpreted as 'normalized'.")
+                .assignmentOptional().defaultValue(true)
+                .init() // XXX What happens if I make it reconfigurable?
+                .commit();
+
         DOUBLE_ELEMENT(expected).key("gain")
-                .displayedName("Normalized Gain")
+                .displayedName("Gain")
                 .description("Sets the gain of the ADC converter.")
                 .assignmentOptional().noDefaultValue()
-                .minInc(0.).maxInc(1.)
                 .reconfigurable()
                 .allowedStates(State::UNKNOWN, State::ON)
+                .commit();
+
+        DOUBLE_ELEMENT(expected).key("absGain")
+                .displayedName("Absolute Gain")
+                .description("The absolute gain of the ADC converter.")
+                .readOnly()
                 .commit();
 
         STRING_ELEMENT(expected).key("acquisitionMode")
@@ -1314,7 +1326,7 @@ namespace karabo {
     }
 
 
-    bool AravisCamera::get_gain(double& gain) {
+    bool AravisCamera::get_gain(double& absGain, double& normGain) {
         GError* error = nullptr;
         const std::string& deviceId = this->getInstanceId();
         boost::mutex::scoped_lock camera_lock(m_camera_mtx);
@@ -1338,29 +1350,32 @@ namespace karabo {
             return false; // failure
         }
 
-        gain = (_gain - gmin) / (gmax - gmin); // normalized gain
+        absGain = _gain;
+        normGain = (_gain - gmin) / (gmax - gmin); // normalized gain
         return true; // success
     }
 
 
-    bool AravisCamera::set_gain(double gain) {
+    bool AravisCamera::set_gain(double gain, bool normalized) {
         GError* error = nullptr;
         const std::string& deviceId = this->getInstanceId();
         boost::mutex::scoped_lock camera_lock(m_camera_mtx);
 
-        // Get bounds
-        double gmin, gmax;
-        arv_camera_get_gain_bounds(m_camera, &gmin, &gmax, &error);
-        if (error != nullptr) {
-            KARABO_LOG_FRAMEWORK_ERROR << deviceId << ": arv_camera_get_gain_bounds failed: " << error->message;
-            g_clear_error(&error);
-            return false; // failure
+        if (normalized) { // Convert normalized to raw gain
+            // Get bounds
+            double gmin, gmax;
+            arv_camera_get_gain_bounds(m_camera, &gmin, &gmax, &error);
+            if (error != nullptr) {
+                KARABO_LOG_FRAMEWORK_ERROR << deviceId << ": arv_camera_get_gain_bounds failed: " << error->message;
+                g_clear_error(&error);
+                return false; // failure
+            }
+            const double _gain = gmin + gain * (gmax - gmin);
+            arv_camera_set_gain(m_camera, _gain, &error);
+        } else {
+            arv_camera_set_gain(m_camera, gain, &error);
         }
 
-        // Convert normalized to raw gain
-        const double _gain = gmin + gain * (gmax - gmin);
-
-        arv_camera_set_gain(m_camera, _gain, &error);
         if (error != nullptr) {
             KARABO_LOG_FRAMEWORK_ERROR << deviceId << ": arv_camera_set_gain failed: " << error->message;
             g_clear_error(&error);
@@ -1577,8 +1592,8 @@ namespace karabo {
 
         if (configuration.has("gain") && m_is_gain_available) {
             const double gain = configuration.get<double>("gain");
-
-            const bool success = this->set_gain(gain);
+            const bool isNormalized = this->get<bool>("isNormGain");
+            const bool success = this->set_gain(gain, isNormalized);
             if (!success) {
                 configuration.erase("gain");
             }
@@ -2203,10 +2218,13 @@ namespace karabo {
         }
 
         if (m_is_gain_available) {
-            double gain;
-            success = this->get_gain(gain);
+            const bool isNormalized = this->get<bool>("isNormGain");
+
+            double absGain, normGain;
+            success = this->get_gain(absGain, normGain);
             if (success) {
-                h.set("gain", gain);
+                h.set("absGain", absGain);
+                h.set("gain", isNormalized?normGain:absGain);
             }
         }
 
