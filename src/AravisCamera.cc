@@ -1356,7 +1356,7 @@ namespace karabo {
     }
 
 
-    bool AravisCamera::set_gain(double gain, bool normalized) {
+    bool AravisCamera::set_gain(double& absGain, double& normGain, bool normalized) {
         GError* error = nullptr;
         const std::string& deviceId = this->getInstanceId();
         boost::mutex::scoped_lock camera_lock(m_camera_mtx);
@@ -1370,26 +1370,29 @@ namespace karabo {
             return false; // failure
         }
 
-        double _gain;
-        if (normalized) { // Convert normalized to raw gain
-            if (gain < 0) {
-                _gain = gmin;
-            } else if (gain < 1.) {
-                _gain = gmin + gain * (gmax - gmin);
+        if (normalized) { // Convert normalized to absolute gain
+            if (normGain < 0) {
+                normGain = 0;
+                absGain = gmin;
+            } else if (normGain < 1.) {
+                absGain = gmin + normGain * (gmax - gmin);
             } else {
-                _gain = gmax;
+                normGain = 1;
+                absGain = gmax;
             }
         } else {
-            if (gain < gmin) {
-                _gain = gmin;
-            } else if (gain < gmax) {
-                _gain = gain;
+            if (absGain < gmin) {
+                absGain = gmin;
+                normGain = 0;
+            } else if (absGain < gmax) {
+                normGain = (absGain - gmin) / (gmax - gmin);
             } else {
-                _gain = gmax;
+                absGain = gmax;
+                normGain = 1.;
             }
         }
 
-        arv_camera_set_gain(m_camera, _gain, &error);
+        arv_camera_set_gain(m_camera, absGain, &error);
         if (error != nullptr) {
             KARABO_LOG_FRAMEWORK_ERROR << deviceId << ": arv_camera_set_gain failed: " << error->message;
             g_clear_error(&error);
@@ -1605,10 +1608,19 @@ namespace karabo {
         }
 
         if (configuration.has("gain") && m_is_gain_available) {
-            const double gain = configuration.get<double>("gain");
+            double absGain = configuration.get<double>("gain");
+            double normGain = configuration.get<double>("gain");
             const bool isNormalized = this->get<bool>("isNormGain");
-            const bool success = this->set_gain(gain, isNormalized);
-            if (!success) {
+            const bool success = this->set_gain(absGain, normGain, isNormalized);
+
+            if (success) { // update the values
+                if (isNormalized) {
+                    configuration.set("gain", normGain);
+                } else {
+                    configuration.set("gain", absGain);
+                }
+                configuration.set("absGain", absGain);
+            } else {
                 configuration.erase("gain");
             }
         }

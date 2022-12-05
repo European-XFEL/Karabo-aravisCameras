@@ -137,7 +137,7 @@ namespace karabo {
         bool set_exposure_time(double& exposure_time);
         bool set_frame_rate(bool enable, double frame_rate=0.);
         bool get_gain(double& absGain, double& normGain);
-        bool set_gain(double gain, bool normalized);
+        bool set_gain(double& absGain, double& normGain, bool normalized);
         bool set_frame_count(gint64& frame_count);
 
         boost::asio::deadline_timer m_poll_timer;
