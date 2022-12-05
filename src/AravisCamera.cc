@@ -1361,21 +1361,35 @@ namespace karabo {
         const std::string& deviceId = this->getInstanceId();
         boost::mutex::scoped_lock camera_lock(m_camera_mtx);
 
-        if (normalized) { // Convert normalized to raw gain
-            // Get bounds
-            double gmin, gmax;
-            arv_camera_get_gain_bounds(m_camera, &gmin, &gmax, &error);
-            if (error != nullptr) {
-                KARABO_LOG_FRAMEWORK_ERROR << deviceId << ": arv_camera_get_gain_bounds failed: " << error->message;
-                g_clear_error(&error);
-                return false; // failure
-            }
-            const double _gain = gmin + gain * (gmax - gmin);
-            arv_camera_set_gain(m_camera, _gain, &error);
-        } else {
-            arv_camera_set_gain(m_camera, gain, &error);
+        // Get bounds
+        double gmin, gmax;
+        arv_camera_get_gain_bounds(m_camera, &gmin, &gmax, &error);
+        if (error != nullptr) {
+            KARABO_LOG_FRAMEWORK_ERROR << deviceId << ": arv_camera_get_gain_bounds failed: " << error->message;
+            g_clear_error(&error);
+            return false; // failure
         }
 
+        double _gain;
+        if (normalized) { // Convert normalized to raw gain
+            if (gain < 0) {
+                _gain = gmin;
+            } else if (gain < 1.) {
+                _gain = gmin + gain * (gmax - gmin);
+            } else {
+                _gain = gmax;
+            }
+        } else {
+            if (gain < gmin) {
+                _gain = gmin;
+            } else if (gain < gmax) {
+                _gain = gain;
+            } else {
+                _gain = gmax;
+            }
+        }
+
+        arv_camera_set_gain(m_camera, _gain, &error);
         if (error != nullptr) {
             KARABO_LOG_FRAMEWORK_ERROR << deviceId << ": arv_camera_set_gain failed: " << error->message;
             g_clear_error(&error);
