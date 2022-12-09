@@ -34,7 +34,7 @@ stages:
     - pushd $CI_PROJECT_DIR
     - karabo -g https://$XFEL_TOKEN@git.xfel.eu install $REL_PROJECT_NAME $REL_TAG
     - export NUM_JOBS=$(grep "processor" /proc/cpuinfo | wc -l)
-    - make -j$NUM_JOBS build CONF=Release package
+    - make -j$NUM_JOBS CONF=Release package
     - echo package/$REL_ARTIFACT_NAME
     - mv package/*sh $REL_ARTIFACT_NAME
     - echo $REL_ARTIFACT_DEST
