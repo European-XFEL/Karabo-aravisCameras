@@ -5,6 +5,9 @@ add_library (
 find_package(PkgConfig REQUIRED)
 
 find_package(Threads REQUIRED)
+find_package(glib REQUIRED)
+find_package(aravis REQUIRED)
+find_package(imageSource REQUIRED)
 
 target_sources(
     ${CMAKE_PROJECT_NAME}
@@ -21,7 +24,7 @@ target_sources(
     # see https://stackoverflow.com/questions/32411963/why-is-cmake-file-glob-evil.
 )
 
-pkg_check_modules(ARV REQUIRED aravis-0.8)
+# pkg_check_modules(ARV REQUIRED aravis-0.8)
 
 target_compile_options(
     ${CMAKE_PROJECT_NAME}
@@ -32,7 +35,6 @@ target_include_directories(
     ${CMAKE_PROJECT_NAME} SYSTEM
     PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}
-    ${ARV_INCLUDE_DIRS}
  )
 
 target_link_libraries(
@@ -40,8 +42,9 @@ target_link_libraries(
     PUBLIC
     Threads::Threads
     ${KARABO_LIB_TARGET_NAME}
-    imageSource
-    ${ARV_LIBRARIES}
+    imageSource::imageSource
+    glib::glib
+    aravis::aravis
 )
 
 # Finds Git - it will be used by the custom command that generates version.hh

@@ -1,116 +1,75 @@
-before_script:
-    - echo '*** Install packages needed by aravis ***'
-    - export REL_OS_NAME=$(lsb_release -is)
-    - >
-      if [ "$REL_OS_NAME" = "CentOS" ]; then
-        if [ -x "/opt/rh/devtoolset-7/enable" ]; then
-            source /opt/rh/devtoolset-7/enable
-        fi
-        yum install -y intltool glib2-devel
-      elif [ "$REL_OS_NAME" = "Ubuntu" ]; then
-        apt-get update
-        apt-get install -y intltool libglib2.0-dev
-      fi
-
 stages:
-  - lint
   - build
 
-.release_build_template: &release_build
-  stage: build
+# determine conan recipe string from CI_COMMIT_TAG
+create_variables:
+  stage: .pre
+  variables:
+    # safe default variables here
+    CONAN_RECIPE_NAME:    $CI_PROJECT_NAME
+    CONAN_RECIPE_VERSION: $CI_COMMIT_SHORT_SHA
+    CONAN_RECIPE_USER:    $CI_PROJECT_NAMESPACE+$CI_PROJECT_NAME
+    CONAN_RECIPE_CHANNEL: 2.16.4
   script:
-    - export REL_OS_NAME=$(lsb_release -is)
-    - export REL_OS_VERS=$(lsb_release -rs | sed -r "s/^([0-9]+).*/\1/")
-    - export REL_ARCH=$(uname -m)
-    - export REL_PROJECT_NAME=$CI_PROJECT_NAME
-    - export REL_TAG=$CI_COMMIT_REF_NAME
-    - export REL_ARTIFACT_DEST=karaboDevices/$REL_PROJECT_NAME/tags/$CI_COMMIT_REF_NAME
-    - export KARABO_TAG=$(echo $REL_TAG | sed -r "s/^([0-9]+.[0-9]+.[0-9]+)-([0-9]+.[0-9]+.[0-9]+)/\2/")
-    - export REL_ARTIFACT_NAME=$REL_PROJECT_NAME-$REL_TAG-$KARABO_TAG-$REL_OS_NAME-$REL_OS_VERS-$REL_ARCH-Release.sh
-    - curl http://exflserv05.desy.de/karabo/karaboFramework/tags/$KARABO_TAG/karabo-$KARABO_TAG-Release-$REL_OS_NAME-$REL_OS_VERS-x86_64.sh > karabo.sh
-    - bash karabo.sh --prefix=/root
-    - source /root/karabo/activate
-    - export KARABO_BROKER_TOPIC="gitlab_ci_$CI_JOB_ID"
-    - pushd $CI_PROJECT_DIR
-    - karabo -g https://$XFEL_TOKEN@git.xfel.eu install $REL_PROJECT_NAME $REL_TAG
-    - export NUM_JOBS=$(grep "processor" /proc/cpuinfo | wc -l)
-    - make -j$NUM_JOBS CONF=Release package
-    - echo package/$REL_ARTIFACT_NAME
-    - mv package/*sh $REL_ARTIFACT_NAME
-    - echo $REL_ARTIFACT_DEST
-    - sshpass -p "$XKARABO_PWD" ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null xkarabo@exflserv05 "mkdir -p /var/www/html/karabo/$REL_ARTIFACT_DEST"
-    - sshpass -p "$XKARABO_PWD" scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null $REL_ARTIFACT_NAME xkarabo@exflserv05:/var/www/html/karabo/$REL_ARTIFACT_DEST
-  only:
-    - /^(\d+\.)(\d+\.)(\d+)-(\d+\.)(\d+\.)(\d+)((a|b|rc)\d+)?$/
-  except:
-    - branches 
+    - |
+      # if this is a tagged pipeline and a '-' is found in the tag ...
+      if [[ "$CI_COMMIT_TAG" =~ "-" ]]; then
+        # package version is first part before the '-'
+        CONAN_RECIPE_VERSION="${CI_COMMIT_TAG%-*}"
+        # karabo version is second part after the '-'
+        CONAN_RECIPE_CHANNEL="${CI_COMMIT_TAG#*-}"
+        KARABO_TAG=$CONAN_RECIPE_CHANNEL
+      fi
+      # pass environment variables on to next step via artifacts:reports:dotenv
+      echo "CONAN_RECIPE_NAME=$CONAN_RECIPE_NAME" >> dotenv.txt
+      echo "CONAN_RECIPE_VERSION=$CONAN_RECIPE_VERSION" >> dotenv.txt
+      echo "CONAN_RECIPE_USER=$CONAN_RECIPE_USER" >> dotenv.txt
+      echo "CONAN_RECIPE_CHANNEL=$CONAN_RECIPE_CHANNEL" >> dotenv.txt
+      echo "CONAN_RECIPE=$CONAN_RECIPE_NAME/$CONAN_RECIPE_VERSION@$CONAN_RECIPE_USER/$CONAN_RECIPE_CHANNEL" >> dotenv.txt
+      # dump variables to CI output
+      cat dotenv.txt
+  artifacts:
+    reports:
+      dotenv: dotenv.txt
 
-.test_build_template: &test_build
+# build template
+.build_template: &build_it
   stage: build
+  variables:
+    KARABO_TAG:          $CONAN_RECIPE_CHANNEL
+    KARABO_BROKER_TOPIC: "gitlab_ci_$CI_JOB_ID"
   script:
-    - export REL_OS_NAME=$(lsb_release -is)
-    - export REL_OS_VERS_LONG=$(lsb_release -rs | sed -r "s/^([0-9]+).*/\1/")
-    - export REL_PROJECT_NAME=$CI_PROJECT_NAME
-    - export REL_TAG=$CI_BUILD_REF_NAME
-    - export KARABO_TAG="latest_build"
-    - curl http://exflserv05.desy.de/karabo/karaboFramework/tags/$KARABO_TAG/karabo-$KARABO_TAG-Release-$REL_OS_NAME-$REL_OS_VERS_LONG-x86_64.sh > karabo.sh
-    - bash karabo.sh --prefix=/root
-    - source /root/karabo/activate
-    - export KARABO_BROKER_TOPIC="gitlab_ci_$CI_JOB_ID"
+    # setup conan build profile
+    - conan profile new default --detect || true > /dev/null
+    - conan profile update settings.compiler.libcxx=libstdc++11 default
+    # setup conan and add XFEL gitlab package registry
+    - conan remote add gitlab $CI_API_V4_URL/packages/conan
+    - conan user -p $CI_JOB_TOKEN --remote=gitlab gitlab-ci-token
+    # install karabo framework from conan package
+    - conan install karaboFramework/$KARABO_TAG@karaboDevices+depends/any --install-folder $HOME/karabo --remote=gitlab > /dev/null
+    - source $HOME/karabo/activate
     - pushd $CI_PROJECT_DIR
-    - karabo -g https://$XFEL_TOKEN@git.xfel.eu install $REL_PROJECT_NAME $REL_TAG
-    - export NUM_JOBS=$(grep "processor" /proc/cpuinfo | wc -l)
-    - make -j$NUM_JOBS build CONF=Release
-    - export GTEST_OUTPUT=xml:$CI_PROJECT_DIR/report.xml
-    - make test CONF=Release
+    # commands for conan to collect dependencies and build a karabo device
+    - mkdir build && cd build
+    - conan install .. --remote=gitlab -pr:b=default
+    - conan build ..
+    # push compiled karabo device package back to gitlab registry
+    - conan export-pkg .. $CONAN_RECIPE
+    - conan upload $CONAN_RECIPE --all --remote=gitlab --confirm
   only:
     - branches
   except:
     - master
-  artifacts:
-    when: always
-    reports:
-      junit: report.xml
 
-##### Static source code analysis #####
-lint:
-  stage: lint
-  image: europeanxfel/karabo-ci:miniconda-3lint
-  script:
-    - git clone https://$XFEL_TOKEN@git.xfel.eu/Karabo/linter-tools.git ci
-    - source ci/lint-cppcheck.sh
+##### confirm the projects builds #####
+build:x86_64-ubuntu:
+  image: conanio/gcc9:1.59.0
+  <<: *build_it
 
-##### Static source code analysis #####
-lint-clang-tidy:
-  stage: lint
-  image: europeanxfel/karabo-ci:miniconda-3lint
-  script:
-    - git clone https://$XFEL_TOKEN@git.xfel.eu/Karabo/linter-tools.git ci
-    - source ci/lint-clang-tidy.sh
+# test:ubuntu20:
+#   image: europeanxfel/karabo-ci:ubuntu-20
+#   <<: *test_build
 
-##### Release build #####
-release:ubuntu18:
-  image: europeanxfel/karabo-ci:ubuntu-18
-  <<: *release_build
-
-release:ubuntu20:
-  image: europeanxfel/karabo-ci:ubuntu-20
-  <<: *release_build
-
-release:centos7:
-  image: europeanxfel/karabo-ci:centos-7gcc7
-  <<: *release_build
-
-##### Test build #####
-test:ubuntu18:
-  image: europeanxfel/karabo-ci:ubuntu-18
-  <<: *test_build
-
-test:ubuntu20:
-  image: europeanxfel/karabo-ci:ubuntu-20
-  <<: *test_build
-
-test:centos7:
-  image: europeanxfel/karabo-ci:centos-7gcc7
-  <<: *test_build
-
+# test:centos7:
+#   image: conanio/gcc72
+#   <<: *test_build

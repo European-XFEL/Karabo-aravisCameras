@@ -2,53 +2,50 @@
 AravisCameras Device (C++)
 ******************************
 
-Compiling
-=========
+Compiling with Conan
+====================
 
-1. Source activate the Karabo installation against which the device will be
-   developed:
+1. Make a build directory::
 
-    ``cd <Karabo installation root directory>``
-    ``source ./activate``
+     mkdir build
+     cd build
 
-2. Goto the device source root directory and generate its build files with cmake:
+2. Install the compile-time and run-time dependencies for this project into the local conan cache. This step also generates a cmake toolchain file that will be used by the project to find these dependencies::
 
-     ``cd $KARABO/devices/aravisCameras``
-     ``mkdir build``
-     ``cd build``
-     ``cmake -DCMAKE_BUILD_TYPE=Debug -DCMAKE_PREFIX_PATH=$KARABO/extern ..``
+     conan install .. --remote=gitlab
 
-   CMAKE_BUILD_TYPE can also be set to "Release".
+3. Compile the project. This step compiles with cmake using the generated toolchain file from the previous step. To control the cmake build options from the conan build command, use the -o arguments (see conanfile.py for which -o options are implemented)::
 
-3. Build the device:
+     conan build .. <-o build_option1=True -o build_option2=False ...>
 
-     ``cd $KARABO/devices/aravisCameras``
-     ``cmake --build . ``
 
-   ``make`` can also be used as long as the Makefile generator is used by cmake.
+Testing with Conan
+==================
 
-Testing
-=======
+1. There is a way to have conan execute cmake tests. Coming soon ....
 
-After a successfull build, a shared library is generated here:
 
-``dist/<configuration>/<system>/libaravisCameras.so``
+Installing with Conan
+=====================
 
-And a soft-link to the ``libaravisCameras.so`` file is created in the
-``$KARABO/plugins`` folder.
+1. Create a conan package of the compiled project and install it into the local conan cache. This step uses the output of cmake install to figure out which files are part of the project package. The project is For this step, a version number is needed (1.0.0 here as example)::
 
-To run the tests, go to the tests directory in your build tree and use ``ctest``:
+     conan export-pkg .. aravisCameras/1.0.0@karaboDevices+aravisCameras/any
 
-    ``cd $KARABO/devices/aravisCameras/build/aravisCameras``
-    ``ctest -VV``
+2. Install the project and all its dependencies (including the Karabo framework) into the /home/<username>/karabo-fromconan folder. Inspect the folder and it should look like a karabo framework deployment along with your project dependencies and plugins::
+
+     conan install aravisCameras/1.0.0@karaboDevices+aravisCameras/any --install-folder ~/karabo-fromconan --remote=gitlab
+
+``The above conan install command can also be used as a one-line command to install a pre-compiled binary and karabo framework from XFEL's gitlab package repository. Browse the Packages & Registries menu option for this project to see available pre-compiled package versions.``
+
 
 Running
 =======
 
-If you want to manually start a server using this device, simply type:
+If you want to manually start a server using this device, activate your Karabo installation in /home/<username>/karabo-fromconan folder and run the cppserver::
 
-``karabo-cppserver serverId=cppServer/1 deviceClasses=AravisCameras``
+     karabo-cppserver serverId=cppServer/1 deviceClasses=AravisCameras
 
-Or just use (a properly configured):
+Or just use (a properly configured)::
 
-``karabo-start``
+     karabo-start
