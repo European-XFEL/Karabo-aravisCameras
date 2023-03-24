@@ -9,7 +9,6 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 find_package(Threads REQUIRED)
 
 find_package(aravisCameras REQUIRED)
-find_package(JPEG REQUIRED)
 find_package(GTest REQUIRED)
 
 add_executable(
@@ -31,7 +30,6 @@ target_link_libraries(
     Threads::Threads
     aravisCameras::aravisCameras
     GTest::gtest
-    JPEG::JPEG
 )
 
 enable_testing()

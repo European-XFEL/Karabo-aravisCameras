@@ -2,7 +2,7 @@ add_library (
     ${CMAKE_PROJECT_NAME} SHARED
 )
 
-find_package(PkgConfig REQUIRED)
+# find_package(PkgConfig REQUIRED)
 
 find_package(Threads REQUIRED)
 find_package(glib REQUIRED)
@@ -17,6 +17,7 @@ set(TARGET_HEADERS
 target_sources(
     ${CMAKE_PROJECT_NAME}
     PRIVATE
+
     # Add any other source file in here.
     AravisCamera.cc
     AravisBaslerBase.cc
@@ -121,6 +122,6 @@ if (BUILD_TESTS)
         ${gtest_LIB}
     )
 
-    add_test(NAME ${CMAKE_PROJECT_NAME}Tests COMMAND test-${CMAKE_PROJECT_NAME})
+    add_test(${CMAKE_PROJECT_NAME}Tests test-${CMAKE_PROJECT_NAME})
 
 endif()
