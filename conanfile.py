@@ -12,10 +12,17 @@ class KaraboDeviceConan(ConanFile):
     requires = ( "karaboFramework/2.16.4@karaboDevices+depends/any",
                  "glib/2.75.2@karaboDevices+depends/any",
                  "aravis/0.8.20@karaboDevices+depends/any",
-                 "imageSource/960a4421@karaboDevices+imageSource/2.16.4",
+                 "imageSource/0.9.9@karaboDevices+imageSource/2.16.4",
     )
     options = { "build_tests": [True, False] }
     default_options = { "build_tests": False }
+
+    def export_sources(self):
+        self.copy("CMakeLists.txt")
+        self.copy("cmake/*")
+        self.copy("src/*")
+        # git refs needed to generate version.hh, self.copy ignores .git/
+        self.run(f"cp -r .git/ {self.export_sources_folder}")
 
     def generate(self):
         toolchain = CMakeToolchain(self)
@@ -37,7 +44,7 @@ class KaraboDeviceConan(ConanFile):
         cmake.install()
 
     def package_info(self):
-        self.cpp_info.includedirs = ["include"]
+        self.cpp_info.includedirs = ["include", "include/aravisCameras"]
         self.cpp_info.libdirs = ["plugins"]
         self.cpp_info.libs = collect_libs(self)
 

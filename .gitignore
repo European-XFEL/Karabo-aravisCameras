@@ -34,6 +34,7 @@ CMakeFiles
 CMakeScripts
 Testing
 #Makefile # using the Makefile to interface with `karabo install`
+CMakeUserPresets.json
 cmake_install.cmake
 install_manifest.txt
 compile_commands.json

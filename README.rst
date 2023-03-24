@@ -10,13 +10,13 @@ Compiling with Conan
      mkdir build
      cd build
 
-2. Install the compile-time and run-time dependencies for this project into the local conan cache. This step also generates a cmake toolchain file that will be used by the project to find these dependencies::
+2. Install the compile-time and run-time dependencies for this project into the local conan cache. This step also generates a cmake toolchain file that will be used by the project to find these dependencies. To control the cmake build options from the conan build command, use the -o arguments (see conanfile.py for which -o options are implemented)::
 
-     conan install .. --remote=gitlab
+     conan install .. --remote=gitlab <-o build_option1=True -o build_option2=False ...>
 
-3. Compile the project. This step compiles with cmake using the generated toolchain file from the previous step. To control the cmake build options from the conan build command, use the -o arguments (see conanfile.py for which -o options are implemented)::
+3. Compile the project. This step compiles with cmake using the generated toolchain file from the previous step. ::
 
-     conan build .. <-o build_option1=True -o build_option2=False ...>
+     conan build ..
 
 
 Testing with Conan

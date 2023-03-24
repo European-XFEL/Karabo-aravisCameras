@@ -1,5 +1,7 @@
 stages:
   - build
+  - test
+  - package
 
 # determine conan recipe string from CI_COMMIT_TAG
 create_variables:
@@ -32,39 +34,96 @@ create_variables:
     reports:
       dotenv: dotenv.txt
 
-# build template
-.build_template: &build_it
-  stage: build
+# define common actions for the build/test/package environment
+.conan_setup_script:
+  cache:
+    paths:
+      - conan_cache_dir/
+    policy: pull-push
   variables:
+    CONAN_USER_HOME:     $CI_PROJECT_DIR/conan_cache_dir
     KARABO_TAG:          $CONAN_RECIPE_CHANNEL
-    KARABO_BROKER_TOPIC: "gitlab_ci_$CI_JOB_ID"
-  script:
+    # karabo framework crashes if $KARABO not defined, since this CI
+    # uses the karaboFramework conan package, there's no need to install
+    # the framework but there is a need to define this variable
+    KARABO:              /tmp
+  before_script:
+    - lsb_release -a
     # setup conan build profile
     - conan profile new default --detect || true > /dev/null
     - conan profile update settings.compiler.libcxx=libstdc++11 default
     # setup conan and add XFEL gitlab package registry
-    - conan remote add gitlab $CI_API_V4_URL/packages/conan
+    - conan remote add gitlab $CI_API_V4_URL/packages/conan || true
     - conan user -p $CI_JOB_TOKEN --remote=gitlab gitlab-ci-token
     # install karabo framework from conan package
-    - conan install karaboFramework/$KARABO_TAG@karaboDevices+depends/any --install-folder $HOME/karabo --remote=gitlab > /dev/null
-    - source $HOME/karabo/activate
-    - pushd $CI_PROJECT_DIR
+    # - conan install karaboFramework/$KARABO_TAG@karaboDevices+depends/any --install-folder $HOME/karabo --remote=gitlab > /dev/null
+    # - source $HOME/karabo/activate
+    # - pushd $CI_PROJECT_DIR
+  after_script:
+    # clean up build directories from conan cache
+    - conan remove "*" -b -f
+
+
+# build template
+.build_template: &build_it
+  stage: build
+  extends: .conan_setup_script
+  script:
     # commands for conan to collect dependencies and build a karabo device
-    - mkdir build && cd build
-    - conan install .. --remote=gitlab -pr:b=default
-    - conan build ..
+    - conan remove $CONAN_RECIPE_NAME -f || true
+    - conan create . $CONAN_RECIPE -pr:b=default -s build_type=Release --build=missing --test-folder=None
+
+# test template
+.test_template: &test_it
+  stage: test
+  extends: .conan_setup_script
+  variables:
+    KARABO_BROKER_TOPIC: "gitlab_ci_$CI_JOB_ID"
+  script:
+    # provide libnssutil3.so, it is missing from the conanio base images
+    - sudo apt-get update
+    - sudo apt-get -qq install -y --no-install-recommends --no-install-suggests libnss3-tools
+    # build and run the test executables in the src/test directory
+    - conan create . $CONAN_RECIPE -pr:b=default -s build_type=Release --build=missing --test-folder=None
+    - export GTEST_OUTPUT=xml:$CI_PROJECT_DIR/report.xml
+    - conan test src/test/. $CONAN_RECIPE
+  artifacts:
+    when: always
+    paths:
+      - report.xml
+    reports:
+      junit:
+        - report.xml
+    expire_in: 8 weeks
+
+# package template
+.package_template: &package_it
+  stage: package
+  extends: .conan_setup_script
+  script:
     # push compiled karabo device package back to gitlab registry
-    - conan export-pkg .. $CONAN_RECIPE
+    - conan create . $CONAN_RECIPE -pr:b=default -s build_type=Release --build=missing --test-folder=None
     - conan upload $CONAN_RECIPE --all --remote=gitlab --confirm
   only:
-    - branches
-  except:
-    - master
+    - tags
+  # conan packages from this stage are not pushed back to cache
+  cache:
+    policy: pull
 
-##### confirm the projects builds #####
+
+##### x86_64-ubuntu 20 #####
 build:x86_64-ubuntu:
   image: conanio/gcc9:1.59.0
   <<: *build_it
+
+test:x86_64-ubuntu:
+  image: conanio/gcc9:1.59.0
+  <<: *test_it
+
+package:x86_64-ubuntu:
+  image: conanio/gcc9:1.59.0
+  <<: *package_it
+
 
 # test:ubuntu20:
 #   image: europeanxfel/karabo-ci:ubuntu-20

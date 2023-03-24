@@ -9,6 +9,11 @@ find_package(glib REQUIRED)
 find_package(aravis REQUIRED)
 find_package(imageSource REQUIRED)
 
+set(TARGET_HEADERS
+    AravisCamera.hh
+    version.hh
+)
+
 target_sources(
     ${CMAKE_PROJECT_NAME}
     PRIVATE
@@ -77,6 +82,16 @@ add_custom_target(
 )
 
 add_dependencies(${CMAKE_PROJECT_NAME} UpdateVersionHeader)
+
+# install public header files
+set_target_properties(
+    ${CMAKE_PROJECT_NAME}
+    PROPERTIES PUBLIC_HEADER "${TARGET_HEADERS}")
+
+# install the target (library files)
+install(TARGETS ${CMAKE_PROJECT_NAME}
+    LIBRARY DESTINATION "plugins"
+    PUBLIC_HEADER DESTINATION "include/${CMAKE_PROJECT_NAME}")
 
 if (BUILD_TESTS)
 
