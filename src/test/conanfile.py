@@ -6,9 +6,7 @@ class KaraboDeviceConan(ConanFile):
     generators = "CMakeToolchain", "CMakeDeps"
     settings = "os", "compiler", "build_type", "arch"
 
-    requires = ( "gtest/1.11.0",
-                 "libjpeg/9e",
-    )
+    requires = ( "gtest/1.11.0" )
 
     def requirements(self):
         self.requires(self.tested_reference_str)

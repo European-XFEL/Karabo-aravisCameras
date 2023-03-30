@@ -17,13 +17,8 @@
 
 #include "testrunner.hh"
 
-// register for configuration so libaraviscamera.so is linked to this test exe
-namespace karabo {
-    USING_KARABO_NAMESPACES;
-    KARABO_REGISTER_FOR_CONFIGURATION(BaseDevice, Device<>, ImageSource, CameraImageSource, AravisCamera)
-}
-
 #define TEST_DEVICE_ID      "testAravisCamera"
+
 using namespace ::testing;
 
 /**
@@ -106,8 +101,12 @@ protected:
 TEST_P(DefaultCfg, testDeviceInstantiation) {
     // get current parameter (note the use of TEST_P(...) above)
     std::string clsIdFromParam = GetParam();
-    instantiateAndGetPointer(clsIdFromParam, TEST_DEVICE_ID, devCfg);
+    auto bp = instantiateAndGetPointer(clsIdFromParam, TEST_DEVICE_ID, devCfg);
 
+    // this pointer is needed only to convince the linker to link
+    // libaravisCameras.so directly to this test executable
+    // TODO: find a better way with linker flags directly
+    auto dp = boost::dynamic_pointer_cast<karabo::AravisCamera>(bp);
 
     karabo::util::Hash result = m_deviceCli->get(TEST_DEVICE_ID);
     std::string cls = result.get<std::string>("classId");
