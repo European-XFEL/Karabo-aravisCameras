@@ -1,170 +1,142 @@
 /*
- * Author: parenti
+ * Author: smithm
  *
- * Created on August 26, 2022, 04:58 PM
+ * Created on March 24, 2023, 04:58 PM
  *
  * Copyright (c) European XFEL GmbH Hamburg. All rights reserved.
  */
 
 #include "AravisCamera.hh"
 
-#include <boost/shared_ptr.hpp>
-#include <gtest/gtest.h>
 #include <thread>
 #include <utility>
+#include <boost/shared_ptr.hpp>
+#include <gtest/gtest.h>
 
-#include "karabo/core/DeviceClient.hh"
-#include "karabo/core/DeviceServer.hh"
-#include "karabo/net/EventLoop.hh"
 #include "karabo/util/Hash.hh"
-#include "karabo/util/PluginLoader.hh"
 
+#include "testrunner.hh"
 
-#define DEVICE_SERVER_ID    "testDeviceSrvCpp"
-#define TEST_ARAVIS_ID      "testAravisCamera"
-#define TEST_ARAVIS_ID_FAIL "testAravisCameraFail"
-#define TEST_BASLER_ID      "testBaslerCamera"
-#define TEST_BASLER2_ID     "testBasle2Camera"
-#define TEST_PHSC_ID        "testPhScCamera"
-#define LOG_PRIORITY        "FATAL"  // Can also be "DEBUG", "INFO" or "ERROR"
+// register for configuration so libaraviscamera.so is linked to this test exe
+namespace karabo {
+    USING_KARABO_NAMESPACES;
+    KARABO_REGISTER_FOR_CONFIGURATION(BaseDevice, Device<>, ImageSource, CameraImageSource, AravisCamera)
+}
 
-#define DEV_CLI_TIMEOUT_SEC 2
-
+#define TEST_DEVICE_ID      "testAravisCamera"
+using namespace ::testing;
 
 /**
- * @brief Test fixture for the AravisCameras device class.
+ * @brief Test fixture for the AravisCamera device classes.
+ *        Since there are multiple classes to instantiate,
+ *        this test fixture is parameterized by the classIds.
  */
-class AravisCamerasFixture: public testing::Test {
+class DefaultCfg: public KaraboDeviceFixture, public WithParamInterface<std::string> {
 protected:
 
-    AravisCamerasFixture() = default;
+    DefaultCfg() = default;
 
-    void SetUp( ) {
-        m_eventLoopThread = std::thread(&karabo::net::EventLoop::work);
+    void SetUp( ) override {
+        /**
+         * Add configuration for this 'DefaultCfg' test fixture
+         * to the devCfg hash here
+         */
 
-        // Load the library dynamically
-        const karabo::util::Hash& pluginConfig = karabo::util::Hash("pluginDirectory", ".");
-        karabo::util::PluginLoader::create("PluginLoader", pluginConfig)->update();
+        karabo::util::Hash goodCfg("deviceId", TEST_DEVICE_ID,
+                                   "_deviceId_", TEST_DEVICE_ID,
+                                   "cameraId", "1.2.3.4");
+        devCfg.merge(goodCfg);
 
-        // Instantiate C++ Device Server.
-        karabo::util::Hash config("serverId", DEVICE_SERVER_ID,
-                                  "scanPlugins", true,
-                                  "Logger.priority", LOG_PRIORITY);
-        m_deviceSrv = karabo::core::DeviceServer::create("DeviceServer", config);
-        m_deviceSrv->finalizeInternalInitialization();
-        // Instantiate Device Client.
-        m_deviceCli = boost::make_shared<karabo::core::DeviceClient>();
+        /**
+         * Instantiate device inside a device server
+         *
+         * Recommended method if not using googletest/googlemock expectations
+         */
+        // instantiate the device to be tested
+        //std::string classId = GetParam();
+        //instantiateWithDeviceServer(classId, TEST_DEVICE_ID, devCfg);
     }
 
-    void TearDown( ) {
-        m_deviceCli.reset();
-        m_deviceSrv.reset();
-        karabo::net::EventLoop::stop();
-        m_eventLoopThread.join();
+    void TearDown( ) override {
+        /**
+         * Shutdown the device
+         */
+        // test the preDestruction() hook
+        m_deviceCli->execute(TEST_DEVICE_ID, "slotKillDevice");
     }
 
-    void instantiateAravisCamera(const karabo::util::Hash& devSpecificCfg) {
-        karabo::util::Hash devCfg("deviceId", TEST_ARAVIS_ID, "cameraId", "1.2.3.4");
-        devCfg.merge(devSpecificCfg);
+    karabo::util::Hash devCfg;
+};
 
-        std::pair<bool, std::string> success =
-            m_deviceCli->instantiate(DEVICE_SERVER_ID, "AravisCamera",
-                                     devCfg, DEV_CLI_TIMEOUT_SEC);
+class InvalidCfg: public KaraboDeviceFixture {
+protected:
 
-        ASSERT_TRUE(success.first)
-            << "Error instantiating '" << TEST_ARAVIS_ID << "':\n"
-            << success.second;
+    InvalidCfg() = default;
+
+    void SetUp( ) override {
+        /**
+         * Add configuration for this 'InvalidCfg' test fixture
+         * that should make instantiation fail
+         */
+
+        karabo::util::Hash badCfg("deviceId", TEST_DEVICE_ID,
+                                  "_deviceId_", TEST_DEVICE_ID);
+        devCfg.merge(badCfg);
+
+        /**
+         * Instantiate device inside a device server
+         *
+         * Recommended method if not using googletest/googlemock expectations
+         */
+        // instantiate the device to be tested
+        //instantiateWithDeviceServer(classId, TEST_DEVICE_ID, devCfg);
     }
 
-    void instantiateAravisCameraFail(const karabo::util::Hash& devSpecificCfg) {
-        karabo::util::Hash devCfg("deviceId", TEST_ARAVIS_ID_FAIL); // missing mandatory parameter
-        devCfg.merge(devSpecificCfg);
-
-        std::pair<bool, std::string> success =
-            m_deviceCli->instantiate(DEVICE_SERVER_ID, "AravisCamera",
-                                     devCfg, DEV_CLI_TIMEOUT_SEC);
-
-        ASSERT_FALSE(success.first)
-            << "Error instantiating '" << TEST_ARAVIS_ID_FAIL << "':\n"
-            << success.second;
+    void TearDown( ) override {
+        /**
+         * Do nothing since the device should not instantiate
+         */
     }
 
-    void instantiateBaslerCamera(const karabo::util::Hash& devSpecificCfg) {
-        karabo::util::Hash devCfg("deviceId", TEST_BASLER_ID, "cameraId", "1.2.3.4");
-        devCfg.merge(devSpecificCfg);
-
-        std::pair<bool, std::string> success =
-            m_deviceCli->instantiate(DEVICE_SERVER_ID, "AravisBaslerCamera",
-                                     devCfg, DEV_CLI_TIMEOUT_SEC);
-
-        ASSERT_TRUE(success.first)
-            << "Error instantiating '" << TEST_BASLER_ID << "':\n"
-            << success.second;
-    }
-
-    void instantiateBasler2Camera(const karabo::util::Hash& devSpecificCfg) {
-        karabo::util::Hash devCfg("deviceId", TEST_BASLER2_ID, "cameraId", "1.2.3.4");
-        devCfg.merge(devSpecificCfg);
-
-        std::pair<bool, std::string> success =
-            m_deviceCli->instantiate(DEVICE_SERVER_ID, "AravisBasler2Camera",
-                                     devCfg, DEV_CLI_TIMEOUT_SEC);
-
-        ASSERT_TRUE(success.first)
-            << "Error instantiating '" << TEST_BASLER2_ID << "':\n"
-            << success.second;
-    }
-
-    void instantiatePhScCamera(const karabo::util::Hash& devSpecificCfg) {
-        karabo::util::Hash devCfg("deviceId", TEST_PHSC_ID, "cameraId", "1.2.3.4");
-        devCfg.merge(devSpecificCfg);
-
-        std::pair<bool, std::string> success =
-            m_deviceCli->instantiate(DEVICE_SERVER_ID, "AravisPhotonicScienceCamera",
-                                     devCfg, DEV_CLI_TIMEOUT_SEC);
-
-        ASSERT_TRUE(success.first)
-            << "Error instantiating '" << TEST_PHSC_ID << "':\n"
-            << success.second;
-    }
-
-    void deinstantiateTestDevice() {
-        ASSERT_NO_THROW(
-            m_deviceCli->killDevice(TEST_ARAVIS_ID, DEV_CLI_TIMEOUT_SEC))
-        << "Failed to deinstantiate device '" << TEST_ARAVIS_ID << "'";
-
-        ASSERT_NO_THROW(
-            m_deviceCli->killDevice(TEST_BASLER_ID, DEV_CLI_TIMEOUT_SEC))
-        << "Failed to deinstantiate device '" << TEST_BASLER_ID << "'";
-
-        ASSERT_NO_THROW(
-            m_deviceCli->killDevice(TEST_BASLER2_ID, DEV_CLI_TIMEOUT_SEC))
-        << "Failed to deinstantiate device '" << TEST_BASLER2_ID << "'";
-
-        ASSERT_NO_THROW(
-            m_deviceCli->killDevice(TEST_PHSC_ID, DEV_CLI_TIMEOUT_SEC))
-        << "Failed to deinstantiate device '" << TEST_PHSC_ID << "'";
-
-    }
-
-    std::thread m_eventLoopThread;
-
-    karabo::core::DeviceServer::Pointer m_deviceSrv;
-    karabo::core::DeviceClient::Pointer m_deviceCli;
+    karabo::util::Hash devCfg;
 };
 
 
-// TODO: Give the test case a proper name (not "testScaffold")
-TEST_F(AravisCamerasFixture, testScaffold){
+// test only that device instantiates
+TEST_P(DefaultCfg, testDeviceInstantiation) {
+    // get current parameter (note the use of TEST_P(...) above)
+    std::string clsIdFromParam = GetParam();
+    instantiateAndGetPointer(clsIdFromParam, TEST_DEVICE_ID, devCfg);
 
-    // TODO: Provide a non-empty config for the device under test.
-    instantiateAravisCamera(karabo::util::Hash());
-    instantiateAravisCameraFail(karabo::util::Hash());
-    instantiateBaslerCamera(karabo::util::Hash());
-    instantiateBasler2Camera(karabo::util::Hash());
-    instantiatePhScCamera(karabo::util::Hash());
 
-    // TODO: Define a test body.
+    karabo::util::Hash result = m_deviceCli->get(TEST_DEVICE_ID);
+    std::string cls = result.get<std::string>("classId");
+    std::string clsVer = result.get<std::string>("classVersion");
 
-    deinstantiateTestDevice();
+    std::cout << std::endl;
+    std::cout << "Device under test is class " << cls;
+    std::cout << ", version " << clsVer;
+    std::cout << std::endl;
+    std::cout << std::endl;
+
+    ASSERT_STREQ(cls.c_str(), clsIdFromParam.c_str());
+}
+
+// run the above DefaultCfg test, with the default config hash,
+// for each camera class listed in Values(...)
+INSTANTIATE_TEST_CASE_P(
+    AravisCameras,
+    DefaultCfg,
+    Values("AravisCamera",
+           "AravisBaslerCamera",
+           "AravisBasler2Camera",
+           "AravisPhotonicScienceCamera")
+);
+
+
+// test only that device fails to instantiate
+TEST_F(InvalidCfg, testDeviceInstantiationFailure) {
+
+    EXPECT_ANY_THROW({ instantiateAndGetPointer("AravisCamera", TEST_DEVICE_ID, devCfg); });
+
 }
