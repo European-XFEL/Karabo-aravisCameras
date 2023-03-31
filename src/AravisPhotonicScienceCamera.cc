@@ -3,7 +3,7 @@
  *
  * Created on March 17, 2020, 12:20 PM
  *
- * Copyright (c) European XFEL GmbH Hamburg. All rights reserved.
+ * Copyright (c) European XFEL GmbH Schenefeld. All rights reserved.
  */
 
 #include "AravisPhotonicScienceCamera.hh"

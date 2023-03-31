@@ -3,7 +3,7 @@
  *
  * Created on September, 2019, 10:46 AM
  *
- * Copyright (c) European XFEL GmbH Hamburg. All rights reserved.
+ * Copyright (c) European XFEL GmbH Schenefeld. All rights reserved.
  */
 
 #ifndef KARABO_ARAVISCAMERA_HH

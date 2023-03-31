@@ -1,4 +1,6 @@
-// Copyright (c) European XFEL GmbH Schenefeld. All rights reserved.
+/*
+ * Copyright (c) European XFEL GmbH Schenefeld. All rights reserved.
+ */
 
 #include "AravisBaslerBase.hh"
 

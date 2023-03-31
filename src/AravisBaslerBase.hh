@@ -3,7 +3,7 @@
  *
  * Created on January 18, 2022,  3:28 PM
  *
- * Copyright (c) European XFEL GmbH Hamburg. All rights reserved.
+ * Copyright (c) European XFEL GmbH Schenefeld. All rights reserved.
  */
 
 #ifndef KARABO_ARAVISBASLERBASE_HH

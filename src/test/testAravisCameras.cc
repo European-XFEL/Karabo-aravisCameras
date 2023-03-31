@@ -3,7 +3,7 @@
  *
  * Created on August 26, 2022, 04:58 PM
  *
- * Copyright (c) European XFEL GmbH Hamburg. All rights reserved.
+ * Copyright (c) European XFEL GmbH Schenefeld. All rights reserved.
  */
 
 #include "AravisCamera.hh"

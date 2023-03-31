@@ -3,7 +3,7 @@
  *
  * Created on October 20, 2020,  4:34 PM
  *
- * Copyright (c) European XFEL GmbH Hamburg. All rights reserved.
+ * Copyright (c) European XFEL GmbH Schenefeld. All rights reserved.
  */
 
 #include "AravisBaslerCamera.hh"
