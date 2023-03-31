@@ -3,7 +3,7 @@
  *
  * Created on April 27, 2021,  6:00 PM
  *
- * Copyright (c) European XFEL GmbH Hamburg. All rights reserved.
+ * Copyright (c) European XFEL GmbH Schenefeld. All rights reserved.
  */
 
 #ifndef KARABO_ARAVISBASLER2CAMERA_HH
