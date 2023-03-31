@@ -12,7 +12,7 @@ class KaraboDeviceConan(ConanFile):
     requires = ( "karaboFramework/2.16.4@karaboDevices+depends/any",
                  "glib/2.75.2@karaboDevices+depends/any",
                  "aravis/0.8.20@karaboDevices+depends/any",
-                 "imageSource/0.9.9@karaboDevices+imageSource/2.16.4",
+                 "imageSource/0.9.9@karaboDevices+imageSource/any",
     )
     options = { "build_tests": [True, False] }
     default_options = { "build_tests": False }
