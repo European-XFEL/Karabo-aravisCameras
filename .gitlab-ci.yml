@@ -83,6 +83,9 @@ create_variables:
     # provide libnssutil3.so, it is missing from the conanio base images
     - sudo apt-get update
     - sudo apt-get -qq install -y --no-install-recommends --no-install-suggests libnss3-tools
+    # see if libjpeg.so.9 error goes away when imageSource build from scratch
+    - conan remove imageSource -f
+    - conan remove aravisCameras -f
     # build and run the test executables in the src/test directory
     - conan create . $CONAN_RECIPE -pr:b=default -s build_type=Release --build=missing --test-folder=None
     - export GTEST_OUTPUT=xml:$CI_PROJECT_DIR/report.xml
