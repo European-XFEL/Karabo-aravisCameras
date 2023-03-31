@@ -87,7 +87,7 @@ create_variables:
     - sudo apt-get update
     - sudo apt-get -qq install -y --no-install-recommends --no-install-suggests libnss3-tools
     # build and run the test executables in the src/test directory
-    - conan create . $CONAN_RECIPE -pr:b=default -s build_type=Release --build=missing --test-folder=None
+    - conan create . $CONAN_RECIPE -pr:b=default -s build_type=Release --build=missing --build=imageSource --test-folder=None
     - export GTEST_OUTPUT=xml:$CI_PROJECT_DIR/report.xml
     - conan test src/test/. $CONAN_RECIPE
   artifacts:
