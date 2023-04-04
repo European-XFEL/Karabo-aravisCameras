@@ -2,36 +2,48 @@
 AravisCameras Device (C++)
 ******************************
 
-Introduction
-============
+Overview
+========
 
 The AravisCamera class provides a way to interface with a GigE Vision camera
 in a Karabo framework environment. It enables users to configure the camera
 settings, acquire images, and dynamically update the settings during runtime.
-This class simplifies the interaction with the camera and streamlines the process
-making it easier to integrate the camera into various applications.
+This class simplifies the interaction with the camera and streamlines the
+process making it easier to integrate the camera into various applications.
 
-This software is released by the European XFEL GmbH as is and without any warranty
-under the GPLv3 license. If you have questions on contributing to the project,
-please get in touch at opensource@xfel.eu. Before contributing you are required
-to sign either a Contributors License Agreement, or Entity Contributor License
-Agreement, which you can find in the root directory of this project. Please mail
-the signed agreement to opensource@xfel.eu. By signing the CLA you acknowledge that
-copyright and all intellectual property rights of your contribution are transferred
-to the European X-ray Free Electron Laser Facility GmbH.
-You are free to use this software under the terms of the GPLv3 without signing a CLA.
+Contact
+========
+
+For questions, please contact opensource@xfel.eu.
+
+License and Contributing
+=========================
+
+This software is released by the European XFEL GmbH as is and without any
+warranty under the GPLv3 license.
+If you have questions on contributing to the project, please get in touch at
+opensource@xfel.eu.
+Before contributing you are required to sign either a Contributors License
+Agreement, or Entity Contributor License Agreement, which you can find in the
+root directory of this project.
+Please mail the signed agreement to opensource@xfel.eu.
+By signing the CLA you acknowledge that copyright and all intellectual property
+rights of your contribution are transferred to the European X-ray Free Electron
+Laser Facility GmbH.
+You are free to use this software under the terms of the GPLv3 without signing
+a CLA.
 
 Dependencies
 ============
 
-- aravis
+- aravis (https://github.com/AravisProject/aravis)
 
-  - meson
-  - ninja
+  - meson (https://pypi.org/project/meson/)
+  - ninja (https://pypi.org/project/ninja/)
 
-- imageSource
+- imageSource (https://git.xfel.eu/karaboDevices/imageSource)
 
-  - opencv
+  - opencv (https://opencv.org/)
 
 Compiling
 =========
