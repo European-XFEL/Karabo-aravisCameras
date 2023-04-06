@@ -56,6 +56,17 @@ namespace karabo {
                 .description("Indicates the temperature state.")
                 .readOnly()
                 .commit();
+
+        STRING_ELEMENT(expected).key("shutterMode")
+                .alias("ShutterMode")
+                .tags("genicam")
+                .displayedName("Shutter Mode")
+                .description("Sets the shutter mode.")
+                .assignmentOptional().defaultValue("Global")
+                .options("Global,Rolling,GlobalResetRelease")
+                .reconfigurable()
+                .allowedStates(State::UNKNOWN, State::ON)
+                .commit();
     }
 
     AravisBaslerCamera::AravisBaslerCamera(const karabo::util::Hash& config) : AravisBaslerBase(config) {

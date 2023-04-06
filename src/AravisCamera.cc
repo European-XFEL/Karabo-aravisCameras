@@ -2693,6 +2693,7 @@ namespace karabo {
                 // This feature is not available on the camera
                 this->disableElement(key, feature, schemaUpdate);
             }
+            // XXX Update options!
         }
 
         if (!m_is_flip_x_available) {
