@@ -124,8 +124,9 @@ namespace karabo {
 
         FLOAT_ELEMENT(expected).key("frameRate.target")
                 .displayedName("Target Frame Rate")
-                .description("Sets the 'absolute' value of the acquisition frame rate on the camera. "
-                "The 'absolute' value is a float value that sets the acquisition frame rate in frames per second.")
+                .description("Sets the 'target' value of the acquisition frame rate on the camera. "
+                "Please be aware that if you enable this feature in combination with external trigger, "
+                "the resulting 'actual' frame rate will most likely be smaller.")
                 .assignmentOptional().defaultValue(10.)
                 .minInc(0.)
                 .unit(Unit::HERTZ)
@@ -555,11 +556,10 @@ namespace karabo {
     }
 
 
-    void AravisCamera::disableElement(const std::string& key, const std::string& feature, karabo::util::Schema& schemaUpdate) {
-        STRING_ELEMENT(schemaUpdate).key(key)
-            .displayedName(feature)
-            .description("Not available for this camera.")
-            .readOnly()
+    void AravisCamera::disableElement(const std::string& key, karabo::util::Schema& schemaUpdate) {
+        OVERWRITE_ELEMENT(schemaUpdate).key(key)
+            .setNewDescription("Not available on this camera.")
+            .setNowReadOnly()
             .commit();
     }
 
@@ -2435,6 +2435,8 @@ namespace karabo {
         guint n_int_values, n_str_values;
         gint64* int_options;
         const char** str_options;
+        Schema schemaUpdate = this->getFullSchema();
+        Hash parameterHash = schemaUpdate.getParameterHash(); // Copy
 
         // get available pixel formats
         int_options = arv_camera_dup_available_pixel_formats(m_camera, &n_int_values, &error);
@@ -2464,23 +2466,14 @@ namespace karabo {
             KARABO_LOG_FRAMEWORK_WARN << deviceId << ": Could not fill-up pixel_format_options map: different number of "
                 << "int and string options.";
         }
-
-        std::string pixelFormatOptions;
-        for (unsigned short i = 0; i < n_str_values; ++i) {
-            if (i > 0) pixelFormatOptions.append(",");
-            pixelFormatOptions.append(str_options[i]);
-        }
         g_free(int_options);
-        g_free(str_options);
 
-        Schema schemaUpdate;
-        STRING_ELEMENT(schemaUpdate).key("pixelFormat")
-                .displayedName("Pixel Format")
-                .assignmentOptional().noDefaultValue()
-                .options(pixelFormatOptions)
-                .reconfigurable()
-                .allowedStates(State::UNKNOWN, State::ON)
-                .commit();
+        const std::vector<std::string> pixelFormatOptions(str_options,
+            str_options + n_str_values);
+        g_free(str_options);
+        OVERWRITE_ELEMENT(schemaUpdate).key("pixelFormat")
+            .setNewOptions(pixelFormatOptions)
+            .commit();
 
         if (m_is_device_reset_available) {
             // Make "resetCamera" slot visible in the GUI
@@ -2490,9 +2483,6 @@ namespace karabo {
                     .allowedStates(State::ERROR, State::ON)
                     .commit();
         }
-
-        // Disable setting not available properties
-        const std::string notAvailable("Not available for this camera.");
 
         if (m_arv_camera_trigger) {
             // get available trigger selectors
@@ -2505,23 +2495,12 @@ namespace karabo {
                 return false; // failure
             }
 
-            std::string triggerSelectorOptions;
-            for (unsigned short i = 0; i < n_str_values; ++i) {
-                if (i > 0) triggerSelectorOptions.append(",");
-                triggerSelectorOptions.append(str_options[i]);
-            }
+            const std::vector<std::string> triggerSelectorOptions(str_options,
+                str_options + n_str_values);
             g_free(str_options);
-
-            STRING_ELEMENT(schemaUpdate).key("triggerSelector")
-                    .displayedName("Trigger Selector")
-                    .description("This enumeration selects the trigger type to configure. "
-                    "Once a trigger type has been selected, all changes to the trigger settings will be applied to "
-                    "the selected trigger.")
-                    .assignmentOptional().noDefaultValue()
-                    .options(triggerSelectorOptions)
-                    .reconfigurable()
-                    .allowedStates(State::UNKNOWN, State::ON)
-                    .commit();
+            OVERWRITE_ELEMENT(schemaUpdate).key("triggerSelector")
+                .setNewOptions(triggerSelectorOptions)
+                .commit();
 
             // get available trigger sources
             str_options = arv_camera_dup_available_trigger_sources(m_camera, &n_str_values, &error);
@@ -2533,94 +2512,34 @@ namespace karabo {
                 return false; // failure
             }
 
-            std::string triggerSourceOptions;
-            for (unsigned short i = 0; i < n_str_values; ++i) {
-                if (i > 0) triggerSourceOptions.append(",");
-                triggerSourceOptions.append(str_options[i]);
-            }
+            std::vector<std::string> triggerSourceOptions(str_options,
+                str_options + n_str_values);
             g_free(str_options);
 
             if (n_str_values == 0) {
                 KARABO_LOG_FRAMEWORK_WARN << deviceId
                     << ": could not get available trigger sources from camera. "
                     << "Using defaults.";
-                triggerSourceOptions = "Software,Line1";
+                triggerSourceOptions = {"Software", "Line1"};
             }
 
-            STRING_ELEMENT(schemaUpdate).key("triggerSource")
-                    .displayedName("Trigger Source")
-                    .description("This enumeration sets the signal source for the selected trigger.")
-                    .assignmentOptional().noDefaultValue()
-                    .options(triggerSourceOptions)
-                    .reconfigurable()
-                    .allowedStates(State::UNKNOWN, State::ON)
-                    .commit();
+            OVERWRITE_ELEMENT(schemaUpdate).key("triggerSource")
+                .setNewOptions(triggerSourceOptions)
+                .commit();
+
         }
 
         if (!m_is_binning_available) {
-            NODE_ELEMENT(schemaUpdate).key("bin")
-                    .displayedName("Image Binning")
-                    .commit();
-
-            INT32_ELEMENT(schemaUpdate).key("bin.x")
-                    .displayedName("X Binning")
-                    .description(notAvailable)
-                    .readOnly()
-                    .commit();
-
-            INT32_ELEMENT(schemaUpdate).key("bin.y")
-                    .displayedName("Y Binning")
-                    .description(notAvailable)
-                    .readOnly()
-                    .commit();
+            this->disableElement("bin.x", schemaUpdate);
+            this->disableElement("bin.y", schemaUpdate);
         }
 
         if (!m_is_exposure_time_available) {
-            DOUBLE_ELEMENT(schemaUpdate).key("exposureTime")
-                    .displayedName("Exposure Time")
-                    .description(notAvailable)
-                    .readOnly()
-                    .commit();
+            this->disableElement("exposureTime", schemaUpdate);
         }
 
-        NODE_ELEMENT(schemaUpdate).key("frameRate")
-                .displayedName("Frame Rate")
-                .commit();
-
         if (!m_is_frame_rate_available) {
-            FLOAT_ELEMENT(schemaUpdate).key("frameRate.target")
-                    .displayedName("Target Frame Rate")
-                    .description(notAvailable)
-                    .readOnly()
-                    .commit();
-
-            FLOAT_ELEMENT(schemaUpdate).key("frameRate.actual")
-                    .displayedName("Actual Frame Rate")
-                    .description("The measured frame rate.")
-                    .unit(Unit::HERTZ)
-                    .readOnly()
-                    .initialValue(0.)
-                    .commit();
-        } else {
-            FLOAT_ELEMENT(schemaUpdate).key("frameRate.target")
-                    .displayedName("Target Frame Rate")
-                    .description("Sets the 'target' value of the acquisition frame rate on the camera. "
-                    "Please be aware that if you enable this feature in combination with external trigger, "
-                    "the resulting 'actual' frame rate will most likely be smaller.")
-                    .assignmentOptional().defaultValue(10.)
-                    .minInc(0.)
-                    .unit(Unit::HERTZ)
-                    .reconfigurable()
-                    .allowedStates(State::UNKNOWN, State::ON)
-                    .commit();
-
-            FLOAT_ELEMENT(schemaUpdate).key("frameRate.actual")
-                    .displayedName("Actual Frame Rate")
-                    .description("The measured frame rate.")
-                    .unit(Unit::HERTZ)
-                    .readOnly()
-                    .initialValue(0.)
-                    .commit();
+            this->disableElement("frameRate.target", schemaUpdate);
         }
 
         const std::string vendor = arv_camera_get_vendor_name(m_camera, &error);
@@ -2628,94 +2547,78 @@ namespace karabo {
             KARABO_LOG_FRAMEWORK_WARN << deviceId << ": arv_camera_get_vendor_name failed: " << error->message;
             g_clear_error(&error);
         }
-        if (vendor == "Basler") {
-            BOOL_ELEMENT(schemaUpdate).key("frameRate.enable")
-                    .displayedName("Frame Rate Enable")
-                    .description("Enable frame rate control when camera is in trigger mode.")
-                    .assignmentOptional().defaultValue(false)
-                    .reconfigurable()
-                    .allowedStates(State::UNKNOWN, State::ON)
-                    .commit();
-        } else {
-            BOOL_ELEMENT(schemaUpdate).key("frameRate.enable")
-                    .displayedName("Frame Rate Enable")
-                    .description(notAvailable)
-                    .readOnly()
-                    .commit();
+        if (vendor != "Basler") {
+            // Only enable for Basler
+            // XXX Check why this is needed...
+            this->disableElement("frameRate.enable", schemaUpdate);
         }
 
         if (!m_is_gain_auto_available) {
-            STRING_ELEMENT(schemaUpdate).key("autoGain")
-                    .displayedName("Auto Gain")
-                    .description(notAvailable)
-                    .readOnly()
-                    .commit();
+            this->disableElement("autoGain", schemaUpdate);
         }
 
         if (!m_is_gain_available) {
-            DOUBLE_ELEMENT(schemaUpdate).key("gain")
-                    .displayedName("Gain")
-                    .description(notAvailable)
-                    .readOnly()
-                    .commit();
+            this->disableElement("gain", schemaUpdate);
         }
 
         if (!m_is_frame_count_available) {
-            STRING_ELEMENT(schemaUpdate).key("acquisitionMode")
-                    .displayedName("Acquisition Mode")
-                    .description("This property sets the image acquisition mode.")
-                    .assignmentOptional().defaultValue("Continuous")
-                    .options("Continuous,SingleFrame")
-                    .reconfigurable()
-                    .allowedStates(State::UNKNOWN, State::ON)
-                    .commit();
+            std::vector<std::string> acquisitionModeOptions = {
+                "Continuous", "SingleFrame"};
+            OVERWRITE_ELEMENT(schemaUpdate).key("acquisitionMode")
+                .setNewOptions(acquisitionModeOptions)
+                .commit();
 
-            INT64_ELEMENT(schemaUpdate).key("frameCount")
-                    .displayedName("Frame Count")
-                    .description(notAvailable)
-                    .readOnly()
-                    .commit();
+            this->disableElement("frameCount", schemaUpdate);
         }
 
-        // Needed in case flip.X or flip.Y are disabled in the next step
-        NODE_ELEMENT(schemaUpdate).key("flip")
-                .displayedName("Image Flip")
-                .description("Enables mirroring of the image.")
+        if (!m_is_flip_x_available) {
+            // Remove alias and tags so that flip is done on software
+            OVERWRITE_ELEMENT(schemaUpdate).key("flip.X")
+                .setNewAlias("")
+                .setNewTags({})
                 .commit();
+            // To avoid the parameter is disabled in the following step.
+            parameterHash.erase("flip.X");
+        }
+
+        if (!m_is_flip_y_available) {
+            // Remove alias and tags so that flip is done on software
+            // This must be done here to avoid the parameter is disabled
+            // in the following step.
+            OVERWRITE_ELEMENT(schemaUpdate).key("flip.Y")
+                .setNewAlias("")
+                .setNewTags({})
+                .commit();
+            // To avoid the parameter is disabled in the following step.
+            parameterHash.erase("flip.Y");
+        }
 
         // Disable features which are unavailable on the camera
         std::vector<std::string> paths;
-        this->getPathsByTag(paths, "genicam,poll");
+        const Hash filteredParameters = this->filterByTags(parameterHash,
+            "genicam,poll");
+        filteredParameters.getPaths(paths);
         camera_lock.unlock(); // must unlock m_camera_mtx before calling isFeatureAvailable(
         for (const auto& key : paths) {
             const std::string feature = this->getAliasFromKey<std::string>(key);
             if (!this->keyHasAlias(key) || !this->isFeatureAvailable(feature)) {
                 // This feature is not available on the camera
-                this->disableElement(key, feature, schemaUpdate);
+                this->disableElement(key, schemaUpdate);
+            } else if (schemaUpdate.getValueType(key) == Types::STRING) {
+                const char** str_options = arv_device_dup_available_enumeration_feature_values_as_strings(
+                    m_device, feature.c_str(), &n_str_values, &error);
+                if (error == nullptr) {
+                    const std::vector<std::string> vec_options(str_options,
+                        str_options + n_str_values);
+                    OVERWRITE_ELEMENT(schemaUpdate).key(key)
+                        .setNewOptions(vec_options)
+                        .commit();
+                } else {
+                    KARABO_LOG_FRAMEWORK_ERROR << "arv_device_dup_available_enumeration_feature_values_as_strings failed: " << error->message;
+                    g_clear_error(&error);
+                }
+                g_free(str_options);
             }
-            // XXX Update options!
-        }
-
-        if (!m_is_flip_x_available) {
-            // Flip will be done on software
-            BOOL_ELEMENT(schemaUpdate).key("flip.X")
-                    .displayedName("Horizonzal Flip")
-                    .description("Enable horizontal flip. This is done before the image rotation.")
-                    .assignmentOptional().defaultValue(false)
-                    .reconfigurable()
-                    .allowedStates(State::UNKNOWN, State::ON)
-                    .commit();
-        }
-
-        if (!m_is_flip_y_available) {
-            // Flip will be done on software
-            BOOL_ELEMENT(schemaUpdate).key("flip.Y")
-                    .displayedName("Vertical Flip")
-                    .description("Enable vertical flip. This is done before the image rotation.")
-                    .assignmentOptional().defaultValue(false)
-                    .reconfigurable()
-                    .allowedStates(State::UNKNOWN, State::ON)
-                    .commit();
         }
 
         this->appendSchema(schemaUpdate);

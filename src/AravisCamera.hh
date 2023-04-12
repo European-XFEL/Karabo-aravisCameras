@@ -153,7 +153,7 @@ namespace karabo {
 
         void getPathsByTag(std::vector<std::string >& paths, const std::string& tags);
 
-        void disableElement(const std::string& key, const std::string& feature, karabo::util::Schema& schemaUpdate);
+        void disableElement(const std::string& key, karabo::util::Schema& schemaUpdate);
 
         Result getBoolFeature(const std::string& feature, bool& value);
         Result getStringFeature(const std::string& feature, std::string& value);
