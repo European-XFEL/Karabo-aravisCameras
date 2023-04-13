@@ -67,6 +67,16 @@ namespace karabo {
                 .reconfigurable()
                 .allowedStates(State::UNKNOWN, State::ON)
                 .commit();
+
+        BOOL_ELEMENT(expected).key("globalResetReleaseModeEnable")
+                .alias("GlobalResetReleaseModeEnable")
+                .tags("genicam")
+                .displayedName("Global Reset Release Mode Enable")
+                .description("Enable the global reset release mode.")
+                .assignmentOptional().defaultValue(false)
+                .reconfigurable()
+                .allowedStates(State::UNKNOWN, State::ON)
+                .commit();
     }
 
     AravisBaslerCamera::AravisBaslerCamera(const karabo::util::Hash& config) : AravisBaslerBase(config) {
