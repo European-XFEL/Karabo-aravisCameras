@@ -2429,7 +2429,6 @@ namespace karabo {
         const unsigned short bpp = ARV_PIXEL_FORMAT_BIT_PER_PIXEL(m_format);
         h.set("bpp", bpp);
 
-        this->set(h);
         CameraImageSource::updateOutputSchema(shape, m_encoding, kType);
 
         guint n_int_values, n_str_values;
@@ -2623,6 +2622,10 @@ namespace karabo {
 
         this->appendSchema(schemaUpdate);
         m_need_schema_update = false;
+
+        // Update device values only after schema (including options) has been updated
+        this->set(h);
+
         return true; // success
     }
 
