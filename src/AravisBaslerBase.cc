@@ -42,6 +42,30 @@ namespace karabo {
                 .setNewTags({"genicam"})
                 .commit();
 
+        const std::vector<std::string> binModes = {"Sum", "Average"};
+
+        STRING_ELEMENT(expected).key("bin.binningHorizontalMode")
+                .alias("BinningHorizontalMode")
+                .tags("genicam")
+                .displayedName("Binning Horizontal Mode")
+                .description("Sets the binning mode for horizontal binning.")
+                .assignmentOptional().defaultValue("Sum")
+                .options(binModes)
+                .reconfigurable()
+                .allowedStates(State::UNKNOWN, State::ON)
+                .commit();
+
+        STRING_ELEMENT(expected).key("bin.binningVerticalMode")
+                .alias("BinningVerticalMode")
+                .tags("genicam")
+                .displayedName("Binning Verticall Mode")
+                .description("Sets the binning mode for vertical binning.")
+                .assignmentOptional().defaultValue("Sum")
+                .options(binModes)
+                .reconfigurable()
+                .allowedStates(State::UNKNOWN, State::ON)
+                .commit();
+
         INT32_ELEMENT(expected).key("gevSCBWR")
                 .alias("GevSCBWR")
                 .tags("genicam")
