@@ -33,7 +33,7 @@ stages:
     - source /root/karabo/activate
     - export KARABO_BROKER_TOPIC="gitlab_ci_$CI_JOB_ID"
     - pushd $CI_PROJECT_DIR
-    - karabo -g https://$XFEL_TOKEN@git.xfel.eu install $REL_PROJECT_NAME $REL_TAG
+    - karabo -g https://gitlab-ci-token:$CI_JOB_TOKEN@git.xfel.eu install $REL_PROJECT_NAME $REL_TAG
     - export NUM_JOBS=$(grep "processor" /proc/cpuinfo | wc -l)
     - make -j$NUM_JOBS CONF=Release package
     - echo package/$REL_ARTIFACT_NAME
@@ -59,7 +59,7 @@ stages:
     - source /root/karabo/activate
     - export KARABO_BROKER_TOPIC="gitlab_ci_$CI_JOB_ID"
     - pushd $CI_PROJECT_DIR
-    - karabo -g https://$XFEL_TOKEN@git.xfel.eu install $REL_PROJECT_NAME $REL_TAG
+    - karabo -g https://gitlab-ci-token:$CI_JOB_TOKEN@git.xfel.eu install $REL_PROJECT_NAME $REL_TAG
     - export NUM_JOBS=$(grep "processor" /proc/cpuinfo | wc -l)
     - make -j$NUM_JOBS build CONF=Release
     - export GTEST_OUTPUT=xml:$CI_PROJECT_DIR/report.xml
@@ -78,7 +78,7 @@ lint:
   stage: lint
   image: europeanxfel/karabo-ci:miniconda-3lint
   script:
-    - git clone https://$XFEL_TOKEN@git.xfel.eu/Karabo/linter-tools.git ci
+    - git clone https://gitlab-ci-token:$CI_JOB_TOKEN@git.xfel.eu/Karabo/linter-tools.git ci
     - source ci/lint-cppcheck.sh
 
 ##### Static source code analysis #####
@@ -86,7 +86,7 @@ lint-clang-tidy:
   stage: lint
   image: europeanxfel/karabo-ci:miniconda-3lint
   script:
-    - git clone https://$XFEL_TOKEN@git.xfel.eu/Karabo/linter-tools.git ci
+    - git clone https://gitlab-ci-token:$CI_JOB_TOKEN@git.xfel.eu/Karabo/linter-tools.git ci
     - source ci/lint-clang-tidy.sh
 
 ##### Release build #####
