@@ -17,6 +17,11 @@ stages:
   - build
   - deploy
 
+include:
+  - project: karabo/gitlabci
+    file: .mirror-device.yml
+    ref: main
+
 .release_build_template: &release_build
   stage: build
   script:
