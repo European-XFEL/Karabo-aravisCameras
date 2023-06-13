@@ -15,6 +15,7 @@ before_script:
 stages:
   - lint
   - build
+  - deploy
 
 .release_build_template: &release_build
   stage: build
