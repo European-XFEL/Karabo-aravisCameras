@@ -36,4 +36,4 @@ cmake \
 cd $BUILD_DIR
 cmake $BUILD_OPT
 $(cp $BUILD_DIR/aravisCameras/lib*.so $TARGET_DIR | true)
-
+$(patchelf --force-rpath --set-rpath '$ORIGIN/../lib:$ORIGIN/../extern/lib:$ORIGIN/../extern/lib64:$ORIGIN' $TARGET_DIR/lib*.so)
