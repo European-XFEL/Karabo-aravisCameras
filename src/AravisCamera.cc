@@ -2603,7 +2603,7 @@ namespace karabo {
             if (!this->keyHasAlias(key) || !this->isFeatureAvailable(feature)) {
                 // This feature is not available on the camera
                 this->disableElement(key, schemaUpdate);
-            } else if (schemaUpdate.getValueType(key) == Types::STRING) {
+            } else if (schemaUpdate.getValueType(key) == Types::STRING && schemaUpdate.isAccessReconfigurable(key)) {
                 const char** str_options = arv_device_dup_available_enumeration_feature_values_as_strings(
                     m_device, feature.c_str(), &n_str_values, &error);
                 if (error == nullptr) {
