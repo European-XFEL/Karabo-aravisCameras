@@ -113,7 +113,7 @@ namespace karabo {
 
         bool set_region(int& x, int& y, int& width, int& height);
         bool set_binning(int& bin_x, int& bin_y);
- 
+
         unsigned int m_max_correction_time;
         double m_min_latency;
         double m_max_latency;
