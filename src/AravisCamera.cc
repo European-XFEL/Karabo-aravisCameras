@@ -2471,6 +2471,7 @@ namespace karabo {
             str_options + n_str_values);
         g_free(str_options);
         OVERWRITE_ELEMENT(schemaUpdate).key("pixelFormat")
+            .setNewDefaultValue(pixelFormatOptions[0])
             .setNewOptions(pixelFormatOptions)
             .commit();
 
@@ -2498,6 +2499,7 @@ namespace karabo {
                 str_options + n_str_values);
             g_free(str_options);
             OVERWRITE_ELEMENT(schemaUpdate).key("triggerSelector")
+                .setNewDefaultValue(triggerSelectorOptions[0])
                 .setNewOptions(triggerSelectorOptions)
                 .commit();
 
@@ -2523,6 +2525,7 @@ namespace karabo {
             }
 
             OVERWRITE_ELEMENT(schemaUpdate).key("triggerSource")
+                .setNewDefaultValue(triggerSourceOptions[0])
                 .setNewOptions(triggerSourceOptions)
                 .commit();
 
@@ -2564,6 +2567,7 @@ namespace karabo {
             std::vector<std::string> acquisitionModeOptions = {
                 "Continuous", "SingleFrame"};
             OVERWRITE_ELEMENT(schemaUpdate).key("acquisitionMode")
+                .setNewDefaultValue(acquisitionModeOptions[0])
                 .setNewOptions(acquisitionModeOptions)
                 .commit();
 
@@ -2610,6 +2614,7 @@ namespace karabo {
                     const std::vector<std::string> vec_options(str_options,
                         str_options + n_str_values);
                     OVERWRITE_ELEMENT(schemaUpdate).key(key)
+                        .setNewDefaultValue(vec_options[0])
                         .setNewOptions(vec_options)
                         .commit();
                 } else {
