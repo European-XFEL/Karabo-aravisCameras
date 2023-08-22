@@ -29,25 +29,25 @@ the European XFEL GmbH, are asked to sign a Contributor License
 Agreement (CLA):
 
 - people contributing as individuals should sign the Individual CLA
-- people contributing on behalf of an organization should sign 
+- people contributing on behalf of an organization should sign
   the Entity CLA.
 
 The CLAs can be found in the `contributor_license_agreement.md` and
 `entity_contributor_license_agreement.md` documents located in
-the root folder of this repository. 
+the root folder of this repository.
 Please send signed CLAs to opensource [at] xfel.eu. We'll get in
-touch with you then. 
-We ask for your understanding that we cannot accept external 
+touch with you then.
+We ask for your understanding that we cannot accept external
 contributions without a CLA in place. Importantly, with signing the CLA
 you acknowledge that
 
 * European XFEL retains all copyrights of the Karabo Aravis Cameras,
-* European XFEL may relicense the Karabo Aravis Cameras under other 
-  appropriate open source licenses which the Free Software Foundation 
-  classifies as Free Software licenses. 
+* European XFEL may relicense the Karabo Aravis Cameras under other
+  appropriate open source licenses which the Free Software Foundation
+  classifies as Free Software licenses.
 
-However, you are welcome to already 
-suggest modifications you'd like to contribute by opening a merge/pull 
+However, you are welcome to already
+suggest modifications you'd like to contribute by opening a merge/pull
 request before you send the CLA.
 
 Dependencies
