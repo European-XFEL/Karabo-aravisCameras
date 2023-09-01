@@ -29,6 +29,30 @@ namespace karabo {
                 .setNewDefaultValue(supportedModels)
                 .commit();
 
+        FLOAT_ELEMENT(expected).key("resultingFramePeriodAbs")
+                .alias("ResultingFramePeriodAbs")
+                .tags("poll")
+                .displayedName("Resulting Frame Period (Abs)")
+                .description("Indicates the 'absolute' value of the minimum allowed acquisition frame period. "
+                "The 'absolute' value is a float value that indicates the minimum allowed acquisition frame "
+                "period in microseconds given the current settings for the area of interest, exposure time, "
+                "and bandwidth.")
+                .unit(Unit::SECOND).metricPrefix(MetricPrefix::MICRO)
+                .readOnly()
+                .commit();
+
+        FLOAT_ELEMENT(expected).key("resultingFrameRateAbs")
+                .alias("ResultingFrameRateAbs")
+                .tags("poll")
+                .displayedName("Resulting Frame Rate (Abs)")
+                .description("Indicates the 'absolute' value of the maximum allowed acquisition frame rate. "
+                "The 'absolute' value is a float value that indicates the maximum allowed acquisition frame "
+                "rate in frames per second given the current settings for the area of interest, exposure time, "
+                "and bandwidth.")
+                .unit(Unit::HERTZ)
+                .readOnly()
+                .commit();
+
         STRING_ELEMENT(expected).key("temperatureSelector")
                 .alias("TemperatureSelector")
                 .tags("genicam")
