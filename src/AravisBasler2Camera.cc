@@ -34,6 +34,16 @@ namespace karabo {
                 .setNewDefaultValue(supportedModels)
                 .commit();
 
+        FLOAT_ELEMENT(expected).key("resultingFrameRate")
+                .alias("ResultingFrameRate")
+                .tags("poll")
+                .displayedName("Resulting Frame Rate")
+                .description("Maximum frame acquisition rate with current camera settings (in "
+                "frames per second).")
+                .unit(Unit::HERTZ)
+                .readOnly()
+                .commit();
+
         STRING_ELEMENT(expected).key("temperatureSelector")
                 .alias("DeviceTemperatureSelector")
                 .tags("genicam")
