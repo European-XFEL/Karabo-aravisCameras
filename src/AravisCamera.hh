@@ -108,6 +108,7 @@ namespace karabo {
         virtual bool get_region(gint& x, gint& y, gint& width, gint& height);
         virtual bool get_timestamp(ArvBuffer* buffer, karabo::util::Timestamp& ts);
 
+        bool is_frame_count_available() const;
         virtual bool is_flip_x_available() const;
         virtual bool is_flip_y_available() const;
 
@@ -201,9 +202,14 @@ namespace karabo {
         ArvBufferStatus m_lastError;
         std::unordered_map<ArvBufferStatus, std::string> m_bufferStatus;
 
+        // Image latency
         karabo::util::Epochstamp m_timer;
         unsigned long m_counter;
         double m_sum_latency;
+
+        bool m_isContinuousMode;
+        // Images to be acquired
+        unsigned long long m_imgsToBeAcquired;
 
         karabo::xms::EncodingType m_encoding;
     };

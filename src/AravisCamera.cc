@@ -927,6 +927,9 @@ namespace karabo {
             if (error == nullptr) m_is_gain_auto_available = arv_camera_is_gain_auto_available(m_camera, &error);
         }
 
+        // Verify whether frame count is available on the camera
+        m_is_frame_count_available = this->is_frame_count_available();
+
         // Verify whether horizontal and vertical flip are available on the camera
         m_is_flip_x_available = this->is_flip_x_available();
         m_is_flip_y_available = this->is_flip_y_available();
@@ -1757,6 +1760,31 @@ namespace karabo {
     }
 
 
+    bool AravisCamera::is_frame_count_available() const {
+        GError* error = nullptr;
+        boost::mutex::scoped_lock camera_lock(m_camera_mtx);
+
+        bool is_available = false;
+        guint n_values;
+        const char** options = arv_device_dup_available_enumeration_feature_values_as_strings(
+            m_device, "AcquisitionMode", &n_values, &error);
+        if (error != nullptr) {
+            KARABO_LOG_FRAMEWORK_ERROR << this->getInstanceId() << ": arv_device_dup_available_enumeration_feature_values_as_strings failed: " << error->message;
+            g_clear_error(&error);
+        } else {
+            for (size_t i = 0; i < n_values; ++i) {
+                if (std::string(options[i]) == "MultiFrame") {
+                    // Frame Count is available
+                    is_available = true;
+                    break;
+                }
+            }
+        }
+        g_free(options);
+        return is_available;
+    }
+
+
     bool AravisCamera::is_flip_x_available() const {
         // If the camera provides horizontal flip, this function shall be overridden.
         // Also, "genicam" tag and alias shall be provided for "flip.X".
@@ -1813,6 +1841,18 @@ namespace karabo {
         // Synchronize timestamp.
         // This will be repeated periodically during acquisition
         this->synchronize_timestamp();
+
+        const std::string acquisitionMode = this->get<std::string>("acquisitionMode");
+        if (acquisitionMode == "SingleFrame") {
+            m_isContinuousMode = false;
+            m_imgsToBeAcquired = 1;
+        } else if (acquisitionMode == "MultiFrame") {
+            m_isContinuousMode = false;
+            m_imgsToBeAcquired = this->get<long long int>("frameCount");
+        } else {
+            m_isContinuousMode = true;
+            m_imgsToBeAcquired = 0; // unused in continuous mode
+        }
 
         {
             boost::mutex::scoped_lock camera_lock(m_camera_mtx);
@@ -2086,6 +2126,17 @@ namespace karabo {
 
         // Push back the buffer to the stream
         arv_stream_push_buffer(stream, arv_buffer);
+
+        if (!self->m_isContinuousMode) {
+            if (self->m_imgsToBeAcquired > 1) {
+                --(self->m_imgsToBeAcquired);
+            } else {
+                // Stop acquisition
+                // Done in the event loop as 'stop' acquires 'm_stream_mtx' via 'clear_stream'
+                self->m_imgsToBeAcquired = 0;
+                EventLoop::getIOService().post(boost::bind(&AravisCamera::stop, self));
+            }
+        }
     }
 
 
