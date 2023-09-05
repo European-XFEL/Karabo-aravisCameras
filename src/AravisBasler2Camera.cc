@@ -86,7 +86,6 @@ namespace karabo {
 
     AravisBasler2Camera::AravisBasler2Camera(const karabo::util::Hash& config) : AravisBaslerBase(config) {
         m_is_device_reset_available = true; // "DeviceReset" command is available
-        m_is_frame_count_available = false;
     }
 
     bool AravisBasler2Camera::synchronize_timestamp() {
