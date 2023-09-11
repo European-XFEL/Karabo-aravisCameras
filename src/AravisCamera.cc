@@ -937,7 +937,7 @@ namespace karabo {
         // The exposure time feature name is used to read out the increment
         std::vector<std::string> features = {"ExposureTime", // e.g. Basler a2A
             "ExposureTimeRaw"}; // e.g. Basler acA
-        for (const std::string feat : features) {
+        for (const std::string& feat : features) {
             if (this->isFeatureAvailable(feat)) {
                 m_exposure_time_feature = feat;
                 break;
