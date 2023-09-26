@@ -6,17 +6,17 @@
  * Copyright (c) European XFEL GmbH Schenefeld. All rights reserved.
  */
 
-#include <boost/algorithm/string/trim.hpp>
-
 #include "AravisCamera.hh"
+
+#include <boost/algorithm/string/trim.hpp>
 
 using namespace std;
 
 USING_KARABO_NAMESPACES;
 
 // Used by Basler ACE 2, but not (yet?) available in aravis
-#define ARV_PIXEL_FORMAT_MONO_10_P              ((ArvPixelFormat) 0x010a0046u)
-#define ARV_PIXEL_FORMAT_MONO_12_P              ((ArvPixelFormat) 0x010c0047u)
+#define ARV_PIXEL_FORMAT_MONO_10_P ((ArvPixelFormat)0x010a0046u)
+#define ARV_PIXEL_FORMAT_MONO_12_P ((ArvPixelFormat)0x010c0047u)
 
 #define GET_PATH(hash, path, type) hash.has(path) ? hash.get<type>(path) : this->get<type>(path);
 
@@ -27,457 +27,551 @@ namespace karabo {
     boost::mutex AravisCamera::m_connect_mtx;
 
     void AravisCamera::expectedParameters(Schema& expected) {
-        OVERWRITE_ELEMENT(expected).key("state")
-                .setNewOptions(State::UNKNOWN, State::ERROR, State::ON, State::ACQUIRING)
-                .commit();
+        OVERWRITE_ELEMENT(expected)
+              .key("state")
+              .setNewOptions(State::UNKNOWN, State::ERROR, State::ON, State::ACQUIRING)
+              .commit();
 
-        STRING_ELEMENT(expected).key("idType")
-                .displayedName("ID Type")
-                .description("The type of identifier to be used, to connect to the camera."
-                "Available options are 'IP' (IP address), 'HOST' (IP name), SN (Serial Number), MAC (MAC address).")
-                .assignmentOptional().defaultValue("IP")
-                .options("IP,HOST,SN,MAC")
-                .init()
-                .commit();
+        STRING_ELEMENT(expected)
+              .key("idType")
+              .displayedName("ID Type")
+              .description(
+                    "The type of identifier to be used, to connect to the camera."
+                    "Available options are 'IP' (IP address), 'HOST' (IP name), SN (Serial Number), MAC (MAC address).")
+              .assignmentOptional()
+              .defaultValue("IP")
+              .options("IP,HOST,SN,MAC")
+              .init()
+              .commit();
 
-        STRING_ELEMENT(expected).key("cameraId")
-                .displayedName("Camera ID")
-                .description("The 'identifier' of the network camera. It can be an IP address (e.g. 192.168.1.153), "
-                "an IP name (e.g. exflqr1234), a serial number or a MAC address (e.g. 00:30:53:25:ab:b7). "
-                "The type must be specified in the 'idType' property.")
-                .assignmentMandatory()
-                .init() // cannot be changed after device instantiation
-                .commit();
+        STRING_ELEMENT(expected)
+              .key("cameraId")
+              .displayedName("Camera ID")
+              .description(
+                    "The 'identifier' of the network camera. It can be an IP address (e.g. 192.168.1.153), "
+                    "an IP name (e.g. exflqr1234), a serial number or a MAC address (e.g. 00:30:53:25:ab:b7). "
+                    "The type must be specified in the 'idType' property.")
+              .assignmentMandatory()
+              .init() // cannot be changed after device instantiation
+              .commit();
 
-        INT64_ELEMENT(expected).key("packetDelay")
-                .displayedName("Packet Delay")
-                .description("Configure the inter packet delay to insert between each packet for the current stream. "
-                "This can be used as a crude flow-control mechanism if the application or the network "
-                "infrastructure cannot keep up with the packets coming from the device.")
-                .assignmentOptional().noDefaultValue()
-                .minInc(0)
-                .unit(Unit::SECOND).metricPrefix(MetricPrefix::NANO)
-                .reconfigurable()
-                .allowedStates(State::UNKNOWN, State::ON)
-                .commit();
+        INT64_ELEMENT(expected)
+              .key("packetDelay")
+              .displayedName("Packet Delay")
+              .description(
+                    "Configure the inter packet delay to insert between each packet for the current stream. "
+                    "This can be used as a crude flow-control mechanism if the application or the network "
+                    "infrastructure cannot keep up with the packets coming from the device.")
+              .assignmentOptional()
+              .noDefaultValue()
+              .minInc(0)
+              .unit(Unit::SECOND)
+              .metricPrefix(MetricPrefix::NANO)
+              .reconfigurable()
+              .allowedStates(State::UNKNOWN, State::ON)
+              .commit();
 
-        BOOL_ELEMENT(expected).key("autoPacketSize")
-                .displayedName("Auto Packet Size")
-                .description("Automatically determine the biggest packet size that can be used for data streaming, "
-                "and set its value accordingly. If this functionality is not available, the packet size will be set "
-                "to a default value (1500 bytes).")
-                .assignmentOptional().defaultValue(true)
-                .reconfigurable()
-                .allowedStates(State::UNKNOWN, State::ON)
-                .commit();
+        BOOL_ELEMENT(expected)
+              .key("autoPacketSize")
+              .displayedName("Auto Packet Size")
+              .description(
+                    "Automatically determine the biggest packet size that can be used for data streaming, "
+                    "and set its value accordingly. If this functionality is not available, the packet size will be "
+                    "set "
+                    "to a default value (1500 bytes).")
+              .assignmentOptional()
+              .defaultValue(true)
+              .reconfigurable()
+              .allowedStates(State::UNKNOWN, State::ON)
+              .commit();
 
-        INT32_ELEMENT(expected).key("packetSize")
-                .displayedName("Packet Size")
-                .description("Specifies the packet size to be used by the camera for data streaming. "
-                "This does not include data leader and data trailer and the last data packet which might be "
-                "of smaller size.")
-                .assignmentOptional().noDefaultValue()
-                .minExc(0)
-                .unit(Unit::BYTE)
-                .reconfigurable()
-                .allowedStates(State::UNKNOWN, State::ON)
-                .commit();
+        INT32_ELEMENT(expected)
+              .key("packetSize")
+              .displayedName("Packet Size")
+              .description(
+                    "Specifies the packet size to be used by the camera for data streaming. "
+                    "This does not include data leader and data trailer and the last data packet which might be "
+                    "of smaller size.")
+              .assignmentOptional()
+              .noDefaultValue()
+              .minExc(0)
+              .unit(Unit::BYTE)
+              .reconfigurable()
+              .allowedStates(State::UNKNOWN, State::ON)
+              .commit();
 
-        SLOT_ELEMENT(expected).key("acquire")
-                .displayedName("Acquire")
-                .allowedStates(State::ON)
-                .commit();
+        SLOT_ELEMENT(expected).key("acquire").displayedName("Acquire").allowedStates(State::ON).commit();
 
-        SLOT_ELEMENT(expected).key("stop")
-                .displayedName("Stop")
-                .allowedStates(State::ACQUIRING)
-                .commit();
+        SLOT_ELEMENT(expected).key("stop").displayedName("Stop").allowedStates(State::ACQUIRING).commit();
 
-        SLOT_ELEMENT(expected).key("trigger")
-                .displayedName("Software Trigger")
-                .allowedStates(State::ACQUIRING)
-                .commit();
+        SLOT_ELEMENT(expected)
+              .key("trigger")
+              .displayedName("Software Trigger")
+              .allowedStates(State::ACQUIRING)
+              .commit();
 
-        SLOT_ELEMENT(expected).key("refresh")
-                .displayedName("Refresh")
-                .description("Refresh hardware parameters and options.")
-                .allowedStates(State::ON)
-                .commit();
+        SLOT_ELEMENT(expected)
+              .key("refresh")
+              .displayedName("Refresh")
+              .description("Refresh hardware parameters and options.")
+              .allowedStates(State::ON)
+              .commit();
 
-        SLOT_ELEMENT(expected).key("reset")
-                .displayedName("Reset")
-                .description("'Software' reset, i.e. just reset the error state.")
-                .allowedStates(State::ERROR)
-                .commit();
+        SLOT_ELEMENT(expected)
+              .key("reset")
+              .displayedName("Reset")
+              .description("'Software' reset, i.e. just reset the error state.")
+              .allowedStates(State::ERROR)
+              .commit();
 
-        NODE_ELEMENT(expected).key("frameRate")
-                .displayedName("Frame Rate")
-                .commit();
+        NODE_ELEMENT(expected).key("frameRate").displayedName("Frame Rate").commit();
 
-        BOOL_ELEMENT(expected).key("frameRate.enable")
-                .displayedName("Frame Rate Enable")
-                .description("Enable the frame rate control.")
-                .assignmentOptional().defaultValue(false)
-                .reconfigurable()
-                .allowedStates(State::UNKNOWN, State::ON)
-                .commit();
+        BOOL_ELEMENT(expected)
+              .key("frameRate.enable")
+              .displayedName("Frame Rate Enable")
+              .description("Enable the frame rate control.")
+              .assignmentOptional()
+              .defaultValue(false)
+              .reconfigurable()
+              .allowedStates(State::UNKNOWN, State::ON)
+              .commit();
 
-        FLOAT_ELEMENT(expected).key("frameRate.target")
-                .displayedName("Target Frame Rate")
-                .description("Sets the 'target' value of the acquisition frame rate on the camera. "
-                "Please be aware that if you enable this feature in combination with external trigger, "
-                "the resulting 'actual' frame rate will most likely be smaller.")
-                .assignmentOptional().defaultValue(10.)
-                .minInc(0.)
-                .unit(Unit::HERTZ)
-                .reconfigurable()
-                .allowedStates(State::UNKNOWN, State::ON)
-                .commit();
+        FLOAT_ELEMENT(expected)
+              .key("frameRate.target")
+              .displayedName("Target Frame Rate")
+              .description(
+                    "Sets the 'target' value of the acquisition frame rate on the camera. "
+                    "Please be aware that if you enable this feature in combination with external trigger, "
+                    "the resulting 'actual' frame rate will most likely be smaller.")
+              .assignmentOptional()
+              .defaultValue(10.)
+              .minInc(0.)
+              .unit(Unit::HERTZ)
+              .reconfigurable()
+              .allowedStates(State::UNKNOWN, State::ON)
+              .commit();
 
-        FLOAT_ELEMENT(expected).key("frameRate.actual")
-                .displayedName("Actual Frame Rate")
-                .description("The measured frame rate.")
-                .unit(Unit::HERTZ)
-                .readOnly()
-                .initialValue(0.)
-                .commit();
+        FLOAT_ELEMENT(expected)
+              .key("frameRate.actual")
+              .displayedName("Actual Frame Rate")
+              .description("The measured frame rate.")
+              .unit(Unit::HERTZ)
+              .readOnly()
+              .initialValue(0.)
+              .commit();
 
-        UINT64_ELEMENT(expected).key("errorCount")
-                .displayedName("Acq. Error Count")
-                .description("The number of errors occurred during acquisition.")
-                .unit(Unit::COUNT)
-                .readOnly()
-                .initialValue(0)
-                .commit();
+        UINT64_ELEMENT(expected)
+              .key("errorCount")
+              .displayedName("Acq. Error Count")
+              .description("The number of errors occurred during acquisition.")
+              .unit(Unit::COUNT)
+              .readOnly()
+              .initialValue(0)
+              .commit();
 
-        STRING_ELEMENT(expected).key("lastError")
-                .displayedName("Last Acq. Error")
-                .description("Description of the last error occurred during acquisition.")
-                .readOnly()
-                .initialValue("")
-                .commit();
+        STRING_ELEMENT(expected)
+              .key("lastError")
+              .displayedName("Last Acq. Error")
+              .description("Description of the last error occurred during acquisition.")
+              .readOnly()
+              .initialValue("")
+              .commit();
 
-        NODE_ELEMENT(expected).key("latency")
-                .displayedName("Image Latency")
-                .description("The latency between the image timestamp - if available - and the "
-                "reception time. The reference interval is 1 s.")
-                .commit();
+        NODE_ELEMENT(expected)
+              .key("latency")
+              .displayedName("Image Latency")
+              .description(
+                    "The latency between the image timestamp - if available - and the "
+                    "reception time. The reference interval is 1 s.")
+              .commit();
 
-        FLOAT_ELEMENT(expected).key("latency.mean")
-                .displayedName("Mean Latency")
-                .description("Mean image latency.")
-                .unit(Unit::SECOND).metricPrefix(MetricPrefix::MILLI)
-                .readOnly().initialValue(0.)
-                .commit();
+        FLOAT_ELEMENT(expected)
+              .key("latency.mean")
+              .displayedName("Mean Latency")
+              .description("Mean image latency.")
+              .unit(Unit::SECOND)
+              .metricPrefix(MetricPrefix::MILLI)
+              .readOnly()
+              .initialValue(0.)
+              .commit();
 
-        FLOAT_ELEMENT(expected).key("latency.min")
-                .displayedName("Min Latency")
-                .description("Minimum image latency.")
-                .unit(Unit::SECOND).metricPrefix(MetricPrefix::MILLI)
-                .readOnly().initialValue(0.)
-                .commit();
+        FLOAT_ELEMENT(expected)
+              .key("latency.min")
+              .displayedName("Min Latency")
+              .description("Minimum image latency.")
+              .unit(Unit::SECOND)
+              .metricPrefix(MetricPrefix::MILLI)
+              .readOnly()
+              .initialValue(0.)
+              .commit();
 
-        FLOAT_ELEMENT(expected).key("latency.max")
-                .displayedName("Max Latency")
-                .description("Maximum image latency.")
-                .unit(Unit::SECOND).metricPrefix(MetricPrefix::MILLI)
-                .readOnly().initialValue(0.)
-                .commit();
+        FLOAT_ELEMENT(expected)
+              .key("latency.max")
+              .displayedName("Max Latency")
+              .description("Maximum image latency.")
+              .unit(Unit::SECOND)
+              .metricPrefix(MetricPrefix::MILLI)
+              .readOnly()
+              .initialValue(0.)
+              .commit();
 
-        INT32_ELEMENT(expected).key("pollingInterval")
-                .displayedName("Polling Interval")
-                .description("The interval for polling the camera for read-out values.")
-                .assignmentOptional().defaultValue(20)
-                .unit(Unit::SECOND)
-                .minInc(5).maxInc(60)
-                .reconfigurable()
-                .commit();
+        INT32_ELEMENT(expected)
+              .key("pollingInterval")
+              .displayedName("Polling Interval")
+              .description("The interval for polling the camera for read-out values.")
+              .assignmentOptional()
+              .defaultValue(20)
+              .unit(Unit::SECOND)
+              .minInc(5)
+              .maxInc(60)
+              .reconfigurable()
+              .commit();
 
-        STRING_ELEMENT(expected).key("camId")
-                .displayedName("Camera ID")
-                .readOnly().initialValue("")
-                .commit();
+        STRING_ELEMENT(expected).key("camId").displayedName("Camera ID").readOnly().initialValue("").commit();
 
-        STRING_ELEMENT(expected).key("vendor")
-                .displayedName("Vendor Name")
-                .description("The vendor of the camera.")
-                .readOnly().initialValue("")
-                .commit();
+        STRING_ELEMENT(expected)
+              .key("vendor")
+              .displayedName("Vendor Name")
+              .description("The vendor of the camera.")
+              .readOnly()
+              .initialValue("")
+              .commit();
 
-        STRING_ELEMENT(expected).key("supportedVendor")
-                .displayedName("Supported Vendor")
-                .description("The vendor supported by this Karabo device.")
-                .readOnly().initialValue("")
-                .commit();
+        STRING_ELEMENT(expected)
+              .key("supportedVendor")
+              .displayedName("Supported Vendor")
+              .description("The vendor supported by this Karabo device.")
+              .readOnly()
+              .initialValue("")
+              .commit();
 
-        STRING_ELEMENT(expected).key("model")
-                .displayedName("Model Name")
-                .description("The model of the camera.")
-                .readOnly().initialValue("")
-                .commit();
+        STRING_ELEMENT(expected)
+              .key("model")
+              .displayedName("Model Name")
+              .description("The model of the camera.")
+              .readOnly()
+              .initialValue("")
+              .commit();
 
-        VECTOR_STRING_ELEMENT(expected).key("supportedModels")
-                .displayedName("Supported Models")
-                .description("The camera models supported by this Karabo device.")
-                .readOnly().initialValue({})
-                .commit();
+        VECTOR_STRING_ELEMENT(expected)
+              .key("supportedModels")
+              .displayedName("Supported Models")
+              .description("The camera models supported by this Karabo device.")
+              .readOnly()
+              .initialValue({})
+              .commit();
 
-        INT32_ELEMENT(expected).key("width")
-                .displayedName("Sensor Width")
-                .readOnly().initialValue(0)
-                .commit();
+        INT32_ELEMENT(expected).key("width").displayedName("Sensor Width").readOnly().initialValue(0).commit();
 
-        INT32_ELEMENT(expected).key("height")
-                .displayedName("Sensor Height")
-                .readOnly().initialValue(0)
-                .commit();
+        INT32_ELEMENT(expected).key("height").displayedName("Sensor Height").readOnly().initialValue(0).commit();
 
-        NODE_ELEMENT(expected).key("roi")
-                .displayedName("Image ROI")
-                .commit();
+        NODE_ELEMENT(expected).key("roi").displayedName("Image ROI").commit();
 
-        INT32_ELEMENT(expected).key("roi.x")
-                .displayedName("X Offset")
-                .unit(Unit::PIXEL)
-                .assignmentOptional().defaultValue(0)
-                .minInc(0)
-                .reconfigurable()
-                .allowedStates(State::UNKNOWN, State::ON)
-                .commit();
+        INT32_ELEMENT(expected)
+              .key("roi.x")
+              .displayedName("X Offset")
+              .unit(Unit::PIXEL)
+              .assignmentOptional()
+              .defaultValue(0)
+              .minInc(0)
+              .reconfigurable()
+              .allowedStates(State::UNKNOWN, State::ON)
+              .commit();
 
-        INT32_ELEMENT(expected).key("roi.y")
-                .displayedName("Y Offset")
-                .unit(Unit::PIXEL)
-                .assignmentOptional().defaultValue(0)
-                .minInc(0)
-                .reconfigurable()
-                .allowedStates(State::UNKNOWN, State::ON)
-                .commit();
+        INT32_ELEMENT(expected)
+              .key("roi.y")
+              .displayedName("Y Offset")
+              .unit(Unit::PIXEL)
+              .assignmentOptional()
+              .defaultValue(0)
+              .minInc(0)
+              .reconfigurable()
+              .allowedStates(State::UNKNOWN, State::ON)
+              .commit();
 
-        INT32_ELEMENT(expected).key("roi.width")
-                .displayedName("Width")
-                .description("The ROI width. Use '0' for the whole sensor width.")
-                .unit(Unit::PIXEL)
-                .assignmentOptional().defaultValue(0)
-                .minInc(0)
-                .reconfigurable()
-                .allowedStates(State::UNKNOWN, State::ON)
-                .commit();
+        INT32_ELEMENT(expected)
+              .key("roi.width")
+              .displayedName("Width")
+              .description("The ROI width. Use '0' for the whole sensor width.")
+              .unit(Unit::PIXEL)
+              .assignmentOptional()
+              .defaultValue(0)
+              .minInc(0)
+              .reconfigurable()
+              .allowedStates(State::UNKNOWN, State::ON)
+              .commit();
 
-        INT32_ELEMENT(expected).key("roi.height")
-                .displayedName("Height")
-                .description("The ROI height. Use '0' for the whole sensor height.")
-                .unit(Unit::PIXEL)
-                .assignmentOptional().defaultValue(0)
-                .minInc(0)
-                .reconfigurable()
-                .allowedStates(State::UNKNOWN, State::ON)
-                .commit();
+        INT32_ELEMENT(expected)
+              .key("roi.height")
+              .displayedName("Height")
+              .description("The ROI height. Use '0' for the whole sensor height.")
+              .unit(Unit::PIXEL)
+              .assignmentOptional()
+              .defaultValue(0)
+              .minInc(0)
+              .reconfigurable()
+              .allowedStates(State::UNKNOWN, State::ON)
+              .commit();
 
-        NODE_ELEMENT(expected).key("bin")
-                .displayedName("Image Binning")
-                .commit();
+        NODE_ELEMENT(expected).key("bin").displayedName("Image Binning").commit();
 
-        INT32_ELEMENT(expected).key("bin.x")
-                .displayedName("X Binning")
-                .unit(Unit::PIXEL)
-                .assignmentOptional().defaultValue(1)
-                .minInc(1)
-                .reconfigurable()
-                .allowedStates(State::UNKNOWN, State::ON)
-                .commit();
+        INT32_ELEMENT(expected)
+              .key("bin.x")
+              .displayedName("X Binning")
+              .unit(Unit::PIXEL)
+              .assignmentOptional()
+              .defaultValue(1)
+              .minInc(1)
+              .reconfigurable()
+              .allowedStates(State::UNKNOWN, State::ON)
+              .commit();
 
-        INT32_ELEMENT(expected).key("bin.y")
-                .displayedName("Y Binning")
-                .unit(Unit::PIXEL)
-                .assignmentOptional().defaultValue(1)
-                .minInc(1)
-                .reconfigurable()
-                .allowedStates(State::UNKNOWN, State::ON)
-                .commit();
+        INT32_ELEMENT(expected)
+              .key("bin.y")
+              .displayedName("Y Binning")
+              .unit(Unit::PIXEL)
+              .assignmentOptional()
+              .defaultValue(1)
+              .minInc(1)
+              .reconfigurable()
+              .allowedStates(State::UNKNOWN, State::ON)
+              .commit();
 
-        NODE_ELEMENT(expected).key("flip")
-                .displayedName("Image Flip")
-                .description("Enables mirroring of the image.")
-                .commit();
+        NODE_ELEMENT(expected)
+              .key("flip")
+              .displayedName("Image Flip")
+              .description("Enables mirroring of the image.")
+              .commit();
 
-        BOOL_ELEMENT(expected).key("flip.X")
-                .displayedName("Horizonzal Flip")
-                .description("Enable horizontal flip. This is done before the image rotation.")
-                .assignmentOptional().defaultValue(false)
-                .reconfigurable()
-                .allowedStates(State::UNKNOWN, State::ON)
-                .commit();
+        BOOL_ELEMENT(expected)
+              .key("flip.X")
+              .displayedName("Horizonzal Flip")
+              .description("Enable horizontal flip. This is done before the image rotation.")
+              .assignmentOptional()
+              .defaultValue(false)
+              .reconfigurable()
+              .allowedStates(State::UNKNOWN, State::ON)
+              .commit();
 
-        BOOL_ELEMENT(expected).key("flip.Y")
-                .displayedName("Vertical Flip")
-                .description("Enable vertical flip. This is done before the image rotation.")
-                .assignmentOptional().defaultValue(false)
-                .reconfigurable()
-                .allowedStates(State::UNKNOWN, State::ON)
-                .commit();
+        BOOL_ELEMENT(expected)
+              .key("flip.Y")
+              .displayedName("Vertical Flip")
+              .description("Enable vertical flip. This is done before the image rotation.")
+              .assignmentOptional()
+              .defaultValue(false)
+              .reconfigurable()
+              .allowedStates(State::UNKNOWN, State::ON)
+              .commit();
 
-        UINT32_ELEMENT(expected).key("rotation")
-                .displayedName("Image Rotation")
-                .description("The image rotation. This is done after the image flip.")
-                .assignmentOptional().defaultValue(0)
-                .options("0,90,180,270")
-                .unit(Unit::DEGREE)
-                .allowedStates(State::UNKNOWN, State::ON)
-                .reconfigurable()
-                .commit();
+        UINT32_ELEMENT(expected)
+              .key("rotation")
+              .displayedName("Image Rotation")
+              .description("The image rotation. This is done after the image flip.")
+              .assignmentOptional()
+              .defaultValue(0)
+              .options("0,90,180,270")
+              .unit(Unit::DEGREE)
+              .allowedStates(State::UNKNOWN, State::ON)
+              .reconfigurable()
+              .commit();
 
-        STRING_ELEMENT(expected).key("pixelFormat")
-                .displayedName("Pixel Format")
-                .description("This enumeration sets the format of the pixel data transmitted for acquired images. "
-                "For example Mono8 means monochromatic, 8 bits-per-pixel.")
-                .assignmentOptional().defaultValue("Mono12Packed")
-                // Fill-up with some commonly available options. They will be updated on connection.
-                .options("Mono8,Mono12,Mono12Packed")
-                .reconfigurable()
-                .allowedStates(State::UNKNOWN, State::ON)
-                .commit();
+        STRING_ELEMENT(expected)
+              .key("pixelFormat")
+              .displayedName("Pixel Format")
+              .description(
+                    "This enumeration sets the format of the pixel data transmitted for acquired images. "
+                    "For example Mono8 means monochromatic, 8 bits-per-pixel.")
+              .assignmentOptional()
+              .defaultValue("Mono12Packed")
+              // Fill-up with some commonly available options. They will be updated on connection.
+              .options("Mono8,Mono12,Mono12Packed")
+              .reconfigurable()
+              .allowedStates(State::UNKNOWN, State::ON)
+              .commit();
 
-        UINT16_ELEMENT(expected).key("bpp")
-                .displayedName("Bits-per-pixel")
-                .readOnly().initialValue(0)
-                .commit();
+        UINT16_ELEMENT(expected).key("bpp").displayedName("Bits-per-pixel").readOnly().initialValue(0).commit();
 
-        DOUBLE_ELEMENT(expected).key("exposureTime")
-                .displayedName("Exposure Time")
-                .description("This float value sets the camera's exposure time. "
-                "It can only be a multiple of the minimum exposure time.")
-                .unit(Unit::SECOND).metricPrefix(MetricPrefix::MICRO)
-                .assignmentOptional().defaultValue(10.)
-                .minExc(0.)
-                .reconfigurable()
-                .allowedStates(State::UNKNOWN, State::ON)
-                .commit();
+        DOUBLE_ELEMENT(expected)
+              .key("exposureTime")
+              .displayedName("Exposure Time")
+              .description(
+                    "This float value sets the camera's exposure time. "
+                    "It can only be a multiple of the minimum exposure time.")
+              .unit(Unit::SECOND)
+              .metricPrefix(MetricPrefix::MICRO)
+              .assignmentOptional()
+              .defaultValue(10.)
+              .minExc(0.)
+              .reconfigurable()
+              .allowedStates(State::UNKNOWN, State::ON)
+              .commit();
 
-        STRING_ELEMENT(expected).key("triggerSelector")
-                .displayedName("Trigger Selector")
-                .description("This enumeration selects the trigger type to configure. "
-                "Once a trigger type has been selected, all changes to the trigger settings will be applied to "
-                "the selected trigger.")
-                .assignmentOptional().noDefaultValue()
-                // options will be injected on connection
-                .reconfigurable()
-                .allowedStates(State::UNKNOWN, State::ON)
-                .commit();
+        STRING_ELEMENT(expected)
+              .key("triggerSelector")
+              .displayedName("Trigger Selector")
+              .description(
+                    "This enumeration selects the trigger type to configure. "
+                    "Once a trigger type has been selected, all changes to the trigger settings will be applied to "
+                    "the selected trigger.")
+              .assignmentOptional()
+              .noDefaultValue()
+              // options will be injected on connection
+              .reconfigurable()
+              .allowedStates(State::UNKNOWN, State::ON)
+              .commit();
 
-        STRING_ELEMENT(expected).key("triggerMode")
-                .displayedName("Trigger Mode")
-                .description("This enumeration enables or disables the selected trigger.")
-                .assignmentOptional().defaultValue("Off")
-                .options("On,Off")
-                .reconfigurable()
-                .allowedStates(State::UNKNOWN, State::ON)
-                .commit();
+        STRING_ELEMENT(expected)
+              .key("triggerMode")
+              .displayedName("Trigger Mode")
+              .description("This enumeration enables or disables the selected trigger.")
+              .assignmentOptional()
+              .defaultValue("Off")
+              .options("On,Off")
+              .reconfigurable()
+              .allowedStates(State::UNKNOWN, State::ON)
+              .commit();
 
-        STRING_ELEMENT(expected).key("triggerSource")
-                .displayedName("Trigger Source")
-                .description("This enumeration sets the signal source for the selected trigger.")
-                .assignmentOptional().noDefaultValue()
-                // options will be injected on connection
-                .reconfigurable()
-                .allowedStates(State::UNKNOWN, State::ON)
-                .commit();
+        STRING_ELEMENT(expected)
+              .key("triggerSource")
+              .displayedName("Trigger Source")
+              .description("This enumeration sets the signal source for the selected trigger.")
+              .assignmentOptional()
+              .noDefaultValue()
+              // options will be injected on connection
+              .reconfigurable()
+              .allowedStates(State::UNKNOWN, State::ON)
+              .commit();
 
-        STRING_ELEMENT(expected).key("triggerActivation")
-                .displayedName("Trigger Activation")
-                .description("This enumeration sets the signal transition needed to activate the selected trigger.")
-                .assignmentOptional().defaultValue("RisingEdge")
-                .options("RisingEdge,FallingEdge")
-                .reconfigurable()
-                .allowedStates(State::UNKNOWN, State::ON)
-                .commit();
+        STRING_ELEMENT(expected)
+              .key("triggerActivation")
+              .displayedName("Trigger Activation")
+              .description("This enumeration sets the signal transition needed to activate the selected trigger.")
+              .assignmentOptional()
+              .defaultValue("RisingEdge")
+              .options("RisingEdge,FallingEdge")
+              .reconfigurable()
+              .allowedStates(State::UNKNOWN, State::ON)
+              .commit();
 
-        STRING_ELEMENT(expected).key("autoGain")
-                .displayedName("Auto Gain")
-                .description("Configures automatic gain feature.")
-                .assignmentOptional().defaultValue("Off")
-                .options("Off,Once,Continuous")
-                .reconfigurable()
-                .allowedStates(State::UNKNOWN, State::ON)
-                .commit();
+        STRING_ELEMENT(expected)
+              .key("autoGain")
+              .displayedName("Auto Gain")
+              .description("Configures automatic gain feature.")
+              .assignmentOptional()
+              .defaultValue("Off")
+              .options("Off,Once,Continuous")
+              .reconfigurable()
+              .allowedStates(State::UNKNOWN, State::ON)
+              .commit();
 
-        BOOL_ELEMENT(expected).key("isNormGain")
-                .displayedName("Enable Normalized Gain")
-                .description("The 'gain' parameter will be interpreted as 'normalized'.")
-                .assignmentOptional().defaultValue(true)
-                .init() // XXX What happens if I make it reconfigurable?
-                .commit();
+        BOOL_ELEMENT(expected)
+              .key("isNormGain")
+              .displayedName("Enable Normalized Gain")
+              .description("The 'gain' parameter will be interpreted as 'normalized'.")
+              .assignmentOptional()
+              .defaultValue(true)
+              .init() // XXX What happens if I make it reconfigurable?
+              .commit();
 
-        DOUBLE_ELEMENT(expected).key("gain")
-                .displayedName("Gain")
-                .description("Sets the gain of the ADC converter.")
-                .assignmentOptional().noDefaultValue()
-                .reconfigurable()
-                .allowedStates(State::UNKNOWN, State::ON)
-                .commit();
+        DOUBLE_ELEMENT(expected)
+              .key("gain")
+              .displayedName("Gain")
+              .description("Sets the gain of the ADC converter.")
+              .assignmentOptional()
+              .noDefaultValue()
+              .reconfigurable()
+              .allowedStates(State::UNKNOWN, State::ON)
+              .commit();
 
-        DOUBLE_ELEMENT(expected).key("absGain")
-                .displayedName("Absolute Gain")
-                .description("The absolute gain of the ADC converter.")
-                .readOnly()
-                .commit();
+        DOUBLE_ELEMENT(expected)
+              .key("absGain")
+              .displayedName("Absolute Gain")
+              .description("The absolute gain of the ADC converter.")
+              .readOnly()
+              .commit();
 
-        STRING_ELEMENT(expected).key("acquisitionMode")
-                .displayedName("Acquisition Mode")
-                .description("This property sets the image acquisition mode.")
-                .assignmentOptional().defaultValue("Continuous")
-                .options("Continuous,SingleFrame,MultiFrame")
-                .reconfigurable()
-                .allowedStates(State::UNKNOWN, State::ON)
-                .commit();
+        STRING_ELEMENT(expected)
+              .key("acquisitionMode")
+              .displayedName("Acquisition Mode")
+              .description("This property sets the image acquisition mode.")
+              .assignmentOptional()
+              .defaultValue("Continuous")
+              .options("Continuous,SingleFrame,MultiFrame")
+              .reconfigurable()
+              .allowedStates(State::UNKNOWN, State::ON)
+              .commit();
 
-        INT64_ELEMENT(expected).key("frameCount")
-                .displayedName("Frame Count")
-                .description("This value sets the number of frames acquired in the 'Multiframe' acquisition mode.")
-                .assignmentOptional().noDefaultValue()
-                .minInc(1)
-                .reconfigurable()
-                .allowedStates(State::UNKNOWN, State::ON)
-                .commit();
+        INT64_ELEMENT(expected)
+              .key("frameCount")
+              .displayedName("Frame Count")
+              .description("This value sets the number of frames acquired in the 'Multiframe' acquisition mode.")
+              .assignmentOptional()
+              .noDefaultValue()
+              .minInc(1)
+              .reconfigurable()
+              .allowedStates(State::UNKNOWN, State::ON)
+              .commit();
 
         const std::vector<std::string> interfaces = {"Camera"};
-        VECTOR_STRING_ELEMENT(expected).key("interfaces")
-                .expertAccess()
-                .readOnly().initialValue(interfaces)
-                .commit();
+        VECTOR_STRING_ELEMENT(expected).key("interfaces").expertAccess().readOnly().initialValue(interfaces).commit();
 
-        UINT32_ELEMENT(expected).key("maxCorrectionTime")
-                .displayedName("Max. Train Correction Time")
-                .description("Maximum time the clock based train Id correction will correct. If the delay "
-                "is outside this time, no correction will be performed.")
-                .unit(Unit::SECOND)
-                .assignmentOptional().defaultValue(5)
-                .minInc(1).maxInc(600)
-                .init()
-                .commit();
+        UINT32_ELEMENT(expected)
+              .key("maxCorrectionTime")
+              .displayedName("Max. Train Correction Time")
+              .description(
+                    "Maximum time the clock based train Id correction will correct. If the delay "
+                    "is outside this time, no correction will be performed.")
+              .unit(Unit::SECOND)
+              .assignmentOptional()
+              .defaultValue(5)
+              .minInc(1)
+              .maxInc(600)
+              .init()
+              .commit();
 
-        BOOL_ELEMENT(expected).key("wouldCorrectAboveMaxTime")
-                .displayedName("Would Correct Above Max. Time")
-                .description("True if a correction above maxCorrectionTime would happen.")
-                .readOnly()
-                .commit();
+        BOOL_ELEMENT(expected)
+              .key("wouldCorrectAboveMaxTime")
+              .displayedName("Would Correct Above Max. Time")
+              .description("True if a correction above maxCorrectionTime would happen.")
+              .readOnly()
+              .commit();
     }
 
 
-    AravisCamera::AravisCamera(const karabo::util::Hash& config) : CameraImageSource(config),
-            m_is_base_class(true), m_arv_camera_trigger(true), m_is_device_reset_available(false),
-            m_is_frame_count_available(false), m_camera(nullptr), m_device(nullptr), m_parser(nullptr),
-            m_chunk_mode(false), m_width(0), m_height(0), m_format(0),
-            m_max_correction_time(0), m_min_latency(0.),
-            m_max_latency(0.), m_connect(true), m_is_connected(false),
-            m_reconnect_timer(EventLoop::getIOService()), m_failed_connections(0u),
-            m_poll_timer(EventLoop::getIOService()), m_is_acquiring(false), m_stream(nullptr),
-            m_is_binning_available(false), m_is_exposure_time_available(false),
-            m_is_flip_x_available(false), m_is_flip_y_available(false),
-            m_is_frame_rate_available(false), m_is_gain_available(false), m_is_gain_auto_available(false),
-            m_errorCount(0), m_lastError(ARV_BUFFER_STATUS_SUCCESS),
-            m_counter(0), m_sum_latency(0.) {
-
+    AravisCamera::AravisCamera(const karabo::util::Hash& config)
+        : CameraImageSource(config),
+          m_is_base_class(true),
+          m_arv_camera_trigger(true),
+          m_is_device_reset_available(false),
+          m_is_frame_count_available(false),
+          m_camera(nullptr),
+          m_device(nullptr),
+          m_parser(nullptr),
+          m_chunk_mode(false),
+          m_width(0),
+          m_height(0),
+          m_format(0),
+          m_max_correction_time(0),
+          m_min_latency(0.),
+          m_max_latency(0.),
+          m_connect(true),
+          m_is_connected(false),
+          m_reconnect_timer(EventLoop::getIOService()),
+          m_failed_connections(0u),
+          m_poll_timer(EventLoop::getIOService()),
+          m_is_acquiring(false),
+          m_stream(nullptr),
+          m_is_binning_available(false),
+          m_is_exposure_time_available(false),
+          m_is_flip_x_available(false),
+          m_is_flip_y_available(false),
+          m_is_frame_rate_available(false),
+          m_is_gain_available(false),
+          m_is_gain_auto_available(false),
+          m_errorCount(0),
+          m_lastError(ARV_BUFFER_STATUS_SUCCESS),
+          m_counter(0),
+          m_sum_latency(0.) {
         m_max_correction_time = config.get<unsigned int>("maxCorrectionTime");
 
         // From <arvbuffer.h>
@@ -545,8 +639,8 @@ namespace karabo {
         if (m_device != nullptr) {
             boost::mutex::scoped_lock camera_lock(m_camera_mtx);
             ArvGcNode* node = arv_device_get_feature(m_device, feature.c_str());
-            if (node != nullptr && arv_gc_feature_node_is_implemented(ARV_GC_FEATURE_NODE (node), NULL) &&
-                arv_gc_feature_node_is_available(ARV_GC_FEATURE_NODE (node), NULL)) {
+            if (node != nullptr && arv_gc_feature_node_is_implemented(ARV_GC_FEATURE_NODE(node), NULL) &&
+                arv_gc_feature_node_is_available(ARV_GC_FEATURE_NODE(node), NULL)) {
                 // The feature is implemented and available
                 return true;
             }
@@ -557,10 +651,11 @@ namespace karabo {
 
 
     void AravisCamera::disableElement(const std::string& key, karabo::util::Schema& schemaUpdate) {
-        OVERWRITE_ELEMENT(schemaUpdate).key(key)
-            .setNewDescription("Not available on this camera.")
-            .setNowReadOnly()
-            .commit();
+        OVERWRITE_ELEMENT(schemaUpdate)
+              .key(key)
+              .setNewDescription("Not available on this camera.")
+              .setNowReadOnly()
+              .commit();
     }
 
 
@@ -572,7 +667,8 @@ namespace karabo {
         value = arv_device_get_boolean_feature_value(m_device, feature.c_str(), &error);
 
         if (error != nullptr) {
-            KARABO_LOG_FRAMEWORK_ERROR << this->getInstanceId() << ": arv_device_get_boolean_feature_value failed: " << error->message;
+            KARABO_LOG_FRAMEWORK_ERROR << this->getInstanceId()
+                                       << ": arv_device_get_boolean_feature_value failed: " << error->message;
             g_clear_error(&error);
             return Result::FAIL;
         }
@@ -589,7 +685,8 @@ namespace karabo {
         value = arv_device_get_string_feature_value(m_device, feature.c_str(), &error);
 
         if (error != nullptr) {
-            KARABO_LOG_FRAMEWORK_ERROR << this->getInstanceId() << ": arv_device_get_string_feature_value failed: " << error->message;
+            KARABO_LOG_FRAMEWORK_ERROR << this->getInstanceId()
+                                       << ": arv_device_get_string_feature_value failed: " << error->message;
             g_clear_error(&error);
             return Result::FAIL;
         }
@@ -606,7 +703,8 @@ namespace karabo {
         value = arv_device_get_integer_feature_value(m_device, feature.c_str(), &error);
 
         if (error != nullptr) {
-            KARABO_LOG_FRAMEWORK_ERROR << this->getInstanceId() << ": arv_device_get_integer_feature_value failed: " << error->message;
+            KARABO_LOG_FRAMEWORK_ERROR << this->getInstanceId()
+                                       << ": arv_device_get_integer_feature_value failed: " << error->message;
             g_clear_error(&error);
             return Result::FAIL;
         }
@@ -623,7 +721,8 @@ namespace karabo {
         value = arv_device_get_float_feature_value(m_device, feature.c_str(), &error);
 
         if (error != nullptr) {
-            KARABO_LOG_FRAMEWORK_ERROR << this->getInstanceId() << ": arv_device_get_float_feature_value failed: " << error->message;
+            KARABO_LOG_FRAMEWORK_ERROR << this->getInstanceId()
+                                       << ": arv_device_get_float_feature_value failed: " << error->message;
             g_clear_error(&error);
             return Result::FAIL;
         }
@@ -640,7 +739,8 @@ namespace karabo {
         boost::mutex::scoped_lock camera_lock(m_camera_mtx);
         arv_device_set_boolean_feature_value(m_device, feature.c_str(), value, &error);
         if (error != nullptr) {
-            KARABO_LOG_FRAMEWORK_ERROR << deviceId << ": arv_device_set_boolean_feature_value failed: " << error->message;
+            KARABO_LOG_FRAMEWORK_ERROR << deviceId
+                                       << ": arv_device_set_boolean_feature_value failed: " << error->message;
             g_clear_error(&error);
         } else {
             return Result::SUCCESS; // success
@@ -649,7 +749,8 @@ namespace karabo {
         // read back value
         const bool rvalue = arv_device_get_boolean_feature_value(m_device, feature.c_str(), &error);
         if (error != nullptr) { // Could not read back value
-            KARABO_LOG_FRAMEWORK_ERROR << deviceId << ": arv_device_get_boolean_feature_value failed: " << error->message;
+            KARABO_LOG_FRAMEWORK_ERROR << deviceId
+                                       << ": arv_device_get_boolean_feature_value failed: " << error->message;
             g_clear_error(&error);
             return Result::FAIL;
         } else if (rvalue != value) { // The value was not set
@@ -669,7 +770,8 @@ namespace karabo {
         boost::mutex::scoped_lock camera_lock(m_camera_mtx);
         arv_device_set_string_feature_value(m_device, feature.c_str(), value.c_str(), &error);
         if (error != nullptr) {
-            KARABO_LOG_FRAMEWORK_ERROR << deviceId << ": arv_device_set_string_feature_value failed: " << error->message;
+            KARABO_LOG_FRAMEWORK_ERROR << deviceId
+                                       << ": arv_device_set_string_feature_value failed: " << error->message;
             g_clear_error(&error);
         } else {
             return Result::SUCCESS; // success
@@ -678,7 +780,8 @@ namespace karabo {
         // read back value
         const std::string rvalue = arv_device_get_string_feature_value(m_device, feature.c_str(), &error);
         if (error != nullptr) { // Could not read back value
-            KARABO_LOG_FRAMEWORK_ERROR << deviceId << ": arv_device_get_string_feature_value failed: " << error->message;
+            KARABO_LOG_FRAMEWORK_ERROR << deviceId
+                                       << ": arv_device_get_string_feature_value failed: " << error->message;
             g_clear_error(&error);
             return Result::FAIL;
         } else if (rvalue != value) { // The value was not set
@@ -698,7 +801,8 @@ namespace karabo {
         boost::mutex::scoped_lock camera_lock(m_camera_mtx);
         arv_device_set_integer_feature_value(m_device, feature.c_str(), value, &error);
         if (error != nullptr) {
-            KARABO_LOG_FRAMEWORK_ERROR << deviceId << ": arv_device_set_integer_feature_value failed: " << error->message;
+            KARABO_LOG_FRAMEWORK_ERROR << deviceId
+                                       << ": arv_device_set_integer_feature_value failed: " << error->message;
             g_clear_error(&error);
         } else {
             return Result::SUCCESS; // success
@@ -707,7 +811,8 @@ namespace karabo {
         // read back value
         const long long rvalue = arv_device_get_integer_feature_value(m_device, feature.c_str(), &error);
         if (error != nullptr) { // Could not read back value
-            KARABO_LOG_FRAMEWORK_ERROR << deviceId << ": arv_device_get_integer_feature_value failed: " << error->message;
+            KARABO_LOG_FRAMEWORK_ERROR << deviceId
+                                       << ": arv_device_get_integer_feature_value failed: " << error->message;
             g_clear_error(&error);
             return Result::FAIL;
         } else if (rvalue != value) { // The value was not set
@@ -729,7 +834,7 @@ namespace karabo {
         if (error != nullptr) {
             KARABO_LOG_FRAMEWORK_ERROR << deviceId << ":arv_device_set_float_feature_value failed: " << error->message;
             g_clear_error(&error);
-        } {
+        } else {
             return Result::SUCCESS; // success
         }
 
@@ -750,21 +855,24 @@ namespace karabo {
 
     void AravisCamera::initialize() {
         m_reconnect_timer.expires_from_now(boost::posix_time::milliseconds(1));
-        m_reconnect_timer.async_wait(karabo::util::bind_weak(&AravisCamera::connect, this, boost::asio::placeholders::error));
+        m_reconnect_timer.async_wait(
+              karabo::util::bind_weak(&AravisCamera::connect, this, boost::asio::placeholders::error));
 
         m_poll_timer.expires_from_now(boost::posix_time::seconds(1l));
-        m_poll_timer.async_wait(karabo::util::bind_weak(&AravisCamera::pollCamera, this, boost::asio::placeholders::error));
+        m_poll_timer.async_wait(
+              karabo::util::bind_weak(&AravisCamera::pollCamera, this, boost::asio::placeholders::error));
     }
 
 
-    void AravisCamera::connect(const boost::system::error_code & ec) {
+    void AravisCamera::connect(const boost::system::error_code& ec) {
         if (ec == boost::asio::error::operation_aborted) return;
         if (!m_connect) return;
 
         if (m_is_connected) {
             // Already connected
             m_reconnect_timer.expires_from_now(boost::posix_time::seconds(5l));
-            m_reconnect_timer.async_wait(karabo::util::bind_weak(&AravisCamera::connect, this, boost::asio::placeholders::error));
+            m_reconnect_timer.async_wait(
+                  karabo::util::bind_weak(&AravisCamera::connect, this, boost::asio::placeholders::error));
             return;
         } else {
             // Clear resources before trying reconnection
@@ -802,12 +910,12 @@ namespace karabo {
             // Update the internal list of available devices
             arv_update_device_list();
 
-            for (unsigned int idx=0; idx < arv_get_n_devices(); ++idx) {
+            for (unsigned int idx = 0; idx < arv_get_n_devices(); ++idx) {
                 // Look for a matching serial number
                 if (cameraId == arv_get_device_serial_nbr(idx)) {
                     cameraIp = arv_get_device_address(idx);
                     if (m_failed_connections < 1) {
-                        KARABO_LOG_INFO << "Serial number resolved: " << cameraId << " -> " <<  cameraIp;
+                        KARABO_LOG_INFO << "Serial number resolved: " << cameraId << " -> " << cameraIp;
                     }
                     break;
                 }
@@ -822,12 +930,12 @@ namespace karabo {
             // Update the internal list of available devices
             arv_update_device_list();
 
-            for (unsigned int idx=0; idx < arv_get_n_devices(); ++idx) {
+            for (unsigned int idx = 0; idx < arv_get_n_devices(); ++idx) {
                 // Look for a matching MAC address
                 if (cameraId == arv_get_device_physical_id(idx)) {
                     cameraIp = arv_get_device_address(idx);
                     if (m_failed_connections < 1) {
-                        KARABO_LOG_INFO << "MAC address resolved: " << cameraId << " -> " <<  cameraIp;
+                        KARABO_LOG_INFO << "MAC address resolved: " << cameraId << " -> " << cameraIp;
                     }
                     break;
                 }
@@ -837,7 +945,6 @@ namespace karabo {
                 this->connection_failed_helper(message);
                 return;
             }
-
         }
 
         GError* error = nullptr;
@@ -887,8 +994,8 @@ namespace karabo {
             // controlling the camera.
             arv_device_execute_command(m_device, "TriggerSoftware", &error);
             if (error != nullptr) {
-                const std::string message("Cannot connect to " + cameraIp
-                    + ". Another application might be controlling it.");
+                const std::string message("Cannot connect to " + cameraIp +
+                                          ". Another application might be controlling it.");
                 std::stringstream ss;
                 ss << "arv_device_execute_command failed: " << error->message; // detailed message
                 this->connection_failed_helper(message, ss.str());
@@ -911,7 +1018,8 @@ namespace karabo {
         {
             boost::mutex::scoped_lock camera_lock(m_camera_mtx);
             // Connect the control-lost signal
-            g_signal_connect(m_device, "control-lost", G_CALLBACK(AravisCamera::control_lost_cb), static_cast<void*>(this));
+            g_signal_connect(m_device, "control-lost", G_CALLBACK(AravisCamera::control_lost_cb),
+                             static_cast<void*>(this));
 
             if (error == nullptr) {
                 gint width, height;
@@ -921,7 +1029,9 @@ namespace karabo {
             }
 
             if (error == nullptr) m_is_binning_available = arv_camera_is_binning_available(m_camera, &error);
-            if (error == nullptr) m_is_exposure_time_available = arv_camera_is_exposure_time_available(m_camera, &error);
+            if (error == nullptr) {
+                m_is_exposure_time_available = arv_camera_is_exposure_time_available(m_camera, &error);
+            }
             if (error == nullptr) m_is_frame_rate_available = arv_camera_is_frame_rate_available(m_camera, &error);
             if (error == nullptr) m_is_gain_available = arv_camera_is_gain_available(m_camera, &error);
             if (error == nullptr) m_is_gain_auto_available = arv_camera_is_gain_auto_available(m_camera, &error);
@@ -935,8 +1045,8 @@ namespace karabo {
         m_is_flip_y_available = this->is_flip_y_available();
 
         // The exposure time feature name is used to read out the increment
-        std::vector<std::string> features = {"ExposureTime", // e.g. Basler a2A
-            "ExposureTimeRaw"}; // e.g. Basler acA
+        std::vector<std::string> features = {"ExposureTime",     // e.g. Basler a2A
+                                             "ExposureTimeRaw"}; // e.g. Basler acA
         for (const std::string& feat : features) {
             if (this->isFeatureAvailable(feat)) {
                 m_exposure_time_feature = feat;
@@ -974,7 +1084,8 @@ namespace karabo {
         m_is_connected = true;
         m_failed_connections = 0;
         m_reconnect_timer.expires_from_now(boost::posix_time::seconds(5l));
-        m_reconnect_timer.async_wait(karabo::util::bind_weak(&AravisCamera::connect, this, boost::asio::placeholders::error));
+        m_reconnect_timer.async_wait(
+              karabo::util::bind_weak(&AravisCamera::connect, this, boost::asio::placeholders::error));
     }
 
 
@@ -1000,7 +1111,8 @@ namespace karabo {
 
         // Try reconnecting after some time
         m_reconnect_timer.expires_from_now(boost::posix_time::seconds(5l));
-        m_reconnect_timer.async_wait(karabo::util::bind_weak(&AravisCamera::connect, this, boost::asio::placeholders::error));
+        m_reconnect_timer.async_wait(
+              karabo::util::bind_weak(&AravisCamera::connect, this, boost::asio::placeholders::error));
     }
 
 
@@ -1019,8 +1131,7 @@ namespace karabo {
                 return true;
             }
         }
-        const std::string msg("This Karabo device does not support model " + model +
-            " from " + vendor);
+        const std::string msg("This Karabo device does not support model " + model + " from " + vendor);
         KARABO_LOG_ERROR << msg;
         this->set("status", msg);
         return false;
@@ -1188,7 +1299,8 @@ namespace karabo {
         arv_camera_get_exposure_time_bounds(m_camera, &tmin, &tmax, &error);
 
         if (error != nullptr) {
-            KARABO_LOG_FRAMEWORK_ERROR << deviceId << ": arv_camera_get_exposure_time_bounds failed: " << error->message;
+            KARABO_LOG_FRAMEWORK_ERROR << deviceId
+                                       << ": arv_camera_get_exposure_time_bounds failed: " << error->message;
             g_clear_error(&error);
             return false; // failure
         }
@@ -1250,9 +1362,11 @@ namespace karabo {
             }
 
             // read the current trigger selector
-            const std::string& triggerSelector = arv_device_get_string_feature_value(m_device, "TriggerSelector", &error);
+            const std::string& triggerSelector =
+                  arv_device_get_string_feature_value(m_device, "TriggerSelector", &error);
             if (error != nullptr) {
-                KARABO_LOG_FRAMEWORK_ERROR << deviceId << ": arv_device_get_string_feature_value failed: " << error->message;
+                KARABO_LOG_FRAMEWORK_ERROR << deviceId
+                                           << ": arv_device_get_string_feature_value failed: " << error->message;
                 g_clear_error(&error);
                 return false; // failure
             }
@@ -1261,7 +1375,8 @@ namespace karabo {
             guint n_triggers;
             const char** triggerSelectorOptions = arv_camera_dup_available_triggers(m_camera, &n_triggers, &error);
             if (error != nullptr) {
-                KARABO_LOG_FRAMEWORK_ERROR << deviceId << ": arv_camera_dup_available_triggers failed: " << error->message;
+                KARABO_LOG_FRAMEWORK_ERROR << deviceId
+                                           << ": arv_camera_dup_available_triggers failed: " << error->message;
                 g_clear_error(&error);
                 return false; // failure
             }
@@ -1319,7 +1434,8 @@ namespace karabo {
         } else { // enable == false
             arv_device_set_boolean_feature_value(m_device, "AcquisitionFrameRateEnable", false, &error);
             if (error != nullptr) {
-                KARABO_LOG_FRAMEWORK_ERROR << deviceId << ": Could not set AcquisitionFrameRateEnable: " << error->message;
+                KARABO_LOG_FRAMEWORK_ERROR << deviceId
+                                           << ": Could not set AcquisitionFrameRateEnable: " << error->message;
                 g_clear_error(&error);
                 return false; // failure
             }
@@ -1355,7 +1471,7 @@ namespace karabo {
 
         absGain = _gain;
         normGain = (_gain - gmin) / (gmax - gmin); // normalized gain
-        return true; // success
+        return true;                               // success
     }
 
 
@@ -1466,7 +1582,8 @@ namespace karabo {
                 boost::mutex::scoped_lock camera_lock(m_camera_mtx);
                 arv_camera_gv_set_packet_size(m_camera, packetSize, &error);
                 if (error != nullptr) {
-                    KARABO_LOG_FRAMEWORK_ERROR << deviceId << ": arv_camera_gv_set_packet_size failed: " << error->message;
+                    KARABO_LOG_FRAMEWORK_ERROR << deviceId
+                                               << ": arv_camera_gv_set_packet_size failed: " << error->message;
                     if (configuration.has("packetSize")) configuration.erase("packetSize");
                     g_clear_error(&error);
                 }
@@ -1490,8 +1607,8 @@ namespace karabo {
             arv_camera_set_pixel_format_from_string(m_camera, pixelFormat, &error);
             if (error == nullptr) m_format = arv_camera_get_pixel_format(m_camera, &error);
             if (error != nullptr) {
-                KARABO_LOG_FRAMEWORK_ERROR << deviceId << ": cold not set pixel format to "
-                    << pixelFormat << ": " << error->message;
+                KARABO_LOG_FRAMEWORK_ERROR << deviceId << ": cold not set pixel format to " << pixelFormat << ": "
+                                           << error->message;
                 m_format = 0;
                 configuration.erase("pixelFormat");
                 g_clear_error(&error);
@@ -1570,7 +1687,8 @@ namespace karabo {
                 if (success != Result::SUCCESS) {
                     configuration.erase("triggerSelector");
                 }
-                m_need_schema_update = true; // Schema update is needed as trigger mode, source and activation must be updated.
+                m_need_schema_update =
+                      true; // Schema update is needed as trigger mode, source and activation must be updated.
             }
 
             if (configuration.has("triggerMode")) {
@@ -1631,9 +1749,11 @@ namespace karabo {
         if (configuration.has("acquisitionMode")) {
             const std::string& acquisitionMode = configuration.get<std::string>("acquisitionMode");
             boost::mutex::scoped_lock camera_lock(m_camera_mtx);
-            arv_camera_set_acquisition_mode(m_camera, arv_acquisition_mode_from_string(acquisitionMode.c_str()), &error);
+            arv_camera_set_acquisition_mode(m_camera, arv_acquisition_mode_from_string(acquisitionMode.c_str()),
+                                            &error);
             if (error != nullptr) {
-                KARABO_LOG_FRAMEWORK_ERROR << deviceId << ": arv_camera_set_acquisition_mode failed: " << error->message;
+                KARABO_LOG_FRAMEWORK_ERROR << deviceId
+                                           << ": arv_camera_set_acquisition_mode failed: " << error->message;
                 configuration.erase("acquisitionMode");
                 g_clear_error(&error);
             }
@@ -1671,7 +1791,7 @@ namespace karabo {
                 continue;
             }
 
-            switch(valueType) {
+            switch (valueType) {
                 case Types::BOOL:
                     boolValue = configuration.get<bool>(key);
                     success = this->setBoolFeature(feature, boolValue);
@@ -1712,7 +1832,6 @@ namespace karabo {
                 this->set("status", message);
             }
         }
-
     }
 
 
@@ -1767,9 +1886,11 @@ namespace karabo {
         bool is_available = false;
         guint n_values;
         const char** options = arv_device_dup_available_enumeration_feature_values_as_strings(
-            m_device, "AcquisitionMode", &n_values, &error);
+              m_device, "AcquisitionMode", &n_values, &error);
         if (error != nullptr) {
-            KARABO_LOG_FRAMEWORK_ERROR << this->getInstanceId() << ": arv_device_dup_available_enumeration_feature_values_as_strings failed: " << error->message;
+            KARABO_LOG_FRAMEWORK_ERROR << this->getInstanceId()
+                                       << ": arv_device_dup_available_enumeration_feature_values_as_strings failed: "
+                                       << error->message;
             g_clear_error(&error);
         } else {
             for (size_t i = 0; i < n_values; ++i) {
@@ -1909,7 +2030,8 @@ namespace karabo {
         if (error != nullptr) {
             const std::string message("Could not stop acquisition");
             KARABO_LOG_ERROR << message;
-            KARABO_LOG_FRAMEWORK_ERROR << this->getInstanceId() << ": arv_camera_stop_acquisition failed: " << error->message;
+            KARABO_LOG_FRAMEWORK_ERROR << this->getInstanceId()
+                                       << ": arv_camera_stop_acquisition failed: " << error->message;
             g_clear_error(&error);
             h.set("status", message);
             this->set(h);
@@ -1940,7 +2062,8 @@ namespace karabo {
                 boost::mutex::scoped_lock camera_lock(m_camera_mtx);
                 arv_camera_software_trigger(m_camera, &error);
                 if (error != nullptr) {
-                    KARABO_LOG_FRAMEWORK_ERROR << this->getInstanceId() << ": arv_camera_software_trigger failed: " << error->message;
+                    KARABO_LOG_FRAMEWORK_ERROR << this->getInstanceId()
+                                               << ": arv_camera_software_trigger failed: " << error->message;
                     g_clear_error(&error);
                 }
             }
@@ -1964,7 +2087,8 @@ namespace karabo {
             this->set("status", "");
             m_connect = true;
             m_reconnect_timer.expires_from_now(boost::posix_time::milliseconds(1));
-            m_reconnect_timer.async_wait(karabo::util::bind_weak(&AravisCamera::connect, this, boost::asio::placeholders::error));
+            m_reconnect_timer.async_wait(
+                  karabo::util::bind_weak(&AravisCamera::connect, this, boost::asio::placeholders::error));
             return;
         }
 
@@ -1991,7 +2115,8 @@ namespace karabo {
 
     void AravisCamera::clear_stream() {
         if (m_stream != nullptr) {
-            // TODO possibly disconnect signal, see https://developer.gnome.org/gobject/stable/gobject-Signals.html#g-signal-handler-disconnect
+            // TODO possibly disconnect signal, see
+            // https://developer.gnome.org/gobject/stable/gobject-Signals.html#g-signal-handler-disconnect
 
             // Disable emission of signals and free resource
             boost::mutex::scoped_lock stream_lock(m_stream_mtx);
@@ -2001,15 +2126,15 @@ namespace karabo {
     }
 
 
-    void AravisCamera::stream_cb(void *context, ArvStreamCallbackType type, ArvBuffer *buffer) {
+    void AravisCamera::stream_cb(void* context, ArvStreamCallbackType type, ArvBuffer* buffer) {
         Self* self = static_cast<Self*>(context);
         const std::string& deviceId = self->getInstanceId();
 
         if (type == ARV_STREAM_CALLBACK_TYPE_INIT) {
             KARABO_LOG_FRAMEWORK_DEBUG << deviceId << ": Init stream";
-                if (!arv_make_thread_realtime(10) && !arv_make_thread_high_priority(-10)) {
-                    KARABO_LOG_FRAMEWORK_WARN << deviceId << ": Failed to make stream thread high priority";
-                }
+            if (!arv_make_thread_realtime(10) && !arv_make_thread_high_priority(-10)) {
+                KARABO_LOG_FRAMEWORK_WARN << deviceId << ": Failed to make stream thread high priority";
+            }
         }
     }
 
@@ -2053,7 +2178,7 @@ namespace karabo {
                 ts = dev_ts;
             }
 
-            switch(pixel_format) {
+            switch (pixel_format) {
                 case ARV_PIXEL_FORMAT_MONO_8:
                     self->writeOutputChannels<unsigned char>(buffer_data, width, height, ts);
                     break;
@@ -2064,40 +2189,36 @@ namespace karabo {
                     self->writeOutputChannels<unsigned short>(buffer_data, width, height, ts);
                     break;
                 case ARV_PIXEL_FORMAT_MONO_10_PACKED:
-                case ARV_PIXEL_FORMAT_MONO_12_PACKED:
-                {
+                case ARV_PIXEL_FORMAT_MONO_12_PACKED: {
                     const uint8_t* data = reinterpret_cast<const uint8_t*>(buffer_data);
                     uint16_t* unpackedData = new uint16_t[width * height];
                     unpackMono12Packed(data, width, height, unpackedData);
                     self->writeOutputChannels<unsigned short>(unpackedData, width, height, ts);
                     delete[] unpackedData;
-                }
-                    break;
-                case ARV_PIXEL_FORMAT_MONO_10_P:
-                {
+                } break;
+                case ARV_PIXEL_FORMAT_MONO_10_P: {
                     const uint8_t* data = reinterpret_cast<const uint8_t*>(buffer_data);
                     uint16_t* unpackedData = new uint16_t[width * height];
                     unpackMono10p(data, width, height, unpackedData);
                     self->writeOutputChannels<unsigned short>(unpackedData, width, height, ts);
                     delete[] unpackedData;
-                }
-                    break;
-               case ARV_PIXEL_FORMAT_MONO_12_P:
-                {
+                } break;
+                case ARV_PIXEL_FORMAT_MONO_12_P: {
                     const uint8_t* data = reinterpret_cast<const uint8_t*>(buffer_data);
                     uint16_t* unpackedData = new uint16_t[width * height];
                     unpackMono12p(data, width, height, unpackedData);
                     self->writeOutputChannels<unsigned short>(unpackedData, width, height, ts);
                     delete[] unpackedData;
-                }
-                    break;
+                } break;
                 // TODO RGB, YUV...
                 default:
                     if (self->m_pixelFormatOptions.find(pixel_format) != self->m_pixelFormatOptions.end()) {
-                        KARABO_LOG_FRAMEWORK_ERROR << deviceId << ": Format " << self->m_pixelFormatOptions[pixel_format]
-                            << " is not yet supported";
+                        KARABO_LOG_FRAMEWORK_ERROR << deviceId << ": Format "
+                                                   << self->m_pixelFormatOptions[pixel_format]
+                                                   << " is not yet supported";
                     } else {
-                        KARABO_LOG_FRAMEWORK_ERROR << deviceId << ": Format " << pixel_format << " is not yet supported";
+                        KARABO_LOG_FRAMEWORK_ERROR << deviceId << ": Format " << pixel_format
+                                                   << " is not yet supported";
                     }
 
                     if (self->getState() == State::ACQUIRING) {
@@ -2227,7 +2348,8 @@ namespace karabo {
 
         if (m_arv_camera_trigger) {
             boost::mutex::scoped_lock camera_lock(m_camera_mtx);
-            const std::string triggerSelector = arv_device_get_string_feature_value(m_device, "TriggerSelector", &error);
+            const std::string triggerSelector =
+                  arv_device_get_string_feature_value(m_device, "TriggerSelector", &error);
             if (error == nullptr) {
                 h.set("triggerSelector", triggerSelector);
             } else {
@@ -2262,7 +2384,8 @@ namespace karabo {
                 }
             }
 
-            const std::string triggerActivation = arv_device_get_string_feature_value(m_device, "TriggerActivation", &error);
+            const std::string triggerActivation =
+                  arv_device_get_string_feature_value(m_device, "TriggerActivation", &error);
             if (error == nullptr) {
                 h.set("triggerActivation", triggerActivation);
             } else {
@@ -2301,7 +2424,7 @@ namespace karabo {
             success = this->get_gain(absGain, normGain);
             if (success) {
                 h.set("absGain", absGain);
-                h.set("gain", isNormalized?normGain:absGain);
+                h.set("gain", isNormalized ? normGain : absGain);
             }
         }
 
@@ -2332,17 +2455,17 @@ namespace karabo {
         std::vector<std::string> paths;
         this->getPathsByTag(paths, "genicam");
         this->pollGenicamFeatures(paths, h);
-
     }
 
 
-    void AravisCamera::pollCamera(const boost::system::error_code & ec) {
+    void AravisCamera::pollCamera(const boost::system::error_code& ec) {
         if (ec == boost::asio::error::operation_aborted) return;
 
         if (!m_is_connected) {
             // Not connected
             m_poll_timer.expires_from_now(boost::posix_time::seconds(5l));
-            m_poll_timer.async_wait(karabo::util::bind_weak(&AravisCamera::pollCamera, this, boost::asio::placeholders::error));
+            m_poll_timer.async_wait(
+                  karabo::util::bind_weak(&AravisCamera::pollCamera, this, boost::asio::placeholders::error));
             return;
         }
 
@@ -2356,7 +2479,8 @@ namespace karabo {
 
         const int pollingInterval = this->get<int>("pollingInterval");
         m_poll_timer.expires_from_now(boost::posix_time::seconds(pollingInterval));
-        m_poll_timer.async_wait(karabo::util::bind_weak(&AravisCamera::pollCamera, this, boost::asio::placeholders::error));
+        m_poll_timer.async_wait(
+              karabo::util::bind_weak(&AravisCamera::pollCamera, this, boost::asio::placeholders::error));
     }
 
 
@@ -2368,7 +2492,7 @@ namespace karabo {
             long long intValue;
             double doubleValue;
             std::string stringValue;
-            switch(valueType) {
+            switch (valueType) {
                 case Types::BOOL:
                     if (this->getBoolFeature(feature, boolValue) == Result::SUCCESS) {
                         h.set(key, boolValue);
@@ -2426,7 +2550,7 @@ namespace karabo {
         boost::mutex::scoped_lock camera_lock(m_camera_mtx);
 
         Types::ReferenceType kType;
-        switch(m_format) {
+        switch (m_format) {
             case ARV_PIXEL_FORMAT_MONO_8:
                 m_encoding = Encoding::GRAY;
                 kType = Types::UINT8;
@@ -2492,7 +2616,8 @@ namespace karabo {
         int_options = arv_camera_dup_available_pixel_formats(m_camera, &n_int_values, &error);
         if (error != nullptr) {
             KARABO_LOG_ERROR << errorMsg;
-            KARABO_LOG_FRAMEWORK_ERROR << deviceId << ": arv_camera_dup_available_pixel_formats failed: " << error->message;
+            KARABO_LOG_FRAMEWORK_ERROR << deviceId
+                                       << ": arv_camera_dup_available_pixel_formats failed: " << error->message;
             g_clear_error(&error);
             this->set("status", errorMsg);
             return false; // failure
@@ -2501,7 +2626,8 @@ namespace karabo {
         str_options = arv_camera_dup_available_pixel_formats_as_strings(m_camera, &n_str_values, &error);
         if (error != nullptr) {
             KARABO_LOG_ERROR << errorMsg;
-            KARABO_LOG_FRAMEWORK_ERROR << deviceId << ":arv_camera_dup_available_pixel_formats_as_strings failed: " << error->message;
+            KARABO_LOG_FRAMEWORK_ERROR << deviceId << ":arv_camera_dup_available_pixel_formats_as_strings failed: "
+                                       << error->message;
             g_clear_error(&error);
             this->set("status", errorMsg);
             return false; // failure
@@ -2513,26 +2639,28 @@ namespace karabo {
                 m_pixelFormatOptions[int_options[i]] = str_options[i];
             }
         } else {
-            KARABO_LOG_FRAMEWORK_WARN << deviceId << ": Could not fill-up pixel_format_options map: different number of "
-                << "int and string options.";
+            KARABO_LOG_FRAMEWORK_WARN << deviceId
+                                      << ": Could not fill-up pixel_format_options map: different number of "
+                                      << "int and string options.";
         }
         g_free(int_options);
 
-        const std::vector<std::string> pixelFormatOptions(str_options,
-            str_options + n_str_values);
+        const std::vector<std::string> pixelFormatOptions(str_options, str_options + n_str_values);
         g_free(str_options);
-        OVERWRITE_ELEMENT(schemaUpdate).key("pixelFormat")
-            .setNewDefaultValue(pixelFormatOptions[0])
-            .setNewOptions(pixelFormatOptions)
-            .commit();
+        OVERWRITE_ELEMENT(schemaUpdate)
+              .key("pixelFormat")
+              .setNewDefaultValue(pixelFormatOptions[0])
+              .setNewOptions(pixelFormatOptions)
+              .commit();
 
         if (m_is_device_reset_available) {
             // Make "resetCamera" slot visible in the GUI
-            SLOT_ELEMENT(schemaUpdate).key("resetCamera")
-                    .displayedName("Reset Camera")
-                    .description("'Hardware' reset, i.e. send a 'reset' command to the camera.")
-                    .allowedStates(State::ERROR, State::ON)
-                    .commit();
+            SLOT_ELEMENT(schemaUpdate)
+                  .key("resetCamera")
+                  .displayedName("Reset Camera")
+                  .description("'Hardware' reset, i.e. send a 'reset' command to the camera.")
+                  .allowedStates(State::ERROR, State::ON)
+                  .commit();
         }
 
         if (m_arv_camera_trigger) {
@@ -2540,46 +2668,46 @@ namespace karabo {
             str_options = arv_camera_dup_available_triggers(m_camera, &n_str_values, &error);
             if (error != nullptr) {
                 KARABO_LOG_ERROR << errorMsg;
-                KARABO_LOG_FRAMEWORK_ERROR << deviceId<< ": arv_camera_dup_available_triggers failed: " << error->message;
+                KARABO_LOG_FRAMEWORK_ERROR << deviceId
+                                           << ": arv_camera_dup_available_triggers failed: " << error->message;
                 g_clear_error(&error);
                 this->set("status", errorMsg);
                 return false; // failure
             }
 
-            const std::vector<std::string> triggerSelectorOptions(str_options,
-                str_options + n_str_values);
+            const std::vector<std::string> triggerSelectorOptions(str_options, str_options + n_str_values);
             g_free(str_options);
-            OVERWRITE_ELEMENT(schemaUpdate).key("triggerSelector")
-                .setNewDefaultValue(triggerSelectorOptions[0])
-                .setNewOptions(triggerSelectorOptions)
-                .commit();
+            OVERWRITE_ELEMENT(schemaUpdate)
+                  .key("triggerSelector")
+                  .setNewDefaultValue(triggerSelectorOptions[0])
+                  .setNewOptions(triggerSelectorOptions)
+                  .commit();
 
             // get available trigger sources
             str_options = arv_camera_dup_available_trigger_sources(m_camera, &n_str_values, &error);
             if (error != nullptr) {
                 KARABO_LOG_ERROR << errorMsg;
-                KARABO_LOG_FRAMEWORK_ERROR << deviceId << ": arv_camera_dup_available_trigger_sources failed: " << error->message;
+                KARABO_LOG_FRAMEWORK_ERROR << deviceId
+                                           << ": arv_camera_dup_available_trigger_sources failed: " << error->message;
                 g_clear_error(&error);
                 this->set("status", errorMsg);
                 return false; // failure
             }
 
-            std::vector<std::string> triggerSourceOptions(str_options,
-                str_options + n_str_values);
+            std::vector<std::string> triggerSourceOptions(str_options, str_options + n_str_values);
             g_free(str_options);
 
             if (n_str_values == 0) {
-                KARABO_LOG_FRAMEWORK_WARN << deviceId
-                    << ": could not get available trigger sources from camera. "
-                    << "Using defaults.";
+                KARABO_LOG_FRAMEWORK_WARN << deviceId << ": could not get available trigger sources from camera. "
+                                          << "Using defaults.";
                 triggerSourceOptions = {"Software", "Line1"};
             }
 
-            OVERWRITE_ELEMENT(schemaUpdate).key("triggerSource")
-                .setNewDefaultValue(triggerSourceOptions[0])
-                .setNewOptions(triggerSourceOptions)
-                .commit();
-
+            OVERWRITE_ELEMENT(schemaUpdate)
+                  .key("triggerSource")
+                  .setNewDefaultValue(triggerSourceOptions[0])
+                  .setNewOptions(triggerSourceOptions)
+                  .commit();
         }
 
         if (!m_is_binning_available) {
@@ -2615,22 +2743,19 @@ namespace karabo {
         }
 
         if (!m_is_frame_count_available) {
-            std::vector<std::string> acquisitionModeOptions = {
-                "Continuous", "SingleFrame"};
-            OVERWRITE_ELEMENT(schemaUpdate).key("acquisitionMode")
-                .setNewDefaultValue(acquisitionModeOptions[0])
-                .setNewOptions(acquisitionModeOptions)
-                .commit();
+            std::vector<std::string> acquisitionModeOptions = {"Continuous", "SingleFrame"};
+            OVERWRITE_ELEMENT(schemaUpdate)
+                  .key("acquisitionMode")
+                  .setNewDefaultValue(acquisitionModeOptions[0])
+                  .setNewOptions(acquisitionModeOptions)
+                  .commit();
 
             this->disableElement("frameCount", schemaUpdate);
         }
 
         if (!m_is_flip_x_available) {
             // Remove alias and tags so that flip is done on software
-            OVERWRITE_ELEMENT(schemaUpdate).key("flip.X")
-                .setNewAlias("")
-                .setNewTags({})
-                .commit();
+            OVERWRITE_ELEMENT(schemaUpdate).key("flip.X").setNewAlias("").setNewTags({}).commit();
             // To avoid the parameter is disabled in the following step.
             parameterHash.erase("flip.X");
         }
@@ -2639,18 +2764,14 @@ namespace karabo {
             // Remove alias and tags so that flip is done on software
             // This must be done here to avoid the parameter is disabled
             // in the following step.
-            OVERWRITE_ELEMENT(schemaUpdate).key("flip.Y")
-                .setNewAlias("")
-                .setNewTags({})
-                .commit();
+            OVERWRITE_ELEMENT(schemaUpdate).key("flip.Y").setNewAlias("").setNewTags({}).commit();
             // To avoid the parameter is disabled in the following step.
             parameterHash.erase("flip.Y");
         }
 
         // Disable features which are unavailable on the camera
         std::vector<std::string> paths;
-        const Hash filteredParameters = this->filterByTags(parameterHash,
-            "genicam,poll");
+        const Hash filteredParameters = this->filterByTags(parameterHash, "genicam,poll");
         filteredParameters.getPaths(paths);
         camera_lock.unlock(); // must unlock m_camera_mtx before calling isFeatureAvailable(
         for (const auto& key : paths) {
@@ -2660,16 +2781,18 @@ namespace karabo {
                 this->disableElement(key, schemaUpdate);
             } else if (schemaUpdate.getValueType(key) == Types::STRING && schemaUpdate.isAccessReconfigurable(key)) {
                 const char** str_options = arv_device_dup_available_enumeration_feature_values_as_strings(
-                    m_device, feature.c_str(), &n_str_values, &error);
+                      m_device, feature.c_str(), &n_str_values, &error);
                 if (error == nullptr) {
-                    const std::vector<std::string> vec_options(str_options,
-                        str_options + n_str_values);
-                    OVERWRITE_ELEMENT(schemaUpdate).key(key)
-                        .setNewDefaultValue(vec_options[0])
-                        .setNewOptions(vec_options)
-                        .commit();
+                    const std::vector<std::string> vec_options(str_options, str_options + n_str_values);
+                    OVERWRITE_ELEMENT(schemaUpdate)
+                          .key(key)
+                          .setNewDefaultValue(vec_options[0])
+                          .setNewOptions(vec_options)
+                          .commit();
                 } else {
-                    KARABO_LOG_FRAMEWORK_ERROR << "arv_device_dup_available_enumeration_feature_values_as_strings failed: " << error->message;
+                    KARABO_LOG_FRAMEWORK_ERROR
+                          << "arv_device_dup_available_enumeration_feature_values_as_strings failed: "
+                          << error->message;
                     g_clear_error(&error);
                 }
                 g_free(str_options);
@@ -2688,16 +2811,15 @@ namespace karabo {
 
     template <class T>
     void AravisCamera::writeOutputChannels(const void* data, gint width, gint height,
-            const karabo::util::Timestamp& ts) {
+                                           const karabo::util::Timestamp& ts) {
         const Dims shape(height, width);
 
         // Non-copy NDArray constructor
-        karabo::util::NDArray imgArray((T*) data, width*height, karabo::util::NDArray::NullDeleter(), shape);
+        karabo::util::NDArray imgArray((T*)data, width * height, karabo::util::NDArray::NullDeleter(), shape);
 
         const unsigned short bpp = this->get<unsigned short>("bpp");
         Dims binning(this->get<int>("bin.y"), this->get<int>("bin.x"));
         Dims roiOffsets(this->get<int>("roi.y"), this->get<int>("roi.x"));
-        const Hash header;
 
         // Apply flip on software if not available on camera
         const bool flipX = this->get<bool>("flip.X") && !m_is_flip_x_available;
@@ -2722,7 +2844,7 @@ namespace karabo {
         }
 
         // Send image and metadata to output channel
-        this->writeChannels(imgArray, binning, bpp, m_encoding, roiOffsets, ts, header);
+        this->writeChannels(imgArray, binning, bpp, m_encoding, roiOffsets, ts);
     }
 
 
@@ -2754,7 +2876,7 @@ namespace karabo {
     }
 
 
-    bool AravisCamera::resolveHostname(const std::string& hostname, std::string&ip_address, std::string& message) {
+    bool AravisCamera::resolveHostname(const std::string& hostname, std::string& ip_address, std::string& message) {
         bool success = false;
         boost::asio::io_service io_service;
         boost::asio::ip::tcp::resolver resolver(io_service);
@@ -2778,4 +2900,4 @@ namespace karabo {
         return success;
     }
 
-}
+} // namespace karabo

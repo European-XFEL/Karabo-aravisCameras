@@ -20,8 +20,7 @@
 namespace karabo {
 
     class AravisBaslerBase : public AravisCamera {
-    public:
-
+       public:
         static void expectedParameters(karabo::util::Schema& expected);
 
         explicit AravisBaslerBase(const karabo::util::Hash& config);
@@ -36,12 +35,12 @@ namespace karabo {
 
         std::string aravisBaslerScene();
 
-    protected:
+       protected:
         bool m_ptp_enabled;
         int m_tick_frequency;
         gint64 m_reference_camera_timestamp;
 
-    private:
+       private:
         void resetCamera() override;
     };
 

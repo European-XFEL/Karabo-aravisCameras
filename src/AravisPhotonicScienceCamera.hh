@@ -12,7 +12,7 @@
 #include <karabo/karabo.hpp>
 
 #include "AravisCamera.hh"
-#include "version.hh"  // provides ARAVISCAMERAS_PACKAGE_VERSION
+#include "version.hh" // provides ARAVISCAMERAS_PACKAGE_VERSION
 
 /**
  * The main Karabo namespace
@@ -20,8 +20,7 @@
 namespace karabo {
 
     class AravisPhotonicScienceCamera final : public AravisCamera {
-    public:
-
+       public:
         KARABO_CLASSINFO(AravisPhotonicScienceCamera, "AravisPhotonicScienceCamera", ARAVISCAMERAS_PACKAGE_VERSION)
 
         static void expectedParameters(karabo::util::Schema& expected);
@@ -40,12 +39,11 @@ namespace karabo {
 
         bool is_flip_y_available() const override;
 
-    private:
+       private:
         void configure(karabo::util::Hash& configuration) override;
         void trigger() override;
 
         double m_reference_camera_timestamp;
-
     };
 
 } // namespace karabo

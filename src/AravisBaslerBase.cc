@@ -14,7 +14,8 @@ USING_KARABO_NAMESPACES
 namespace karabo {
 
     // XXX The following does not compile - too many parameters
-    // KARABO_REGISTER_FOR_CONFIGURATION(BaseDevice, Device<>, ImageSource, CameraImageSource, AravisCamera, AravisBaslerBase)
+    // KARABO_REGISTER_FOR_CONFIGURATION(BaseDevice, Device<>, ImageSource, CameraImageSource, AravisCamera,
+    // AravisBaslerBase)
     // XXX Work-around: do not register all parameters here, but call parent's expectedParameters in this class
     KARABO_REGISTER_FOR_CONFIGURATION(BaseDevice, Device<>, ImageSource, CameraImageSource, AravisBaslerBase)
 
@@ -24,135 +25,146 @@ namespace karabo {
         AravisCamera::expectedParameters(expected);
 
         // **************************************************************************************************************
-        //                                   READ/WRITE HARDWARE PARAMETERS                                             *
+        //                                   READ/WRITE HARDWARE PARAMETERS
         // **************************************************************************************************************
 
-        OVERWRITE_ELEMENT(expected).key("flip.X")
-                .setNewAlias("ReverseX")
-                .setNewTags({"genicam"})
-                .commit();
+        OVERWRITE_ELEMENT(expected).key("flip.X").setNewAlias("ReverseX").setNewTags({"genicam"}).commit();
 
         // This class supports cameras from Basler
-        OVERWRITE_ELEMENT(expected).key("supportedVendor")
-                .setNewDefaultValue("Basler")
-                .commit();
+        OVERWRITE_ELEMENT(expected).key("supportedVendor").setNewDefaultValue("Basler").commit();
 
-        OVERWRITE_ELEMENT(expected).key("flip.Y")
-                .setNewAlias("ReverseY")
-                .setNewTags({"genicam"})
-                .commit();
+        OVERWRITE_ELEMENT(expected).key("flip.Y").setNewAlias("ReverseY").setNewTags({"genicam"}).commit();
 
         const std::vector<std::string> binModes = {"Sum", "Average"};
 
-        STRING_ELEMENT(expected).key("bin.binningHorizontalMode")
-                .alias("BinningHorizontalMode")
-                .tags("genicam")
-                .displayedName("Binning Horizontal Mode")
-                .description("Sets the binning mode for horizontal binning.")
-                .assignmentOptional().defaultValue("Sum")
-                .options(binModes)
-                .reconfigurable()
-                .allowedStates(State::UNKNOWN, State::ON)
-                .commit();
+        STRING_ELEMENT(expected)
+              .key("bin.binningHorizontalMode")
+              .alias("BinningHorizontalMode")
+              .tags("genicam")
+              .displayedName("Binning Horizontal Mode")
+              .description("Sets the binning mode for horizontal binning.")
+              .assignmentOptional()
+              .defaultValue("Sum")
+              .options(binModes)
+              .reconfigurable()
+              .allowedStates(State::UNKNOWN, State::ON)
+              .commit();
 
-        STRING_ELEMENT(expected).key("bin.binningVerticalMode")
-                .alias("BinningVerticalMode")
-                .tags("genicam")
-                .displayedName("Binning Verticall Mode")
-                .description("Sets the binning mode for vertical binning.")
-                .assignmentOptional().defaultValue("Sum")
-                .options(binModes)
-                .reconfigurable()
-                .allowedStates(State::UNKNOWN, State::ON)
-                .commit();
+        STRING_ELEMENT(expected)
+              .key("bin.binningVerticalMode")
+              .alias("BinningVerticalMode")
+              .tags("genicam")
+              .displayedName("Binning Verticall Mode")
+              .description("Sets the binning mode for vertical binning.")
+              .assignmentOptional()
+              .defaultValue("Sum")
+              .options(binModes)
+              .reconfigurable()
+              .allowedStates(State::UNKNOWN, State::ON)
+              .commit();
 
-        INT32_ELEMENT(expected).key("gevSCBWR")
-                .alias("GevSCBWR")
-                .tags("genicam")
-                .displayedName("GevSCBWR")
-                .description("This value reserves a portion of Ethernet bandwidth assigned to the camera for "
-                "packet resends and for the transmission of control data between the camera and the host PC. "
-                "The setting is expressed as a percentage of the bandwidth assigned parameter. "
-                "For example, if the Bandwidth Assigned parameter indicates that 30 MBytes/s have been assigned "
-                "to the camera and the Bandwidth Reserve parameter is set to 5%, then the bandwidth reserve "
-                "will be 1.5 MBytes/s.")
-                .assignmentOptional().noDefaultValue()
-                .unit(Unit::PERCENT)
-                .reconfigurable()
-                .allowedStates(State::UNKNOWN, State::ON)
-                .commit();
+        INT32_ELEMENT(expected)
+              .key("gevSCBWR")
+              .alias("GevSCBWR")
+              .tags("genicam")
+              .displayedName("GevSCBWR")
+              .description(
+                    "This value reserves a portion of Ethernet bandwidth assigned to the camera for "
+                    "packet resends and for the transmission of control data between the camera and the host PC. "
+                    "The setting is expressed as a percentage of the bandwidth assigned parameter. "
+                    "For example, if the Bandwidth Assigned parameter indicates that 30 MBytes/s have been assigned "
+                    "to the camera and the Bandwidth Reserve parameter is set to 5%, then the bandwidth reserve "
+                    "will be 1.5 MBytes/s.")
+              .assignmentOptional()
+              .noDefaultValue()
+              .unit(Unit::PERCENT)
+              .reconfigurable()
+              .allowedStates(State::UNKNOWN, State::ON)
+              .commit();
 
-        INT32_ELEMENT(expected).key("gevSCBWRA")
-                .alias("GevSCBWRA")
-                .tags("genicam")
-                .displayedName("GevSCBWRA")
-                .description("This value sets a multiplier for the Bandwidth Reserve parameter. "
-                "The multiplier is used to establish an extra pool of reserved bandwidth that can be used "
-                "if an unusually large burst of packet resends is needed.")
-                .assignmentOptional().noDefaultValue()
-                .reconfigurable()
-                .allowedStates(State::UNKNOWN, State::ON)
-                .commit();
+        INT32_ELEMENT(expected)
+              .key("gevSCBWRA")
+              .alias("GevSCBWRA")
+              .tags("genicam")
+              .displayedName("GevSCBWRA")
+              .description(
+                    "This value sets a multiplier for the Bandwidth Reserve parameter. "
+                    "The multiplier is used to establish an extra pool of reserved bandwidth that can be used "
+                    "if an unusually large burst of packet resends is needed.")
+              .assignmentOptional()
+              .noDefaultValue()
+              .reconfigurable()
+              .allowedStates(State::UNKNOWN, State::ON)
+              .commit();
 
-        INT32_ELEMENT(expected).key("gevSCFTD")
-                .alias("GevSCFTD")
-                .tags("genicam")
-                .displayedName("Frame Transmission Delay")
-                .description("The GevSCFTD parameter sets a delay in ticks between when a camera "
-                "would normally begin transmitting an acquired frame and when it actually begins "
-                "transmission. In most cases, this parameter should be set to zero. However, if "
-                "your network hardware can't handle spikes in network traffic (e.g., if you are "
-                "triggering multiple cameras simultaneously), you can use the frame transmission "
-                "delay parameter to stagger the start of image data transmissions from each "
-                "camera.")
-                .assignmentOptional().defaultValue(0)
-                .minInc(0).maxInc(50000000)
-                .unit(Unit::NUMBER)
-                .reconfigurable()
-                .allowedStates(State::UNKNOWN, State::ON)
-                .commit();
+        INT32_ELEMENT(expected)
+              .key("gevSCFTD")
+              .alias("GevSCFTD")
+              .tags("genicam")
+              .displayedName("Frame Transmission Delay")
+              .description(
+                    "The GevSCFTD parameter sets a delay in ticks between when a camera "
+                    "would normally begin transmitting an acquired frame and when it actually begins "
+                    "transmission. In most cases, this parameter should be set to zero. However, if "
+                    "your network hardware can't handle spikes in network traffic (e.g., if you are "
+                    "triggering multiple cameras simultaneously), you can use the frame transmission "
+                    "delay parameter to stagger the start of image data transmissions from each "
+                    "camera.")
+              .assignmentOptional()
+              .defaultValue(0)
+              .minInc(0)
+              .maxInc(50000000)
+              .unit(Unit::NUMBER)
+              .reconfigurable()
+              .allowedStates(State::UNKNOWN, State::ON)
+              .commit();
 
-        INT32_ELEMENT(expected).key("gevTimestampTickFrequency")
-                .alias("GevTimestampTickFrequency")
-                .tags("genicam")
-                .displayedName("Tick Frequency")
-                .description("This value indicates the number of clock ticks per second.")
-                .unit(Unit::HERTZ)
-                .readOnly()
-                .commit();
+        INT32_ELEMENT(expected)
+              .key("gevTimestampTickFrequency")
+              .alias("GevTimestampTickFrequency")
+              .tags("genicam")
+              .displayedName("Tick Frequency")
+              .description("This value indicates the number of clock ticks per second.")
+              .unit(Unit::HERTZ)
+              .readOnly()
+              .commit();
 
         // **************************************************************************************************************
-        //                                   READ ONLY HARDWARE PARAMETERS                                              *
+        //                                   READ ONLY HARDWARE PARAMETERS
         // **************************************************************************************************************
 
-        FLOAT_ELEMENT(expected).key("resultingLinePeriodAbs")
-                .alias("ResultingLinePeriodAbs")
-                .tags("poll")
-                .displayedName("Resulting Line Period (Abs)")
-                .description("Indicates the 'absolute' value of the minimum allowed acquisition line period. "
-                "The 'absolute' value is a float value that indicates the minimum allowed acquisition line "
-                "period in microseconds given the current settings for the area of interest, exposure time, "
-                "and bandwidth.")
-                .unit(Unit::SECOND).metricPrefix(MetricPrefix::MICRO)
-                .readOnly()
-                .commit();
+        FLOAT_ELEMENT(expected)
+              .key("resultingLinePeriodAbs")
+              .alias("ResultingLinePeriodAbs")
+              .tags("poll")
+              .displayedName("Resulting Line Period (Abs)")
+              .description(
+                    "Indicates the 'absolute' value of the minimum allowed acquisition line period. "
+                    "The 'absolute' value is a float value that indicates the minimum allowed acquisition line "
+                    "period in microseconds given the current settings for the area of interest, exposure time, "
+                    "and bandwidth.")
+              .unit(Unit::SECOND)
+              .metricPrefix(MetricPrefix::MICRO)
+              .readOnly()
+              .commit();
 
-        FLOAT_ELEMENT(expected).key("resultingLineRateAbs")
-                .alias("ResultingLineRateAbs")
-                .tags("poll")
-                .displayedName("Resulting Line Rate (Abs)")
-                .description("Indicates the 'absolute' value of the maximum allowed acquisition line rate. "
-                "The 'absolute' value is a float value that indicates the maximum allowed acquisition line "
-                "rate in lines per second given the current settings for the area of interest, exposure time, "
-                "and bandwidth.")
-                .unit(Unit::HERTZ)
-                .readOnly()
-                .commit();
-
+        FLOAT_ELEMENT(expected)
+              .key("resultingLineRateAbs")
+              .alias("ResultingLineRateAbs")
+              .tags("poll")
+              .displayedName("Resulting Line Rate (Abs)")
+              .description(
+                    "Indicates the 'absolute' value of the maximum allowed acquisition line rate. "
+                    "The 'absolute' value is a float value that indicates the maximum allowed acquisition line "
+                    "rate in lines per second given the current settings for the area of interest, exposure time, "
+                    "and bandwidth.")
+              .unit(Unit::HERTZ)
+              .readOnly()
+              .commit();
     }
 
-    AravisBaslerBase::AravisBaslerBase(const karabo::util::Hash& config) : AravisCamera(config),
-            m_ptp_enabled(false), m_tick_frequency(0) {
+    AravisBaslerBase::AravisBaslerBase(const karabo::util::Hash& config)
+        : AravisCamera(config), m_ptp_enabled(false), m_tick_frequency(0) {
         m_is_base_class = false;
         this->registerScene(boost::bind(&AravisBaslerBase::aravisBaslerScene, this), "scene");
     }
@@ -168,7 +180,8 @@ namespace karabo {
             timestamp = arv_chunk_parser_get_integer_value(m_parser, buffer, tsFeature.c_str(), &error);
         }
         if (error != nullptr) {
-            KARABO_LOG_FRAMEWORK_ERROR << this->getInstanceId() << ": Could not read image timestamp: " << error->message;
+            KARABO_LOG_FRAMEWORK_ERROR << this->getInstanceId()
+                                       << ": Could not read image timestamp: " << error->message;
             g_clear_error(&error);
             return false; // failure
         }
