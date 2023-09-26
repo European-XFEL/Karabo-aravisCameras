@@ -2,7 +2,7 @@ before_script:
     - echo '*** Install packages needed by aravis ***'
     - export REL_OS_NAME=$(lsb_release -is)
     - >
-      if [ "$REL_OS_NAME" = "CentOS" ]; then
+      if [ "$REL_OS_NAME" = "CentOS" -o "$REL_OS_NAME" = "AlmaLinux" ]; then
         if [ -x "/opt/rh/devtoolset-7/enable" ]; then
             source /opt/rh/devtoolset-7/enable
         fi

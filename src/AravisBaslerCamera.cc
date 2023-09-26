@@ -25,82 +25,93 @@ namespace karabo {
 
         // This class supports the following models: ace, aviator, pilot (Area Scan) and racer (Line Scan)
         const std::vector<std::string> supportedModels = {"acA", "avA", "piA", "raL"};
-        OVERWRITE_ELEMENT(expected).key("supportedModels")
-                .setNewDefaultValue(supportedModels)
-                .commit();
+        OVERWRITE_ELEMENT(expected).key("supportedModels").setNewDefaultValue(supportedModels).commit();
 
-        FLOAT_ELEMENT(expected).key("resultingFramePeriodAbs")
-                .alias("ResultingFramePeriodAbs")
-                .tags("poll")
-                .displayedName("Resulting Frame Period (Abs)")
-                .description("Indicates the 'absolute' value of the minimum allowed acquisition frame period. "
-                "The 'absolute' value is a float value that indicates the minimum allowed acquisition frame "
-                "period in microseconds given the current settings for the area of interest, exposure time, "
-                "and bandwidth.")
-                .unit(Unit::SECOND).metricPrefix(MetricPrefix::MICRO)
-                .readOnly()
-                .commit();
+        FLOAT_ELEMENT(expected)
+              .key("resultingFramePeriodAbs")
+              .alias("ResultingFramePeriodAbs")
+              .tags("poll")
+              .displayedName("Resulting Frame Period (Abs)")
+              .description(
+                    "Indicates the 'absolute' value of the minimum allowed acquisition frame period. "
+                    "The 'absolute' value is a float value that indicates the minimum allowed acquisition frame "
+                    "period in microseconds given the current settings for the area of interest, exposure time, "
+                    "and bandwidth.")
+              .unit(Unit::SECOND)
+              .metricPrefix(MetricPrefix::MICRO)
+              .readOnly()
+              .commit();
 
-        FLOAT_ELEMENT(expected).key("resultingFrameRateAbs")
-                .alias("ResultingFrameRateAbs")
-                .tags("poll")
-                .displayedName("Resulting Frame Rate (Abs)")
-                .description("Indicates the 'absolute' value of the maximum allowed acquisition frame rate. "
-                "The 'absolute' value is a float value that indicates the maximum allowed acquisition frame "
-                "rate in frames per second given the current settings for the area of interest, exposure time, "
-                "and bandwidth.")
-                .unit(Unit::HERTZ)
-                .readOnly()
-                .commit();
+        FLOAT_ELEMENT(expected)
+              .key("resultingFrameRateAbs")
+              .alias("ResultingFrameRateAbs")
+              .tags("poll")
+              .displayedName("Resulting Frame Rate (Abs)")
+              .description(
+                    "Indicates the 'absolute' value of the maximum allowed acquisition frame rate. "
+                    "The 'absolute' value is a float value that indicates the maximum allowed acquisition frame "
+                    "rate in frames per second given the current settings for the area of interest, exposure time, "
+                    "and bandwidth.")
+              .unit(Unit::HERTZ)
+              .readOnly()
+              .commit();
 
-        STRING_ELEMENT(expected).key("temperatureSelector")
-                .alias("TemperatureSelector")
-                .tags("genicam")
-                .displayedName("Temperature Selector")
-                .description("Lists the temperature sources available for readout.")
-                .assignmentOptional().defaultValue("Sensorboard")
-                .options("Sensorboard,Coreboard")
-                .reconfigurable()
-                .allowedStates(State::UNKNOWN, State::ON)
-                .commit();
+        STRING_ELEMENT(expected)
+              .key("temperatureSelector")
+              .alias("TemperatureSelector")
+              .tags("genicam")
+              .displayedName("Temperature Selector")
+              .description("Lists the temperature sources available for readout.")
+              .assignmentOptional()
+              .defaultValue("Sensorboard")
+              .options("Sensorboard,Coreboard")
+              .reconfigurable()
+              .allowedStates(State::UNKNOWN, State::ON)
+              .commit();
 
-        FLOAT_ELEMENT(expected).key("temperature")
-                .alias("TemperatureAbs")
-                .tags("poll")
-                .displayedName("Temperature")
-                .description("Shows the current temperature of the selected target.")
-                .unit(Unit::DEGREE_CELSIUS)
-                .readOnly()
-                .commit();
+        FLOAT_ELEMENT(expected)
+              .key("temperature")
+              .alias("TemperatureAbs")
+              .tags("poll")
+              .displayedName("Temperature")
+              .description("Shows the current temperature of the selected target.")
+              .unit(Unit::DEGREE_CELSIUS)
+              .readOnly()
+              .commit();
 
-        STRING_ELEMENT(expected).key("temperatureState")
-                .alias("TemperatureState")
-                .tags("poll")
-                .displayedName("Temperature State")
-                .description("Indicates the temperature state.")
-                .readOnly()
-                .commit();
+        STRING_ELEMENT(expected)
+              .key("temperatureState")
+              .alias("TemperatureState")
+              .tags("poll")
+              .displayedName("Temperature State")
+              .description("Indicates the temperature state.")
+              .readOnly()
+              .commit();
 
-        STRING_ELEMENT(expected).key("shutterMode")
-                .alias("ShutterMode")
-                .tags("genicam")
-                .displayedName("Shutter Mode")
-                .description("Sets the shutter mode.")
-                .assignmentOptional().defaultValue("Global")
-                .options("Global,Rolling,GlobalResetRelease")
-                .reconfigurable()
-                .allowedStates(State::UNKNOWN, State::ON)
-                .commit();
+        STRING_ELEMENT(expected)
+              .key("shutterMode")
+              .alias("ShutterMode")
+              .tags("genicam")
+              .displayedName("Shutter Mode")
+              .description("Sets the shutter mode.")
+              .assignmentOptional()
+              .defaultValue("Global")
+              .options("Global,Rolling,GlobalResetRelease")
+              .reconfigurable()
+              .allowedStates(State::UNKNOWN, State::ON)
+              .commit();
 
-        BOOL_ELEMENT(expected).key("globalResetReleaseModeEnable")
-                .alias("GlobalResetReleaseModeEnable")
-                .tags("genicam")
-                .displayedName("Global Reset Release Mode Enable")
-                .description("Enable the global reset release mode.")
-                .assignmentOptional().defaultValue(false)
-                .reconfigurable()
-                .allowedStates(State::UNKNOWN, State::ON)
-                .commit();
+        BOOL_ELEMENT(expected)
+              .key("globalResetReleaseModeEnable")
+              .alias("GlobalResetReleaseModeEnable")
+              .tags("genicam")
+              .displayedName("Global Reset Release Mode Enable")
+              .description("Enable the global reset release mode.")
+              .assignmentOptional()
+              .defaultValue(false)
+              .reconfigurable()
+              .allowedStates(State::UNKNOWN, State::ON)
+              .commit();
     }
 
     AravisBaslerCamera::AravisBaslerCamera(const karabo::util::Hash& config) : AravisBaslerBase(config) {
@@ -122,7 +133,8 @@ namespace karabo {
             bool resetNeeded = false;
             if (m_min_latency > 0. && m_max_latency / m_min_latency > 5.) {
                 // When min and max latency differ too much, the clock could need to be reset
-                KARABO_LOG_FRAMEWORK_INFO << deviceId << ": max_latency / min_latency = " << m_max_latency / m_min_latency;
+                KARABO_LOG_FRAMEWORK_INFO << deviceId
+                                          << ": max_latency / min_latency = " << m_max_latency / m_min_latency;
                 resetNeeded = true;
             } else if (m_max_latency > 3.) {
                 // Max latency higher than 3 s
@@ -149,7 +161,9 @@ namespace karabo {
         // It has been verified on an acA640-120gm that this takes 1 ms ca.,
         // thus this is the precision we can aim to in the synchronization.
         arv_camera_execute_command(m_camera, "GevTimestampControlLatch", &error);
-        if (error == nullptr) m_reference_camera_timestamp = arv_camera_get_integer(m_camera, "GevTimestampValue", &error);
+        if (error == nullptr) {
+            m_reference_camera_timestamp = arv_camera_get_integer(m_camera, "GevTimestampValue", &error);
+        }
 
         if (error != nullptr) {
             KARABO_LOG_FRAMEWORK_ERROR << deviceId << ": Could not synchronize timestamp: " << error->message;
@@ -173,7 +187,8 @@ namespace karabo {
         if (error != nullptr) {
             arv_camera_set_chunk_mode(m_camera, false, nullptr);
             m_chunk_mode = false;
-            KARABO_LOG_FRAMEWORK_ERROR << this->getInstanceId() << ": Could not enable timestamp chunk: " << error->message;
+            KARABO_LOG_FRAMEWORK_ERROR << this->getInstanceId()
+                                       << ": Could not enable timestamp chunk: " << error->message;
             g_clear_error(&error);
             return false; // failure
         }

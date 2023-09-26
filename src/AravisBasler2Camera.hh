@@ -12,7 +12,7 @@
 #include <karabo/karabo.hpp>
 
 #include "AravisBaslerBase.hh"
-#include "version.hh"  // provides ARAVISCAMERAS_PACKAGE_VERSION
+#include "version.hh" // provides ARAVISCAMERAS_PACKAGE_VERSION
 
 /**
  * The main Karabo namespace
@@ -20,8 +20,7 @@
 namespace karabo {
 
     class AravisBasler2Camera final : public AravisBaslerBase {
-    public:
-
+       public:
         KARABO_CLASSINFO(AravisBasler2Camera, "AravisBasler2Camera", ARAVISCAMERAS_PACKAGE_VERSION)
 
         static void expectedParameters(karabo::util::Schema& expected);
@@ -35,7 +34,6 @@ namespace karabo {
         bool configure_timestamp_chunk() override;
 
         bool get_timestamp(ArvBuffer* buffer, karabo::util::Timestamp& ts) override;
-
     };
 
 } // namespace karabo

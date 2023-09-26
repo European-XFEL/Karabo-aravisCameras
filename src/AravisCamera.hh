@@ -12,30 +12,23 @@
 #include <unordered_map>
 
 extern "C" {
-  #include <arv.h>
+#include <arv.h>
 }
 
+#include <image_source/CameraImageSource.hh>
 #include <karabo/karabo.hpp>
 
-#include <image_source/CameraImageSource.hh>
-
-#include "version.hh"  // provides ARAVISCAMERAS_PACKAGE_VERSION
+#include "version.hh" // provides ARAVISCAMERAS_PACKAGE_VERSION
 
 /**
  * The main Karabo namespace
  */
 namespace karabo {
 
-    enum class Result {
-        SUCCESS,
-        FAIL,
-        NOT_AVAILABLE
-    };
+    enum class Result { SUCCESS, FAIL, NOT_AVAILABLE };
 
     class AravisCamera : public CameraImageSource {
-
-    public:
-
+       public:
         // Add reflection information and Karabo framework compatibility to this class
         KARABO_CLASSINFO(AravisCamera, "AravisCamera", ARAVISCAMERAS_PACKAGE_VERSION)
 
@@ -83,8 +76,8 @@ namespace karabo {
          */
         virtual void postReconfigure() override;
 
-    protected:
-        bool m_is_base_class; // false for derived classes
+       protected:
+        bool m_is_base_class;      // false for derived classes
         bool m_arv_camera_trigger; // Use arv_camera to access trigger
         bool m_is_device_reset_available;
         bool m_is_frame_count_available;
@@ -119,7 +112,7 @@ namespace karabo {
         double m_min_latency;
         double m_max_latency;
 
-    private:
+       private:
         bool m_need_schema_update;
         void initialize();
 
@@ -130,13 +123,13 @@ namespace karabo {
         static boost::mutex m_connect_mtx; // Class lock is needed for ArvInterface
 
         void connect(const boost::system::error_code& ec);
-        void connection_failed_helper(const std::string& message, const std::string& detailed_msg="");
+        void connection_failed_helper(const std::string& message, const std::string& detailed_msg = "");
 
         bool verify_vendor_and_model(const std::string& vendor, const std::string& model);
 
         bool set_auto_packet_size();
         bool set_exposure_time(double& exposure_time);
-        bool set_frame_rate(bool enable, double frame_rate=0.);
+        bool set_frame_rate(bool enable, double frame_rate = 0.);
         bool get_gain(double& absGain, double& normGain);
         bool set_gain(double& absGain, double& normGain, bool normalized);
         bool set_frame_count(gint64& frame_count);
@@ -152,7 +145,7 @@ namespace karabo {
         void reset();
         virtual void resetCamera();
 
-        void getPathsByTag(std::vector<std::string >& paths, const std::string& tags);
+        void getPathsByTag(std::vector<std::string>& paths, const std::string& tags);
 
         void disableElement(const std::string& key, karabo::util::Schema& schemaUpdate);
 
@@ -174,7 +167,7 @@ namespace karabo {
         static void control_lost_cb(ArvGvDevice* gv_device, void* context);
 
         void pollOnce(karabo::util::Hash& h);
-        void pollCamera(const boost::system::error_code & ec);
+        void pollCamera(const boost::system::error_code& ec);
         void pollGenicamFeatures(const std::vector<std::string>& paths, karabo::util::Hash& h);
         bool updateOutputSchema();
         template <class T>
@@ -213,6 +206,6 @@ namespace karabo {
 
         karabo::xms::EncodingType m_encoding;
     };
-}
+} // namespace karabo
 
 #endif

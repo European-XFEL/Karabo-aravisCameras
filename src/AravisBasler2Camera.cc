@@ -23,65 +23,72 @@ namespace karabo {
         // does not compile with too many parameters
         AravisBaslerBase::expectedParameters(expected);
 
-        OVERWRITE_ELEMENT(expected).key("pixelFormat")
-                .setNewOptions("Mono8,Mono10,Mono10p,Mono12,Mono12p")
-                .setNewDefaultValue("Mono12p")
-                .commit();
+        OVERWRITE_ELEMENT(expected)
+              .key("pixelFormat")
+              .setNewOptions("Mono8,Mono10,Mono10p,Mono12,Mono12p")
+              .setNewDefaultValue("Mono12p")
+              .commit();
 
         // This class supports the following models: ace2 (Area Scan)
         const std::vector<std::string> supportedModels = {"a2A"};
-        OVERWRITE_ELEMENT(expected).key("supportedModels")
-                .setNewDefaultValue(supportedModels)
-                .commit();
+        OVERWRITE_ELEMENT(expected).key("supportedModels").setNewDefaultValue(supportedModels).commit();
 
-        FLOAT_ELEMENT(expected).key("resultingFrameRate")
-                .alias("ResultingFrameRate")
-                .tags("poll")
-                .displayedName("Resulting Frame Rate")
-                .description("Maximum frame acquisition rate with current camera settings (in "
-                "frames per second).")
-                .unit(Unit::HERTZ)
-                .readOnly()
-                .commit();
+        FLOAT_ELEMENT(expected)
+              .key("resultingFrameRate")
+              .alias("ResultingFrameRate")
+              .tags("poll")
+              .displayedName("Resulting Frame Rate")
+              .description(
+                    "Maximum frame acquisition rate with current camera settings (in "
+                    "frames per second).")
+              .unit(Unit::HERTZ)
+              .readOnly()
+              .commit();
 
-        STRING_ELEMENT(expected).key("temperatureSelector")
-                .alias("DeviceTemperatureSelector")
-                .tags("genicam")
-                .displayedName("Temperature Selector")
-                .description("Lists the temperature sources available for readout.")
-                .assignmentOptional().defaultValue("Coreboard")
-                .options("Coreboard")
-                .reconfigurable()
-                .allowedStates(State::UNKNOWN, State::ON)
-                .commit();
+        STRING_ELEMENT(expected)
+              .key("temperatureSelector")
+              .alias("DeviceTemperatureSelector")
+              .tags("genicam")
+              .displayedName("Temperature Selector")
+              .description("Lists the temperature sources available for readout.")
+              .assignmentOptional()
+              .defaultValue("Coreboard")
+              .options("Coreboard")
+              .reconfigurable()
+              .allowedStates(State::UNKNOWN, State::ON)
+              .commit();
 
-        FLOAT_ELEMENT(expected).key("temperature")
-                .alias("DeviceTemperature")
-                .tags("poll")
-                .displayedName("Temperature")
-                .description("Shows the current temperature of the selected target.")
-                .unit(Unit::DEGREE_CELSIUS)
-                .readOnly()
-                .commit();
+        FLOAT_ELEMENT(expected)
+              .key("temperature")
+              .alias("DeviceTemperature")
+              .tags("poll")
+              .displayedName("Temperature")
+              .description("Shows the current temperature of the selected target.")
+              .unit(Unit::DEGREE_CELSIUS)
+              .readOnly()
+              .commit();
 
-        STRING_ELEMENT(expected).key("temperatureState")
-                .alias("BslTemperatureStatus")
-                .tags("poll")
-                .displayedName("Temperature State")
-                .description("Indicates the temperature state.")
-                .readOnly()
-                .commit();
+        STRING_ELEMENT(expected)
+              .key("temperatureState")
+              .alias("BslTemperatureStatus")
+              .tags("poll")
+              .displayedName("Temperature State")
+              .description("Indicates the temperature state.")
+              .readOnly()
+              .commit();
 
-        STRING_ELEMENT(expected).key("shutterMode")
-                .alias("SensorShutterMode")
-                .tags("genicam")
-                .displayedName("Shutter Mode")
-                .description("Sets the shutter mode of the camera.")
-                .assignmentOptional().defaultValue("Global")
-                .options("Global,Rolling,GlobalResetRelease")
-                .reconfigurable()
-                .allowedStates(State::UNKNOWN, State::ON)
-                .commit();
+        STRING_ELEMENT(expected)
+              .key("shutterMode")
+              .alias("SensorShutterMode")
+              .tags("genicam")
+              .displayedName("Shutter Mode")
+              .description("Sets the shutter mode of the camera.")
+              .assignmentOptional()
+              .defaultValue("Global")
+              .options("Global,Rolling,GlobalResetRelease")
+              .reconfigurable()
+              .allowedStates(State::UNKNOWN, State::ON)
+              .commit();
     }
 
     AravisBasler2Camera::AravisBasler2Camera(const karabo::util::Hash& config) : AravisBaslerBase(config) {
@@ -109,10 +116,13 @@ namespace karabo {
         // It has been verified on an a2A2590-22gmPRO that this takes 4 ms ca.,
         // thus this is the precision we can aim to in the synchronization.
         arv_camera_execute_command(m_camera, "TimestampLatch", &error);
-        if (error == nullptr) m_reference_camera_timestamp = arv_camera_get_integer(m_camera, "TimestampLatchValue", &error);
+        if (error == nullptr) {
+            m_reference_camera_timestamp = arv_camera_get_integer(m_camera, "TimestampLatchValue", &error);
+        }
 
         if (error != nullptr) {
-            KARABO_LOG_FRAMEWORK_ERROR << this->getInstanceId() << ": Could not synchronize timestamp: " << error->message;
+            KARABO_LOG_FRAMEWORK_ERROR << this->getInstanceId()
+                                       << ": Could not synchronize timestamp: " << error->message;
             g_clear_error(&error);
             return false; // failure
         }
@@ -132,7 +142,9 @@ namespace karabo {
         if (error == nullptr) arv_camera_set_chunk_state(m_camera, "Timestamp", true, &error);
 
         // Refer the timestamp to acquisition start of current image
-        if (error == nullptr) arv_device_set_string_feature_value(m_device, "BslChunkTimestampSelector", "FrameStart", &error);
+        if (error == nullptr) {
+            arv_device_set_string_feature_value(m_device, "BslChunkTimestampSelector", "FrameStart", &error);
+        }
 
         if (error != nullptr) {
             arv_camera_set_chunk_mode(m_camera, false, nullptr);

@@ -1,16 +1,20 @@
+# This file is intended to be used together with Karabo:
+#
+# http://www.karabo.eu
+#
+# IF YOU REQUIRE ANY LICENSING AND COPYRIGHT TERMS, PLEASE ADD THEM HERE.
+# Karabo itself is licensed under the terms of the MPL 2.0 license.
 add_library (
     ${CMAKE_PROJECT_NAME} SHARED
 )
-
-find_package(PkgConfig REQUIRED)
 
 find_package(Threads REQUIRED)
 
 target_sources(
     ${CMAKE_PROJECT_NAME}
     PRIVATE
-    # Add any other source file in here.
     AravisCamera.cc
+    # Add any other source file in here
     AravisBaslerBase.cc
     AravisBaslerCameraScene.cc
     AravisBaslerCamera.cc
@@ -29,9 +33,9 @@ target_compile_options(
            -Wno-deprecated-declarations -Wall)
 
 target_include_directories(
-    ${CMAKE_PROJECT_NAME} SYSTEM
+    ${CMAKE_PROJECT_NAME}
     PUBLIC
-    ${CMAKE_CURRENT_SOURCE_DIR}
+    ${CMAKE_CURRENT_LIST_DIR}
     ${ARV_INCLUDE_DIRS}
  )
 
@@ -100,6 +104,7 @@ if (BUILD_TESTS)
         PRIVATE
         Threads::Threads
         ${CMAKE_PROJECT_NAME}
+        ${KARABO_LIB}
         ${gtest_LIB}
     )
 
