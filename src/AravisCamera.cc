@@ -512,9 +512,6 @@ namespace karabo {
               .allowedStates(State::UNKNOWN, State::ON)
               .commit();
 
-        const std::vector<std::string> interfaces = {"Camera"};
-        VECTOR_STRING_ELEMENT(expected).key("interfaces").expertAccess().readOnly().initialValue(interfaces).commit();
-
         UINT32_ELEMENT(expected)
               .key("maxCorrectionTime")
               .displayedName("Max. Train Correction Time")
