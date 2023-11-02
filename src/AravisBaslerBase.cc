@@ -63,6 +63,21 @@ namespace karabo {
               .allowedStates(State::UNKNOWN, State::ON)
               .commit();
 
+        const std::vector<std::string> expTimeModes = {"Standard", "Short", "UltraShort"};
+
+        STRING_ELEMENT(expected)
+              .key("exposureTimeMode")
+              .alias("BslExposureTimeMode")
+              .tags("genicam")
+              .displayedName("Exposure Time Mode")
+              .description("Sets the exposure time mode.")
+              .assignmentOptional()
+              .defaultValue("Standard")
+              .options(expTimeModes)
+              .reconfigurable()
+              .allowedStates(State::UNKNOWN, State::ON)
+              .commit();
+
         INT32_ELEMENT(expected)
               .key("gevSCBWR")
               .alias("GevSCBWR")
