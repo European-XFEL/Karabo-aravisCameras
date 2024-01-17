@@ -205,6 +205,7 @@ namespace karabo {
         unsigned long long m_imgsToBeAcquired;
 
         karabo::xms::EncodingType m_encoding;
+        std::vector<unsigned long long> m_shape;
     };
 } // namespace karabo
 
