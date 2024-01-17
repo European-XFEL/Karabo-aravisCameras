@@ -17,6 +17,7 @@ USING_KARABO_NAMESPACES;
 // Used by Basler ACE 2, but not (yet?) available in aravis
 #define ARV_PIXEL_FORMAT_MONO_10_P ((ArvPixelFormat)0x010a0046u)
 #define ARV_PIXEL_FORMAT_MONO_12_P ((ArvPixelFormat)0x010c0047u)
+// XXX add Format YCbCr422_8 0x0210003bu
 
 #define GET_PATH(hash, path, type) hash.has(path) ? hash.get<type>(path) : this->get<type>(path);
 
@@ -2207,11 +2208,18 @@ namespace karabo {
                     self->writeOutputChannels<unsigned short>(unpackedData, width, height, ts);
                     delete[] unpackedData;
                 } break;
-                // TODO RGB, YUV...
+                case ARV_PIXEL_FORMAT_RGB_8_PACKED:
+                case ARV_PIXEL_FORMAT_BGR_8_PACKED:
+                    self->writeOutputChannels<unsigned char>(buffer_data, width, height, ts);
+                    break;
+                // XXX PACKED ARV_PIXEL_FORMAT_BAYER_RG_8 ARV_PIXEL_FORMAT_BAYER_RG_10 ARV_PIXEL_FORMAT_BAYER_RG_10P
+                // ARV_PIXEL_FORMAT_BAYER_RG_12 ARV_PIXEL_FORMAT_BAYER_RG_12P
+                // XXX YUV...
                 default:
                     if (self->m_pixelFormatOptions.find(pixel_format) != self->m_pixelFormatOptions.end()) {
                         KARABO_LOG_FRAMEWORK_ERROR << deviceId << ": Format "
-                                                   << self->m_pixelFormatOptions[pixel_format]
+                                                   << self->m_pixelFormatOptions[pixel_format] << " (" << pixel_format
+                                                   << ")"
                                                    << " is not yet supported";
                     } else {
                         KARABO_LOG_FRAMEWORK_ERROR << deviceId << ": Format " << pixel_format
@@ -2575,20 +2583,39 @@ namespace karabo {
             case ARV_PIXEL_FORMAT_RGB_8_PACKED:
             case ARV_PIXEL_FORMAT_RGB_8_PLANAR:
                 m_encoding = Encoding::RGB;
+                shape.push_back(3);
+                kType = Types::UINT8;
+                break;
+            case ARV_PIXEL_FORMAT_BGR_8_PACKED:
+                m_encoding = Encoding::BGR;
+                shape.push_back(3);
                 kType = Types::UINT8;
                 break;
             case ARV_PIXEL_FORMAT_RGB_10_PACKED:
             case ARV_PIXEL_FORMAT_RGB_10_PLANAR:
                 m_encoding = Encoding::RGB;
+                shape.push_back(3);
+                kType = Types::UINT16;
+                break;
+            case ARV_PIXEL_FORMAT_BGR_10_PACKED:
+                m_encoding = Encoding::BGR;
+                shape.push_back(3);
                 kType = Types::UINT16;
                 break;
             case ARV_PIXEL_FORMAT_RGB_12_PACKED:
             case ARV_PIXEL_FORMAT_RGB_12_PLANAR:
                 m_encoding = Encoding::RGB;
+                shape.push_back(3);
+                kType = Types::UINT16;
+                break;
+            case ARV_PIXEL_FORMAT_BGR_12_PACKED:
+                m_encoding = Encoding::BGR;
+                shape.push_back(3);
                 kType = Types::UINT16;
                 break;
             case ARV_PIXEL_FORMAT_RGB_16_PLANAR:
                 m_encoding = Encoding::RGB;
+                shape.push_back(3);
                 kType = Types::UINT16;
                 break;
             // TODO: YUV
@@ -2601,6 +2628,7 @@ namespace karabo {
         const unsigned short bpp = ARV_PIXEL_FORMAT_BIT_PER_PIXEL(m_format);
         h.set("bpp", bpp);
 
+        m_shape = shape;
         CameraImageSource::updateOutputSchema(shape, m_encoding, kType);
 
         guint n_int_values, n_str_values;
@@ -2809,10 +2837,28 @@ namespace karabo {
     template <class T>
     void AravisCamera::writeOutputChannels(const void* data, gint width, gint height,
                                            const karabo::util::Timestamp& ts) {
-        const Dims shape(height, width);
+        Dims shape;
+        const unsigned int rotation = this->get<unsigned int>("rotation");
+        switch (rotation) {
+            case 90:
+            case 270:
+                // N.B. In case image has to be rotated, in m_shape width and
+                // height are already swapped! Thus I have to swap again
+                // before I use it to construct the NDArray
+                {
+                    std::vector<unsigned long long> vec = m_shape;
+                    vec[0] = m_shape[1];
+                    vec[1] = m_shape[0];
+                    shape = Dims(vec);
+                    break;
+                }
+            default:
+                shape = Dims(m_shape);
+                break;
+        }
 
         // Non-copy NDArray constructor
-        karabo::util::NDArray imgArray((T*)data, width * height, karabo::util::NDArray::NullDeleter(), shape);
+        karabo::util::NDArray imgArray((T*)data, shape.size(), karabo::util::NDArray::NullDeleter(), shape);
 
         const unsigned short bpp = this->get<unsigned short>("bpp");
         Dims binning(this->get<int>("bin.y"), this->get<int>("bin.x"));
@@ -2825,11 +2871,12 @@ namespace karabo {
             util::flip_image<T>(imgArray, flipX, flipY);
         }
 
-        const unsigned int rotation = this->get<unsigned int>("rotation");
         switch (rotation) {
             case 90:
             case 270:
                 util::rotate_image<T>(imgArray, rotation);
+                // Binning and ROI offsets must be reversed before adding the
+                // 3rd dimension (i.e. channel)
                 binning.reverse();
                 roiOffsets.reverse();
                 break;
@@ -2840,10 +2887,14 @@ namespace karabo {
                 break;
         }
 
+        if (shape.rank() == 3) { // color image
+            binning = Dims(binning.x1(), binning.x2(), 1);
+            roiOffsets = Dims(roiOffsets.x1(), roiOffsets.x2(), 1);
+        }
+
         // Send image and metadata to output channel
         this->writeChannels(imgArray, binning, bpp, m_encoding, roiOffsets, ts);
     }
-
 
     void AravisCamera::updateFrameRate() {
         Hash h;
