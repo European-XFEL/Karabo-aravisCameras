@@ -2189,31 +2189,55 @@ namespace karabo {
                 case ARV_PIXEL_FORMAT_MONO_10_PACKED:
                 case ARV_PIXEL_FORMAT_MONO_12_PACKED: {
                     const uint8_t* data = reinterpret_cast<const uint8_t*>(buffer_data);
-                    uint16_t* unpackedData = new uint16_t[width * height];
+                    uint16_t* unpackedData = self->m_unpackedData.data();
                     unpackMono12Packed(data, width, height, unpackedData);
                     self->writeOutputChannels<unsigned short>(unpackedData, width, height, ts);
-                    delete[] unpackedData;
                 } break;
                 case ARV_PIXEL_FORMAT_MONO_10_P: {
                     const uint8_t* data = reinterpret_cast<const uint8_t*>(buffer_data);
-                    uint16_t* unpackedData = new uint16_t[width * height];
+                    uint16_t* unpackedData = self->m_unpackedData.data();
                     unpackMono10p(data, width, height, unpackedData);
                     self->writeOutputChannels<unsigned short>(unpackedData, width, height, ts);
-                    delete[] unpackedData;
                 } break;
                 case ARV_PIXEL_FORMAT_MONO_12_P: {
                     const uint8_t* data = reinterpret_cast<const uint8_t*>(buffer_data);
-                    uint16_t* unpackedData = new uint16_t[width * height];
+                    uint16_t* unpackedData = self->m_unpackedData.data();
                     unpackMono12p(data, width, height, unpackedData);
                     self->writeOutputChannels<unsigned short>(unpackedData, width, height, ts);
-                    delete[] unpackedData;
                 } break;
                 case ARV_PIXEL_FORMAT_RGB_8_PACKED:
                 case ARV_PIXEL_FORMAT_BGR_8_PACKED:
                     self->writeOutputChannels<unsigned char>(buffer_data, width, height, ts);
                     break;
-                // XXX PACKED ARV_PIXEL_FORMAT_BAYER_RG_8 ARV_PIXEL_FORMAT_BAYER_RG_10 ARV_PIXEL_FORMAT_BAYER_RG_10P
-                // ARV_PIXEL_FORMAT_BAYER_RG_12 ARV_PIXEL_FORMAT_BAYER_RG_12P
+                case ARV_PIXEL_FORMAT_RGB_10_PACKED:
+                case ARV_PIXEL_FORMAT_RGB_10_PLANAR:
+                case ARV_PIXEL_FORMAT_BGR_10_PACKED:
+                case ARV_PIXEL_FORMAT_RGB_12_PACKED:
+                case ARV_PIXEL_FORMAT_RGB_12_PLANAR:
+                case ARV_PIXEL_FORMAT_BGR_12_PACKED:
+                case ARV_PIXEL_FORMAT_RGB_16_PLANAR:
+                    // XXX not tested
+                    self->writeOutputChannels<unsigned short>(buffer_data, width, height, ts);
+                    break;
+                case ARV_PIXEL_FORMAT_BAYER_RG_8:
+                    self->writeOutputChannels<unsigned char>(buffer_data, width, height, ts);
+                    break;
+                case ARV_PIXEL_FORMAT_BAYER_RG_10:
+                case ARV_PIXEL_FORMAT_BAYER_RG_12:
+                    self->writeOutputChannels<unsigned short>(buffer_data, width, height, ts);
+                    break;
+                case ARV_PIXEL_FORMAT_BAYER_RG_10P: {
+                    const uint8_t* data = reinterpret_cast<const uint8_t*>(buffer_data);
+                    uint16_t* unpackedData = self->m_unpackedData.data();
+                    unpackBayerRG10p(data, width, height, unpackedData);
+                    self->writeOutputChannels<unsigned short>(unpackedData, width, height, ts);
+                } break;
+                case ARV_PIXEL_FORMAT_BAYER_RG_12P: {
+                    const uint8_t* data = reinterpret_cast<const uint8_t*>(buffer_data);
+                    uint16_t* unpackedData = self->m_unpackedData.data();
+                    unpackBayerRG12p(data, width, height, unpackedData);
+                    self->writeOutputChannels<unsigned short>(unpackedData, width, height, ts);
+                } break;
                 // XXX YUV...
                 default:
                     if (self->m_pixelFormatOptions.find(pixel_format) != self->m_pixelFormatOptions.end()) {
@@ -2618,6 +2642,17 @@ namespace karabo {
                 shape.push_back(3);
                 kType = Types::UINT16;
                 break;
+            case ARV_PIXEL_FORMAT_BAYER_RG_8:
+                m_encoding = Encoding::BAYER;
+                kType = Types::UINT8;
+                break;
+            case ARV_PIXEL_FORMAT_BAYER_RG_10:
+            case ARV_PIXEL_FORMAT_BAYER_RG_10P:
+            case ARV_PIXEL_FORMAT_BAYER_RG_12:
+            case ARV_PIXEL_FORMAT_BAYER_RG_12P:
+                m_encoding = Encoding::BAYER;
+                kType = Types::UINT16;
+                break;
             // TODO: YUV
             default:
                 m_encoding = Encoding::GRAY;
@@ -2629,6 +2664,13 @@ namespace karabo {
         h.set("bpp", bpp);
 
         m_shape = shape;
+
+        size_t unpackedDataSize = width * height;
+        if (shape.size() > 2) {
+            unpackedDataSize *= shape[2];
+        }
+        m_unpackedData.resize(unpackedDataSize);
+
         CameraImageSource::updateOutputSchema(shape, m_encoding, kType);
 
         guint n_int_values, n_str_values;

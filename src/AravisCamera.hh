@@ -206,6 +206,8 @@ namespace karabo {
 
         karabo::xms::EncodingType m_encoding;
         std::vector<unsigned long long> m_shape;
+
+        std::vector<uint16_t> m_unpackedData;
     };
 } // namespace karabo
 
