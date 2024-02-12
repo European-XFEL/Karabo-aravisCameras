@@ -17,7 +17,7 @@ USING_KARABO_NAMESPACES;
 // Used by Basler ACE 2, but not (yet?) available in aravis
 #define ARV_PIXEL_FORMAT_MONO_10_P ((ArvPixelFormat)0x010a0046u)
 #define ARV_PIXEL_FORMAT_MONO_12_P ((ArvPixelFormat)0x010c0047u)
-// XXX add Format YCbCr422_8 0x0210003bu
+#define ARV_PIXEL_FORMAT_YCBCR_422_8 ((ArvPixelFormat)0x0210003bu)
 
 #define GET_PATH(hash, path, type) hash.has(path) ? hash.get<type>(path) : this->get<type>(path);
 
@@ -2238,7 +2238,9 @@ namespace karabo {
                     unpackBayerRG12p(data, width, height, unpackedData);
                     self->writeOutputChannels<unsigned short>(unpackedData, width, height, ts);
                 } break;
-                // XXX YUV...
+                case ARV_PIXEL_FORMAT_YCBCR_422_8:
+                    self->writeOutputChannels<unsigned char>(buffer_data, width, height, ts);
+                    break;
                 default:
                     if (self->m_pixelFormatOptions.find(pixel_format) != self->m_pixelFormatOptions.end()) {
                         KARABO_LOG_FRAMEWORK_ERROR << deviceId << ": Format "
@@ -2653,7 +2655,11 @@ namespace karabo {
                 m_encoding = Encoding::BAYER;
                 kType = Types::UINT16;
                 break;
-            // TODO: YUV
+            case ARV_PIXEL_FORMAT_YCBCR_422_8:
+                m_encoding = Encoding::YUV;
+                shape.push_back(2);
+                kType = Types::UINT8;
+                break;
             default:
                 m_encoding = Encoding::GRAY;
                 kType = Types::UNKNOWN;
