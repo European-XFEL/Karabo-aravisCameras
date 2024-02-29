@@ -5,11 +5,12 @@ AravisCameras Device (C++)
 Overview
 ========
 
-The AravisCamera class provides a way to interface with a GigE Vision camera
-in a Karabo framework environment. It enables users to configure the camera
-settings, acquire images, and dynamically update the settings during runtime.
-This class simplifies the interaction with the camera and streamlines the
-process making it easier to integrate the camera into various applications.
+The AravisCamera class provides an interface to GigE Vision and USB3
+Vision cameras in the Karabo framework environment. It enables users to
+configure the camera settings, acquire images, and dynamically update the
+settings during runtime. This class simplifies the interaction with the camera
+and streamlines the process making it easier to integrate the camera into
+various applications.
 
 Contact
 ========
@@ -62,6 +63,18 @@ Dependencies
 
   - opencv (https://opencv.org/)
 
+Host Setup
+==========
+
+In order to enable users to access a USB3V camera, a file
+``/etc/udev/rules.d/69-basler-cameras.rules`` must be added with the following
+content
+
+
+    ``# Enable user access to all basler cameras``
+
+    ``SUBSYSTEM=="usb", ATTRS{idVendor}=="2676", MODE:="0666", TAG+="uaccess", TAG+="udev-acl"``
+
 Compiling
 =========
 
@@ -69,13 +82,18 @@ Compiling
    developed:
 
     ``cd <Karabo installation root directory>``
+
     ``source ./activate``
 
-2. Goto the device source root directory and generate its build files with cmake:
+2. Go to the device source root directory and generate its build files with
+   cmake:
 
      ``cd $KARABO/devices/aravisCameras``
+
      ``mkdir build``
+
      ``cd build``
+
      ``cmake -DCMAKE_BUILD_TYPE=Debug -DCMAKE_PREFIX_PATH=$KARABO/extern ..``
 
    CMAKE_BUILD_TYPE can also be set to "Release".
@@ -83,9 +101,11 @@ Compiling
 3. Build the device:
 
      ``cd $KARABO/devices/aravisCameras``
-     ``cmake --build . ``
 
-   ``make`` can also be used as long as the Makefile generator is used by cmake.
+     ``cmake --build .``
+
+   ``make`` can also be used as long as the Makefile generator is used by
+   cmake.
 
 Testing
 =======
@@ -97,9 +117,11 @@ After a successfull build, a shared library is generated here:
 And a soft-link to the ``libaravisCameras.so`` file is created in the
 ``$KARABO/plugins`` folder.
 
-To run the tests, go to the tests directory in your build tree and use ``ctest``:
+To run the tests, go to the tests directory in your build tree and use
+``ctest``:
 
     ``cd $KARABO/devices/aravisCameras/build/aravisCameras``
+
     ``ctest -VV``
 
 Running
