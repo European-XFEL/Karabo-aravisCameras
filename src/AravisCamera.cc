@@ -38,7 +38,9 @@ namespace karabo {
               .displayedName("ID Type")
               .description(
                     "The type of identifier to be used, to connect to the camera."
-                    "Available options are 'IP' (IP address), 'HOST' (IP name), SN (Serial Number), MAC (MAC address).")
+                    "Available options for GEV (Ethernet) cameras are 'IP' (IP address), 'HOST' (IP name), SN (Serial "
+                    "Number), MAC (MAC address). "
+                    "For USB3V cameras only SN can be used.")
               .assignmentOptional()
               .defaultValue("IP")
               .options("IP,HOST,SN,MAC")
@@ -49,13 +51,23 @@ namespace karabo {
               .key("cameraId")
               .displayedName("Camera ID")
               .description(
-                    "The 'identifier' of the network camera. It can be an IP address (e.g. 192.168.1.153), "
+                    "The 'identifier' of the camera. For GEV (Ethernet) cameras it can be an IP address (e.g. "
+                    "192.168.1.153), "
                     "an IP name (e.g. exflqr1234), a serial number or a MAC address (e.g. 00:30:53:25:ab:b7). "
+                    "For USB3V cameras only SN can be used. "
                     "The type must be specified in the 'idType' property.")
               .assignmentMandatory()
               .init() // cannot be changed after device instantiation
               .commit();
 
+        STRING_ELEMENT(expected)
+              .key("interfaceStandard")
+              .displayedName("Camera Interface Standard")
+              .description("The camera interface standard (GEV or USB3V).")
+              .readOnly()
+              .commit();
+
+        // GEV cameras only
         INT64_ELEMENT(expected)
               .key("packetDelay")
               .displayedName("Packet Delay")
@@ -72,6 +84,7 @@ namespace karabo {
               .allowedStates(State::UNKNOWN, State::ON)
               .commit();
 
+        // GEV cameras only
         BOOL_ELEMENT(expected)
               .key("autoPacketSize")
               .displayedName("Auto Packet Size")
@@ -86,12 +99,13 @@ namespace karabo {
               .allowedStates(State::UNKNOWN, State::ON)
               .commit();
 
+        // GEV cameras only
         INT32_ELEMENT(expected)
               .key("packetSize")
               .displayedName("Packet Size")
               .description(
                     "Specifies the packet size to be used by the camera for data streaming. "
-                    "This does not include data leader and data trailer and the last data packet which might be "
+                    "This does not include data header and data trailer and the last data packet which might be "
                     "of smaller size.")
               .assignmentOptional()
               .noDefaultValue()
@@ -886,6 +900,9 @@ namespace karabo {
         // here a class level lock.
         boost::mutex::scoped_lock class_lock(AravisCamera::m_connect_mtx);
 
+        // Update the internal list of available devices
+        arv_update_device_list();
+
         if (idType == "IP") { // IP address
             if (cameraId.size() == 0) {
                 this->connection_failed_helper("Cannot connect: the provided IP is empty");
@@ -905,19 +922,36 @@ namespace karabo {
             }
 
         } else if (idType == "SN") { // Serial number
-            // Update the internal list of available devices
-            arv_update_device_list();
 
-            for (unsigned int idx = 0; idx < arv_get_n_devices(); ++idx) {
-                // Look for a matching serial number
-                if (cameraId == arv_get_device_serial_nbr(idx)) {
-                    cameraIp = arv_get_device_address(idx);
-                    if (m_failed_connections < 1) {
-                        KARABO_LOG_INFO << "Serial number resolved: " << cameraId << " -> " << cameraIp;
+            if (cameraId.size() == 0) {
+                this->connection_failed_helper("Cannot connect: the provided SN is empty");
+                return;
+            }
+
+            const std::string& supportedVendor = this->get<std::string>("supportedVendor");
+
+            if (supportedVendor.size() != 0) {
+                // If the vendor is known, the camera can be simply addressed
+                // by <Vendor>-<SerialNumber>.
+                // Note: this is the only way to access USB3V cameras!
+                cameraIp = supportedVendor + "-" + cameraId;
+
+            } else {
+                // If supportedVendor is not defined, we loop over all
+                // auto-discovered cameras and try to match the SN
+
+                for (unsigned int idx = 0; idx < arv_get_n_devices(); ++idx) {
+                    // Look for a matching serial number
+                    if (cameraId == arv_get_device_serial_nbr(idx)) {
+                        cameraIp = arv_get_device_address(idx);
+                        if (m_failed_connections < 1) {
+                            KARABO_LOG_INFO << "Serial number resolved: " << cameraId << " -> " << cameraIp;
+                        }
+                        break;
                     }
-                    break;
                 }
             }
+
             if (cameraIp.size() == 0) {
                 const std::string message("Could not discover any camera with serial: " + cameraId);
                 this->connection_failed_helper(message);
@@ -925,24 +959,12 @@ namespace karabo {
             }
 
         } else if (idType == "MAC") { // MAC address
-            // Update the internal list of available devices
-            arv_update_device_list();
-
-            for (unsigned int idx = 0; idx < arv_get_n_devices(); ++idx) {
-                // Look for a matching MAC address
-                if (cameraId == arv_get_device_physical_id(idx)) {
-                    cameraIp = arv_get_device_address(idx);
-                    if (m_failed_connections < 1) {
-                        KARABO_LOG_INFO << "MAC address resolved: " << cameraId << " -> " << cameraIp;
-                    }
-                    break;
-                }
-            }
-            if (cameraIp.size() == 0) {
-                const std::string message("Could not discover any camera with MAC: " + cameraId);
-                this->connection_failed_helper(message);
+            if (cameraId.size() == 0) {
+                this->connection_failed_helper("Cannot connect: the provided MAC is empty");
                 return;
             }
+
+            cameraIp = cameraId;
         }
 
         GError* error = nullptr;
@@ -956,17 +978,34 @@ namespace karabo {
             if (error != nullptr) {
                 std::stringstream ss;
                 ss << "arv_camera_new failed: " << error->message; // detailed message
-                this->connection_failed_helper("Cannot connect to " + cameraIp, ss.str());
+                if (ss.str().find("LIBUSB_ERROR_BUSY") != std::string::npos) {
+                    const std::string message("Cannot connect to " + cameraIp +
+                                              ". Another application might be controlling it.");
+                    this->connection_failed_helper(message, ss.str());
+                } else {
+                    this->connection_failed_helper("Cannot connect to " + cameraIp, ss.str());
+                }
                 g_clear_error(&error);
                 return;
             }
 
+            m_is_gv_device = arv_camera_is_gv_device(m_camera);
+            if (m_is_gv_device) {
+                h.set("interfaceStandard", "GEV");
+            } else if (arv_camera_is_uv_device(m_camera)) {
+                h.set("interfaceStandard", "USB3V");
+            }
+
             // Read immutable properties
-            if (error == nullptr) h.set("camId", std::string(arv_camera_get_device_id(m_camera, &error)));
-            const std::string vendor(arv_camera_get_vendor_name(m_camera, &error));
-            if (error == nullptr) h.set("vendor", vendor);
-            const std::string model(arv_camera_get_model_name(m_camera, &error));
-            if (error == nullptr) h.set("model", model);
+            if (m_is_gv_device) {
+                // Not available for USBV3
+                if (error == nullptr) h.set("camId", std::string(arv_camera_get_device_id(m_camera, &error)));
+            }
+
+            const char* vendor = arv_camera_get_vendor_name(m_camera, &error);
+            if (error == nullptr) h.set("vendor", std::string(vendor));
+            const char* model = arv_camera_get_model_name(m_camera, &error);
+            if (error == nullptr) h.set("model", std::string(model));
 
             // For derived classes, check that vendor and model are supported by the class
             const bool is_supported = m_is_base_class || verify_vendor_and_model(vendor, model);
@@ -1137,6 +1176,11 @@ namespace karabo {
 
 
     bool AravisCamera::set_auto_packet_size() {
+        if (!m_is_gv_device) {
+            // Available on GEV cameras only
+            return true;
+        }
+
         GError* error = nullptr;
         const std::string& deviceId = this->getInstanceId();
         boost::mutex::scoped_lock camera_lock(m_camera_mtx);
@@ -1558,35 +1602,39 @@ namespace karabo {
         GError* error = nullptr;
         const std::string& deviceId = this->getInstanceId();
 
-        if (configuration.has("packetDelay")) {
-            boost::mutex::scoped_lock camera_lock(m_camera_mtx);
-            arv_camera_gv_set_packet_delay(m_camera, configuration.get<long long>("packetDelay"), &error);
-            if (error != nullptr) {
-                KARABO_LOG_FRAMEWORK_ERROR << deviceId << ": arv_camera_gv_set_packet_delay failed: " << error->message;
-                configuration.erase("packetDelay");
-                g_clear_error(&error);
-            }
-        }
-
-        const bool autoPacketSize = GET_PATH(configuration, "autoPacketSize", bool);
-        if (autoPacketSize) {
-            const bool success = this->set_auto_packet_size();
-            if (!success && configuration.has("autoPacketSize")) {
-                configuration.erase("autoPacketSize");
-            }
-        } else {
-            try {
-                const guint packetSize = GET_PATH(configuration, "packetSize", int);
+        // Available on GEV cameras only
+        if (m_is_gv_device) {
+            if (configuration.has("packetDelay")) {
                 boost::mutex::scoped_lock camera_lock(m_camera_mtx);
-                arv_camera_gv_set_packet_size(m_camera, packetSize, &error);
+                arv_camera_gv_set_packet_delay(m_camera, configuration.get<long long>("packetDelay"), &error);
                 if (error != nullptr) {
                     KARABO_LOG_FRAMEWORK_ERROR << deviceId
-                                               << ": arv_camera_gv_set_packet_size failed: " << error->message;
-                    if (configuration.has("packetSize")) configuration.erase("packetSize");
+                                               << ": arv_camera_gv_set_packet_delay failed: " << error->message;
+                    configuration.erase("packetDelay");
                     g_clear_error(&error);
                 }
-            } catch (const karabo::util::ParameterException& e) {
-                // key neither in configuration nor on device
+            }
+
+            const bool autoPacketSize = GET_PATH(configuration, "autoPacketSize", bool);
+            if (autoPacketSize) {
+                const bool success = this->set_auto_packet_size();
+                if (!success && configuration.has("autoPacketSize")) {
+                    configuration.erase("autoPacketSize");
+                }
+            } else {
+                try {
+                    const guint packetSize = GET_PATH(configuration, "packetSize", int);
+                    boost::mutex::scoped_lock camera_lock(m_camera_mtx);
+                    arv_camera_gv_set_packet_size(m_camera, packetSize, &error);
+                    if (error != nullptr) {
+                        KARABO_LOG_FRAMEWORK_ERROR << deviceId
+                                                   << ": arv_camera_gv_set_packet_size failed: " << error->message;
+                        if (configuration.has("packetSize")) configuration.erase("packetSize");
+                        g_clear_error(&error);
+                    }
+                } catch (const karabo::util::ParameterException& e) {
+                    // key neither in configuration nor on device
+                }
             }
         }
 
@@ -2315,20 +2363,23 @@ namespace karabo {
         GError* error = nullptr;
         const std::string& deviceId = this->getInstanceId();
 
-        const long long packetDelay = arv_camera_gv_get_packet_delay(m_camera, &error);
-        if (error == nullptr) {
-            h.set("packetDelay", packetDelay);
-        } else {
-            KARABO_LOG_FRAMEWORK_WARN << deviceId << ": arv_camera_gv_get_packet_delay failed: " << error->message;
-            g_clear_error(&error);
-        }
+        // Available on GEV cameras only
+        if (m_is_gv_device) {
+            const long long packetDelay = arv_camera_gv_get_packet_delay(m_camera, &error);
+            if (error == nullptr) {
+                h.set("packetDelay", packetDelay);
+            } else {
+                KARABO_LOG_FRAMEWORK_WARN << deviceId << ": arv_camera_gv_get_packet_delay failed: " << error->message;
+                g_clear_error(&error);
+            }
 
-        const guint packetSize = arv_camera_gv_get_packet_size(m_camera, &error);
-        if (error == nullptr) {
-            h.set("packetSize", packetSize);
-        } else {
-            KARABO_LOG_FRAMEWORK_WARN << deviceId << ": arv_camera_gv_get_packet_size failed: " << error->message;
-            g_clear_error(&error);
+            const guint packetSize = arv_camera_gv_get_packet_size(m_camera, &error);
+            if (error == nullptr) {
+                h.set("packetSize", packetSize);
+            } else {
+                KARABO_LOG_FRAMEWORK_WARN << deviceId << ": arv_camera_gv_get_packet_size failed: " << error->message;
+                g_clear_error(&error);
+            }
         }
 
         gint x, y, width, height;
@@ -2725,6 +2776,13 @@ namespace karabo {
               .setNewDefaultValue(pixelFormatOptions[0])
               .setNewOptions(pixelFormatOptions)
               .commit();
+
+        if (!m_is_gv_device) {
+            // Available on GEV cameras only
+            this->disableElement("packetDelay", schemaUpdate);
+            this->disableElement("autoPacketSize", schemaUpdate);
+            this->disableElement("packetSize", schemaUpdate);
+        }
 
         if (m_is_device_reset_available) {
             // Make "resetCamera" slot visible in the GUI
