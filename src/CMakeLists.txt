@@ -39,6 +39,12 @@ target_include_directories(
     ${ARV_INCLUDE_DIRS}
  )
 
+target_link_options(
+    ${CMAKE_PROJECT_NAME}
+    PRIVATE
+    "LINKER:--disable-new-dtags"
+)
+
 target_link_libraries(
     ${CMAKE_PROJECT_NAME}
     PUBLIC
