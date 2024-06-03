@@ -1,13 +1,14 @@
 before_script:
     - echo '*** Install packages needed by aravis ***'
-    - export REL_OS_NAME=$(lsb_release -is)
+    - . /etc/os-release
     - >
-      if [ "$REL_OS_NAME" = "CentOS" -o "$REL_OS_NAME" = "AlmaLinux" ]; then
-        if [ -x "/opt/rh/devtoolset-7/enable" ]; then
-            source /opt/rh/devtoolset-7/enable
-        fi
-        yum install -y intltool glib2-devel
-      elif [ "$REL_OS_NAME" = "Ubuntu" ]; then
+      if [ -x "/opt/rh/devtoolset-7/enable" ]; then
+        source /opt/rh/devtoolset-7/enable
+      fi
+    - >
+      if [ "$ID" = "centos" -o "$ID" = "almalinux" -o "$ID" = "rhel" ]; then
+        yum install -y glib2-devel
+      elif [ "$ID" = "ubuntu" ]; then
         apt-get update
         apt-get install -y intltool libglib2.0-dev
       fi
