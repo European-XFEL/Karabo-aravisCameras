@@ -190,6 +190,7 @@ namespace karabo {
 
         std::string m_exposure_time_feature;
 
+        static const std::set<ArvPixelFormat> m_supportedPixelFormats;
         std::unordered_map<ArvPixelFormat, std::string> m_pixelFormatOptions;
 
         unsigned long long m_errorCount;
