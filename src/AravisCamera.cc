@@ -27,6 +27,18 @@ namespace karabo {
 
     boost::mutex AravisCamera::m_connect_mtx;
 
+    // m_supportedPixelFormats contains the list of pixel formats supported by the new_buffer_cb function
+    const std::set<ArvPixelFormat> AravisCamera::m_supportedPixelFormats = {
+          ARV_PIXEL_FORMAT_MONO_8,         ARV_PIXEL_FORMAT_MONO_10,       ARV_PIXEL_FORMAT_MONO_12,
+          ARV_PIXEL_FORMAT_MONO_14,        ARV_PIXEL_FORMAT_MONO_16,       ARV_PIXEL_FORMAT_MONO_10_PACKED,
+          ARV_PIXEL_FORMAT_MONO_12_PACKED, ARV_PIXEL_FORMAT_MONO_10_P,     ARV_PIXEL_FORMAT_MONO_12_P,
+          ARV_PIXEL_FORMAT_RGB_8_PACKED,   ARV_PIXEL_FORMAT_BGR_8_PACKED,  ARV_PIXEL_FORMAT_RGB_10_PACKED,
+          ARV_PIXEL_FORMAT_RGB_10_PLANAR,  ARV_PIXEL_FORMAT_BGR_10_PACKED, ARV_PIXEL_FORMAT_RGB_12_PACKED,
+          ARV_PIXEL_FORMAT_RGB_12_PLANAR,  ARV_PIXEL_FORMAT_BGR_12_PACKED, ARV_PIXEL_FORMAT_RGB_16_PLANAR,
+          ARV_PIXEL_FORMAT_BAYER_RG_8,     ARV_PIXEL_FORMAT_BAYER_RG_10,   ARV_PIXEL_FORMAT_BAYER_RG_12,
+          ARV_PIXEL_FORMAT_BAYER_RG_10P,   ARV_PIXEL_FORMAT_BAYER_RG_12P,  ARV_PIXEL_FORMAT_YCBCR_422_8};
+
+
     void AravisCamera::expectedParameters(Schema& expected) {
         OVERWRITE_ELEMENT(expected)
               .key("state")
@@ -2224,6 +2236,7 @@ namespace karabo {
                 ts = dev_ts;
             }
 
+            // NB When a new pixel format is supported, do not forget to add it to m_supportedPixelFormats
             switch (pixel_format) {
                 case ARV_PIXEL_FORMAT_MONO_8:
                     self->writeOutputChannels<unsigned char>(buffer_data, width, height, ts);
@@ -2757,10 +2770,16 @@ namespace karabo {
             return false; // failure
         }
 
+        std::vector<std::string> pixelFormatOptions;
         if (n_int_values == n_str_values) {
             // fill-up the pixel_format_options map
             for (unsigned short i = 0; i < n_int_values; ++i) {
-                m_pixelFormatOptions[int_options[i]] = str_options[i];
+                if (AravisCamera::m_supportedPixelFormats.find(int_options[i]) !=
+                    AravisCamera::m_supportedPixelFormats.end()) {
+                    // This pixel format is supported
+                    m_pixelFormatOptions[int_options[i]] = str_options[i];
+                    pixelFormatOptions.push_back(str_options[i]);
+                }
             }
         } else {
             KARABO_LOG_FRAMEWORK_WARN << deviceId
@@ -2768,14 +2787,15 @@ namespace karabo {
                                       << "int and string options.";
         }
         g_free(int_options);
-
-        const std::vector<std::string> pixelFormatOptions(str_options, str_options + n_str_values);
         g_free(str_options);
-        OVERWRITE_ELEMENT(schemaUpdate)
-              .key("pixelFormat")
-              .setNewDefaultValue(pixelFormatOptions[0])
-              .setNewOptions(pixelFormatOptions)
-              .commit();
+
+        if (pixelFormatOptions.size() > 0) {
+            OVERWRITE_ELEMENT(schemaUpdate)
+                  .key("pixelFormat")
+                  .setNewDefaultValue(pixelFormatOptions[0])
+                  .setNewOptions(pixelFormatOptions)
+                  .commit();
+        }
 
         if (!m_is_gv_device) {
             // Available on GEV cameras only
