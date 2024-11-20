@@ -2,15 +2,12 @@ before_script:
     - echo '*** Install packages needed by aravis ***'
     - . /etc/os-release
     - >
-      if [ -x "/opt/rh/devtoolset-7/enable" ]; then
-        source /opt/rh/devtoolset-7/enable
-      fi
-    - >
-      if [ "$ID" = "centos" -o "$ID" = "almalinux" -o "$ID" = "rhel" ]; then
-        yum install -y glib2-devel
+      if [ "$ID" == "rhel" -o "$ID" == "almalinux" ]; then
+          yum install -y libxml2-devel
       elif [ "$ID" = "ubuntu" ]; then
-        apt-get update
-        apt-get install -y intltool libglib2.0-dev
+          apt-get update
+          if [ ! -f /etc/localtime ]; then echo "Europe/Berlin" > /etc/localtime; fi  # Set-up tzdata for libglib2.0-dev
+          apt-get install -y libglib2.0-dev libxml2-dev
       fi
 
 include:
