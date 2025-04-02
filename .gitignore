@@ -41,6 +41,7 @@ CTestTestfile.cmake
 build/
 build_debug/
 build_release/
+package/
 
 # VSCode settings
 .vscode
