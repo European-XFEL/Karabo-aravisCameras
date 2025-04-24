@@ -98,6 +98,7 @@ namespace karabo {
 
         gint m_width;
         gint m_height;
+        guint m_buffer_size;
         ArvPixelFormat m_format;
         virtual bool get_region(gint& x, gint& y, gint& width, gint& height);
         virtual bool get_timestamp(ArvBuffer* buffer, karabo::util::Timestamp& ts);
@@ -164,7 +165,7 @@ namespace karabo {
         void clear_stream();
 
         static void stream_cb(void* context, ArvStreamCallbackType type, ArvBuffer* buffer);
-        static void new_buffer_cb(ArvStream* stream, void* context);
+        void process_buffer(ArvBuffer* buffer);
         static void control_lost_cb(ArvGvDevice* gv_device, void* context);
 
         void pollOnce(karabo::util::Hash& h);
@@ -200,7 +201,7 @@ namespace karabo {
         // Image latency
         karabo::util::Epochstamp m_timer;
         unsigned long m_counter;
-        double m_sum_latency;
+        double m_mean_latency;
 
         bool m_isContinuousMode;
         // Images to be acquired
