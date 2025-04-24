@@ -27,7 +27,7 @@ namespace karabo {
 
     boost::mutex AravisCamera::m_connect_mtx;
 
-    // m_supportedPixelFormats contains the list of pixel formats supported by the new_buffer_cb function
+    // m_supportedPixelFormats contains the list of pixel formats supported by the process_buffer function
     const std::set<ArvPixelFormat> AravisCamera::m_supportedPixelFormats = {
           ARV_PIXEL_FORMAT_MONO_8,         ARV_PIXEL_FORMAT_MONO_10,       ARV_PIXEL_FORMAT_MONO_12,
           ARV_PIXEL_FORMAT_MONO_14,        ARV_PIXEL_FORMAT_MONO_16,       ARV_PIXEL_FORMAT_MONO_10_PACKED,
@@ -574,6 +574,7 @@ namespace karabo {
           m_chunk_mode(false),
           m_width(0),
           m_height(0),
+          m_buffer_size(0),
           m_format(0),
           m_max_correction_time(0),
           m_min_latency(0.),
@@ -594,8 +595,7 @@ namespace karabo {
           m_is_gain_auto_available(false),
           m_errorCount(0),
           m_lastError(ARV_BUFFER_STATUS_SUCCESS),
-          m_counter(0),
-          m_sum_latency(0.) {
+          m_counter(0) {
         m_max_correction_time = config.get<unsigned int>("maxCorrectionTime");
 
         // From <arvbuffer.h>
@@ -1005,6 +1005,8 @@ namespace karabo {
             if (m_is_gv_device) {
                 h.set("interfaceStandard", "GEV");
             } else if (arv_camera_is_uv_device(m_camera)) {
+                // Use the asynchronous libusb API for better performances
+                arv_camera_uv_set_usb_mode(m_camera, ARV_UV_USB_MODE_ASYNC);
                 h.set("interfaceStandard", "USB3V");
             }
 
@@ -1983,26 +1985,10 @@ namespace karabo {
 
         m_timer.now();
         m_counter = 0;
-        m_sum_latency = 0.;
 
         {
             boost::mutex::scoped_lock camera_lock(m_camera_mtx);
-            boost::mutex::scoped_lock stream_lock(m_stream_mtx);
-            m_stream = arv_camera_create_stream(m_camera, AravisCamera::stream_cb, static_cast<void*>(this), &error);
-
-            if (error != nullptr) {
-                std::stringstream ss;
-                ss << "arv_camera_create_stream failed: " << error->message;
-                this->acquire_failed_helper(ss.str());
-                g_clear_error(&error);
-                return;
-            }
-
-            // Enable emission of signals (it's disabled by default for performance reason)
-            arv_stream_set_emit_signals(m_stream, TRUE);
-
-            // Create and push buffers to the stream
-            const gint payload = arv_camera_get_payload(m_camera, &error);
+            const guint payload = arv_camera_get_payload(m_camera, &error);
 
             if (error != nullptr) {
                 std::stringstream ss;
@@ -2012,8 +1998,31 @@ namespace karabo {
                 return;
             }
 
-            for (size_t i = 0; i < 10; i++) {
-                arv_stream_push_buffer(m_stream, arv_buffer_new(payload, NULL));
+            if (m_stream != nullptr && payload != m_buffer_size) {
+                // The payload size changed:
+                // clear the stream and the associated buffers.
+                this->clear_stream();
+            }
+            m_buffer_size = payload;
+
+            if (m_stream == nullptr) {
+                boost::mutex::scoped_lock stream_lock(m_stream_mtx);
+
+                m_stream =
+                      arv_camera_create_stream(m_camera, AravisCamera::stream_cb, static_cast<void*>(this), &error);
+
+                if (error != nullptr) {
+                    std::stringstream ss;
+                    ss << "arv_camera_create_stream failed: " << error->message;
+                    this->acquire_failed_helper(ss.str());
+                    g_clear_error(&error);
+                    return;
+                }
+
+                // Create and push buffers to the stream
+                for (size_t i = 0; i < 10; i++) {
+                    arv_stream_push_buffer(m_stream, arv_buffer_new(m_buffer_size, NULL));
+                }
             }
         }
 
@@ -2043,12 +2052,6 @@ namespace karabo {
                 g_clear_error(&error);
                 return;
             }
-        }
-
-        {
-            boost::mutex::scoped_lock stream_lock(m_stream_mtx);
-            // Connect the 'new-buffer' signal
-            g_signal_connect(m_stream, "new-buffer", G_CALLBACK(AravisCamera::new_buffer_cb), static_cast<void*>(this));
         }
 
         m_is_acquiring = true;
@@ -2096,8 +2099,6 @@ namespace karabo {
             this->updateState(State::ERROR);
             return;
         }
-
-        this->clear_stream();
 
         h.set("status", "Acquisition stopped");
         this->signalEOS(); // End-of-Stream signal
@@ -2173,181 +2174,176 @@ namespace karabo {
 
     void AravisCamera::clear_stream() {
         if (m_stream != nullptr) {
-            // TODO possibly disconnect signal, see
-            // https://developer.gnome.org/gobject/stable/gobject-Signals.html#g-signal-handler-disconnect
-
             // Disable emission of signals and free resource
             boost::mutex::scoped_lock stream_lock(m_stream_mtx);
-            arv_stream_set_emit_signals(m_stream, FALSE);
             g_clear_object(&m_stream);
         }
     }
 
 
     void AravisCamera::stream_cb(void* context, ArvStreamCallbackType type, ArvBuffer* buffer) {
+        // This code is called from the stream receiving thread, which means all the time spent there is less time
+        // available for the reception of incoming packets
+
         Self* self = static_cast<Self*>(context);
         const std::string& deviceId = self->getInstanceId();
 
         if (type == ARV_STREAM_CALLBACK_TYPE_INIT) {
-            KARABO_LOG_FRAMEWORK_DEBUG << deviceId << ": Init stream";
+            // Stream thread started
+            KARABO_LOG_FRAMEWORK_DEBUG << deviceId << ": ARV_STREAM_CALLBACK_TYPE_INIT";
             if (!arv_make_thread_realtime(10) && !arv_make_thread_high_priority(-10)) {
                 KARABO_LOG_FRAMEWORK_WARN << deviceId << ": Failed to make stream thread high priority";
+            }
+        } else if (type == ARV_STREAM_CALLBACK_TYPE_BUFFER_DONE) {
+            // The buffer is received, successfully or not
+            ArvBufferStatus buffer_status = arv_buffer_get_status(buffer);
+            if (buffer_status == ARV_BUFFER_STATUS_SUCCESS && buffer == arv_stream_pop_buffer(self->m_stream)) {
+                // AravisCamera::process_buffer can take long thus is posted to the event loop
+                // 'process_buffer' shall also take care of calling arv_stream_push_buffer
+                EventLoop::getIOService().post(karabo::util::bind_weak(&AravisCamera::process_buffer, self, buffer));
+            } else {
+                // Push back the buffer to the stream
+                arv_stream_push_buffer(self->m_stream, buffer);
+
+                if (buffer_status != ARV_BUFFER_STATUS_SUCCESS) { // ERROR
+                    self->m_errorCount += 1;
+                    self->m_lastError = buffer_status;
+                }
             }
         }
     }
 
 
-    void AravisCamera::new_buffer_cb(ArvStream* stream, void* context) {
-        Self* self = static_cast<Self*>(context);
-        boost::mutex::scoped_lock stream_lock(self->m_stream_mtx);
+    void AravisCamera::process_buffer(ArvBuffer* arv_buffer) {
+        const karabo::util::Timestamp dev_ts = this->getActualTimestamp();
+        const std::string& deviceId = this->getInstanceId();
 
-        const karabo::util::Timestamp dev_ts = self->getActualTimestamp();
-        const std::string& deviceId = self->getInstanceId();
+        size_t buffer_size;
+        const void* buffer_data = arv_buffer_get_data(arv_buffer, &buffer_size);
 
-        ArvBuffer* arv_buffer = arv_stream_pop_buffer(stream);
-        if (arv_buffer == nullptr) {
-            return;
-        }
-
-        ArvBufferStatus lastError = arv_buffer_get_status(arv_buffer);
-        if (lastError == ARV_BUFFER_STATUS_SUCCESS) {
-            gint width = self->m_width;
-            gint height = self->m_height;
-            size_t buffer_size;
-            ArvPixelFormat pixel_format = self->m_format;
-
-            const void* buffer_data = arv_buffer_get_data(arv_buffer, &buffer_size);
-
-            karabo::util::Timestamp ts;
-            if (self->get_timestamp(arv_buffer, ts)) {
-                // Latency between the image timestamp and the reception time
-                const double latency = dev_ts.getEpochstamp() - ts.getEpochstamp();
-                if (self->m_counter == 0) {
-                    self->m_min_latency = latency;
-                    self->m_max_latency = latency;
-                    self->m_sum_latency = latency;
-                } else {
-                    self->m_min_latency = std::min(latency, self->m_min_latency);
-                    self->m_max_latency = std::max(latency, self->m_max_latency);
-                    self->m_sum_latency += latency;
-                }
+        karabo::util::Timestamp ts;
+        if (this->get_timestamp(arv_buffer, ts)) {
+            // Latency between the image timestamp and the reception time
+            const double latency = dev_ts.getEpochstamp() - ts.getEpochstamp();
+            if (m_counter == 0) {
+                m_min_latency = latency;
+                m_max_latency = latency;
+                m_mean_latency = latency;
             } else {
-                // HW timestamp not available: use actual one from device
-                ts = dev_ts;
+                m_min_latency = std::min(latency, m_min_latency);
+                m_max_latency = std::max(latency, m_max_latency);
+                m_mean_latency = (m_counter * m_mean_latency + latency) / (m_counter + 1);
             }
-
-            // NB When a new pixel format is supported, do not forget to add it to m_supportedPixelFormats
-            switch (pixel_format) {
-                case ARV_PIXEL_FORMAT_MONO_8:
-                    self->writeOutputChannels<unsigned char>(buffer_data, width, height, ts);
-                    break;
-                case ARV_PIXEL_FORMAT_MONO_10:
-                case ARV_PIXEL_FORMAT_MONO_12:
-                case ARV_PIXEL_FORMAT_MONO_14:
-                case ARV_PIXEL_FORMAT_MONO_16:
-                    self->writeOutputChannels<unsigned short>(buffer_data, width, height, ts);
-                    break;
-                case ARV_PIXEL_FORMAT_MONO_10_PACKED:
-                case ARV_PIXEL_FORMAT_MONO_12_PACKED: {
-                    const uint8_t* data = reinterpret_cast<const uint8_t*>(buffer_data);
-                    uint16_t* unpackedData = self->m_unpackedData.data();
-                    unpackMono12Packed(data, width, height, unpackedData);
-                    self->writeOutputChannels<unsigned short>(unpackedData, width, height, ts);
-                } break;
-                case ARV_PIXEL_FORMAT_MONO_10_P: {
-                    const uint8_t* data = reinterpret_cast<const uint8_t*>(buffer_data);
-                    uint16_t* unpackedData = self->m_unpackedData.data();
-                    unpackMono10p(data, width, height, unpackedData);
-                    self->writeOutputChannels<unsigned short>(unpackedData, width, height, ts);
-                } break;
-                case ARV_PIXEL_FORMAT_MONO_12_P: {
-                    const uint8_t* data = reinterpret_cast<const uint8_t*>(buffer_data);
-                    uint16_t* unpackedData = self->m_unpackedData.data();
-                    unpackMono12p(data, width, height, unpackedData);
-                    self->writeOutputChannels<unsigned short>(unpackedData, width, height, ts);
-                } break;
-                case ARV_PIXEL_FORMAT_RGB_8_PACKED:
-                case ARV_PIXEL_FORMAT_BGR_8_PACKED:
-                    self->writeOutputChannels<unsigned char>(buffer_data, width, height, ts);
-                    break;
-                case ARV_PIXEL_FORMAT_RGB_10_PACKED:
-                case ARV_PIXEL_FORMAT_RGB_10_PLANAR:
-                case ARV_PIXEL_FORMAT_BGR_10_PACKED:
-                case ARV_PIXEL_FORMAT_RGB_12_PACKED:
-                case ARV_PIXEL_FORMAT_RGB_12_PLANAR:
-                case ARV_PIXEL_FORMAT_BGR_12_PACKED:
-                case ARV_PIXEL_FORMAT_RGB_16_PLANAR:
-                    // XXX not tested
-                    self->writeOutputChannels<unsigned short>(buffer_data, width, height, ts);
-                    break;
-                case ARV_PIXEL_FORMAT_BAYER_RG_8:
-                    self->writeOutputChannels<unsigned char>(buffer_data, width, height, ts);
-                    break;
-                case ARV_PIXEL_FORMAT_BAYER_RG_10:
-                case ARV_PIXEL_FORMAT_BAYER_RG_12:
-                    self->writeOutputChannels<unsigned short>(buffer_data, width, height, ts);
-                    break;
-                case ARV_PIXEL_FORMAT_BAYER_RG_10P: {
-                    const uint8_t* data = reinterpret_cast<const uint8_t*>(buffer_data);
-                    uint16_t* unpackedData = self->m_unpackedData.data();
-                    unpackBayerRG10p(data, width, height, unpackedData);
-                    self->writeOutputChannels<unsigned short>(unpackedData, width, height, ts);
-                } break;
-                case ARV_PIXEL_FORMAT_BAYER_RG_12P: {
-                    const uint8_t* data = reinterpret_cast<const uint8_t*>(buffer_data);
-                    uint16_t* unpackedData = self->m_unpackedData.data();
-                    unpackBayerRG12p(data, width, height, unpackedData);
-                    self->writeOutputChannels<unsigned short>(unpackedData, width, height, ts);
-                } break;
-                case ARV_PIXEL_FORMAT_YCBCR_422_8:
-                    self->writeOutputChannels<unsigned char>(buffer_data, width, height, ts);
-                    break;
-                default:
-                    if (self->m_pixelFormatOptions.find(pixel_format) != self->m_pixelFormatOptions.end()) {
-                        KARABO_LOG_FRAMEWORK_ERROR << deviceId << ": Format "
-                                                   << self->m_pixelFormatOptions[pixel_format] << " (" << pixel_format
-                                                   << ")"
-                                                   << " is not yet supported";
-                    } else {
-                        KARABO_LOG_FRAMEWORK_ERROR << deviceId << ": Format " << pixel_format
-                                                   << " is not yet supported";
-                    }
-
-                    if (self->getState() == State::ACQUIRING) {
-                        self->execute("stop");
-                    }
-            }
-
-            self->m_counter += 1;
-
         } else {
-            self->m_errorCount += 1;
-            self->m_lastError = lastError;
+            // HW timestamp not available: use actual one from device
+            ts = dev_ts;
         }
 
-        if (self->m_timer.elapsed() >= 1.) {
+        // NB When a new pixel format is supported, do not forget to add it to m_supportedPixelFormats
+        switch (m_format) {
+            case ARV_PIXEL_FORMAT_MONO_8:
+                this->writeOutputChannels<unsigned char>(buffer_data, m_width, m_height, ts);
+                break;
+            case ARV_PIXEL_FORMAT_MONO_10:
+            case ARV_PIXEL_FORMAT_MONO_12:
+            case ARV_PIXEL_FORMAT_MONO_14:
+            case ARV_PIXEL_FORMAT_MONO_16:
+                this->writeOutputChannels<unsigned short>(buffer_data, m_width, m_height, ts);
+                break;
+            case ARV_PIXEL_FORMAT_MONO_10_PACKED:
+            case ARV_PIXEL_FORMAT_MONO_12_PACKED: {
+                const uint8_t* data = reinterpret_cast<const uint8_t*>(buffer_data);
+                uint16_t* unpackedData = this->m_unpackedData.data();
+                unpackMono12Packed(data, m_width, m_height, unpackedData);
+                this->writeOutputChannels<unsigned short>(unpackedData, m_width, m_height, ts);
+            } break;
+            case ARV_PIXEL_FORMAT_MONO_10_P: {
+                const uint8_t* data = reinterpret_cast<const uint8_t*>(buffer_data);
+                uint16_t* unpackedData = m_unpackedData.data();
+                unpackMono10p(data, m_width, m_height, unpackedData);
+                this->writeOutputChannels<unsigned short>(unpackedData, m_width, m_height, ts);
+            } break;
+            case ARV_PIXEL_FORMAT_MONO_12_P: {
+                const uint8_t* data = reinterpret_cast<const uint8_t*>(buffer_data);
+                uint16_t* unpackedData = m_unpackedData.data();
+                unpackMono12p(data, m_width, m_height, unpackedData);
+                this->writeOutputChannels<unsigned short>(unpackedData, m_width, m_height, ts);
+            } break;
+            case ARV_PIXEL_FORMAT_RGB_8_PACKED:
+            case ARV_PIXEL_FORMAT_BGR_8_PACKED:
+                this->writeOutputChannels<unsigned char>(buffer_data, m_width, m_height, ts);
+                break;
+            case ARV_PIXEL_FORMAT_RGB_10_PACKED:
+            case ARV_PIXEL_FORMAT_RGB_10_PLANAR:
+            case ARV_PIXEL_FORMAT_BGR_10_PACKED:
+            case ARV_PIXEL_FORMAT_RGB_12_PACKED:
+            case ARV_PIXEL_FORMAT_RGB_12_PLANAR:
+            case ARV_PIXEL_FORMAT_BGR_12_PACKED:
+            case ARV_PIXEL_FORMAT_RGB_16_PLANAR:
+                // XXX not tested
+                this->writeOutputChannels<unsigned short>(buffer_data, m_width, m_height, ts);
+                break;
+            case ARV_PIXEL_FORMAT_BAYER_RG_8:
+                this->writeOutputChannels<unsigned char>(buffer_data, m_width, m_height, ts);
+                break;
+            case ARV_PIXEL_FORMAT_BAYER_RG_10:
+            case ARV_PIXEL_FORMAT_BAYER_RG_12:
+                this->writeOutputChannels<unsigned short>(buffer_data, m_width, m_height, ts);
+                break;
+            case ARV_PIXEL_FORMAT_BAYER_RG_10P: {
+                const uint8_t* data = reinterpret_cast<const uint8_t*>(buffer_data);
+                uint16_t* unpackedData = m_unpackedData.data();
+                unpackBayerRG10p(data, m_width, m_height, unpackedData);
+                this->writeOutputChannels<unsigned short>(unpackedData, m_width, m_height, ts);
+            } break;
+            case ARV_PIXEL_FORMAT_BAYER_RG_12P: {
+                const uint8_t* data = reinterpret_cast<const uint8_t*>(buffer_data);
+                uint16_t* unpackedData = m_unpackedData.data();
+                unpackBayerRG12p(data, m_width, m_height, unpackedData);
+                this->writeOutputChannels<unsigned short>(unpackedData, m_width, m_height, ts);
+            } break;
+            case ARV_PIXEL_FORMAT_YCBCR_422_8:
+                this->writeOutputChannels<unsigned char>(buffer_data, m_width, m_height, ts);
+                break;
+            default:
+                if (m_pixelFormatOptions.find(m_format) != m_pixelFormatOptions.end()) {
+                    KARABO_LOG_FRAMEWORK_ERROR << deviceId << ": Format " << m_pixelFormatOptions[m_format] << " ("
+                                               << m_format << ")"
+                                               << " is not yet supported";
+                } else {
+                    KARABO_LOG_FRAMEWORK_ERROR << deviceId << ": Format " << m_format << " is not yet supported";
+                }
+
+                if (this->getState() == State::ACQUIRING) {
+                    this->execute("stop");
+                }
+        }
+
+
+        // Push back the buffer to the stream
+        arv_stream_push_buffer(m_stream, arv_buffer);
+
+        m_counter += 1;
+
+        if (m_timer.elapsed() >= 1. && m_is_acquiring) {
             // Update frame rate and error count
-            self->updateFrameRate();
+            this->updateFrameRate();
 
             // Synchronize camera timestamp with timeserver.
             // This shall be repetead regularly to correct for drift.
-            self->synchronize_timestamp();
+            this->synchronize_timestamp();
 
-            self->m_timer.now();
-            self->m_counter = 0;
+            m_timer.now();
+            m_counter = 0;
         }
 
-        // Push back the buffer to the stream
-        arv_stream_push_buffer(stream, arv_buffer);
-
-        if (!self->m_isContinuousMode) {
-            if (self->m_imgsToBeAcquired > 1) {
-                --(self->m_imgsToBeAcquired);
+        if (!m_isContinuousMode) {
+            if (m_imgsToBeAcquired > 1) {
+                --m_imgsToBeAcquired;
             } else {
                 // Stop acquisition
-                // Done in the event loop as 'stop' acquires 'm_stream_mtx' via 'clear_stream'
-                self->m_imgsToBeAcquired = 0;
-                EventLoop::getIOService().post(boost::bind(&AravisCamera::stop, self));
+                m_imgsToBeAcquired = 0;
+                this->execute("stop");
             }
         }
     }
@@ -3029,7 +3025,7 @@ namespace karabo {
             // Convert latency to ms
             h.set("latency.min", 1000. * m_min_latency);
             h.set("latency.max", 1000. * m_max_latency);
-            h.set("latency.mean", 1000. * m_sum_latency / m_counter);
+            h.set("latency.mean", 1000. * m_mean_latency);
         }
 
         // Calculate frame rate

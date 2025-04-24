@@ -29,6 +29,14 @@ namespace karabo {
               .setNewDefaultValue("Mono12p")
               .commit();
 
+        OVERWRITE_ELEMENT(expected)
+              .key("gevTimestampTickFrequency")
+              // The timestamp tick frequency is 1 GHz for all a2A cameras
+              // Moreover, it can only be read from GigE cameras.
+              // https://docs.baslerweb.com/timestamp#how-it-works
+              .setNewDefaultValue(1'000'000'000)
+              .commit();
+
         // This class supports the following models: ace2 (Area Scan)
         const std::vector<std::string> supportedModels = {"a2A"};
         OVERWRITE_ELEMENT(expected).key("supportedModels").setNewDefaultValue(supportedModels).commit();
