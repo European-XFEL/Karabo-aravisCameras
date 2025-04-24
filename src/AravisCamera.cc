@@ -2197,7 +2197,7 @@ namespace karabo {
         } else if (type == ARV_STREAM_CALLBACK_TYPE_BUFFER_DONE) {
             // The buffer is received, successfully or not
             ArvBufferStatus buffer_status = arv_buffer_get_status(buffer);
-            if (buffer_status == ARV_BUFFER_STATUS_SUCCESS && buffer == arv_stream_pop_buffer(self->m_stream)) {
+            if (buffer == arv_stream_pop_buffer(self->m_stream) && buffer_status == ARV_BUFFER_STATUS_SUCCESS) {
                 // AravisCamera::process_buffer can take long thus is posted to the event loop
                 // 'process_buffer' shall also take care of calling arv_stream_push_buffer
                 EventLoop::getIOService().post(karabo::util::bind_weak(&AravisCamera::process_buffer, self, buffer));
@@ -2205,9 +2205,12 @@ namespace karabo {
                 // Push back the buffer to the stream
                 arv_stream_push_buffer(self->m_stream, buffer);
 
-                if (buffer_status != ARV_BUFFER_STATUS_SUCCESS) { // ERROR
-                    self->m_errorCount += 1;
-                    self->m_lastError = buffer_status;
+                self->m_errorCount += 1;
+                if (buffer_status == ARV_BUFFER_STATUS_SUCCESS) {
+                    // Other ERROR:
+                    // The buffer status is OK but the buffer received by the
+                    // callback does not match the one popped from the queue.
+                    self->m_lastError = ARV_BUFFER_STATUS_UNKNOWN;
                 }
             }
         }
