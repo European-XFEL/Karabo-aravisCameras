@@ -1,9 +1,6 @@
-******************************
-AravisCameras Device (C++)
-******************************
+# AravisCameras Device (C++)
 
-Overview
-========
+## Overview
 
 The AravisCamera class provides an interface to GigE Vision and USB3
 Vision cameras in the Karabo framework environment. It enables users to
@@ -12,13 +9,11 @@ settings during runtime. This class simplifies the interaction with the camera
 and streamlines the process making it easier to integrate the camera into
 various applications.
 
-Contact
-========
+## Contact
 
 For questions, please contact opensource@xfel.eu.
 
-License and Contributing
-=========================
+## License and Contributing
 
 This software is released by the European XFEL GmbH as is and without any
 warranty under the GPLv3 license.
@@ -42,8 +37,8 @@ We ask for your understanding that we cannot accept external
 contributions without a CLA in place. Importantly, with signing the CLA
 you acknowledge that
 
-* European XFEL retains all copyrights of the Karabo Aravis Cameras,
-* European XFEL may relicense the Karabo Aravis Cameras under other
+- European XFEL retains all copyrights of the Karabo Aravis Cameras,
+- European XFEL may relicense the Karabo Aravis Cameras under other
   appropriate open source licenses which the Free Software Foundation
   classifies as Free Software licenses.
 
@@ -51,64 +46,62 @@ However, you are welcome to already
 suggest modifications you'd like to contribute by opening a merge/pull
 request before you send the CLA.
 
-Dependencies
-============
+## Dependencies
 
 - aravis (https://github.com/AravisProject/aravis)
 
   - meson (https://pypi.org/project/meson/)
   - ninja (https://pypi.org/project/ninja/)
 
-- imageSource (https://git.xfel.eu/karaboDevices/imageSource)
+- imageSource (https://git.xfel.eu/karaboDevices/imageSource or
+  https://github.com/European-XFEL/imageSource)
 
   - opencv (https://opencv.org/)
 
-Host Setup
-==========
+## Host Setup
 
 In order to enable users to access a USB3V camera, a file
 ``/etc/udev/rules.d/69-basler-cameras.rules`` must be added with the following
 content
 
+```
+# Enable user access to all basler cameras
+SUBSYSTEM=="usb", ATTRS{idVendor}=="2676", MODE:="0666", TAG+="uaccess", TAG+="udev-acl"
+```
 
-    ``# Enable user access to all basler cameras``
-
-    ``SUBSYSTEM=="usb", ATTRS{idVendor}=="2676", MODE:="0666", TAG+="uaccess", TAG+="udev-acl"``
-
-Compiling
-=========
+## Compiling
 
 1. Source activate the Karabo installation against which the device will be
    developed:
 
-    ``cd <Karabo installation root directory>``
-
-    ``source ./activate``
+   ```
+   cd <Karabo installation root directory>
+   source ./activate
+   ```
 
 2. Go to the device source root directory and generate its build files with
    cmake:
 
-     ``cd $KARABO/devices/aravisCameras``
+   ```
+   cd $KARABO/devices/aravisCameras
+   mkdir build
+   cd build
+   cmake -DCMAKE_BUILD_TYPE=Debug -DCMAKE_PREFIX_PATH=$KARABO/extern ..
+   ```
 
-     ``mkdir build``
-
-     ``cd build``
-
-     ``cmake -DCMAKE_BUILD_TYPE=Debug -DCMAKE_PREFIX_PATH=$KARABO/extern ..``
-
-   CMAKE_BUILD_TYPE can also be set to "Release".
+   ``CMAKE_BUILD_TYPE`` can also be set to "Release".
 
 3. Build the device:
 
-     ``cd $KARABO/devices/aravisCameras``
-
-     ``cmake --build .``
+   ```
+   cd $KARABO/devices/aravisCameras
+   cmake --build .
+   ```
 
    ``make`` can also be used as long as the Makefile generator is used by
    cmake.
 
-Testing
-=======
+## Testing
 
 After a successfull build, a shared library is generated here:
 
@@ -120,17 +113,21 @@ And a soft-link to the ``libaravisCameras.so`` file is created in the
 To run the tests, go to the tests directory in your build tree and use
 ``ctest``:
 
-    ``cd $KARABO/devices/aravisCameras/build/aravisCameras``
+```
+cd $KARABO/devices/aravisCameras/build/aravisCameras
+ctest -VV
+```
 
-    ``ctest -VV``
-
-Running
-=======
+## Running
 
 If you want to manually start a server using this device, simply type:
 
-``karabo-cppserver serverId=cppServer/1 deviceClasses=AravisCameras``
+```
+karabo-cppserver serverId=cppServer/1 deviceClasses=AravisCameras
+```
 
 Or just use (a properly configured):
 
-``karabo-start``
+```
+karabo-start
+```
