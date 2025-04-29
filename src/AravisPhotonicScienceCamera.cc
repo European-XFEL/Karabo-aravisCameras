@@ -47,7 +47,7 @@ namespace karabo {
               .displayedName("Pixel Size")
               .description("This feature indicates the total size in bits of a pixel of the image.")
               .readOnly()
-              .initialValue("")
+              .defaultValue("")
               .commit();
 
         OVERWRITE_ELEMENT(expected)

@@ -184,7 +184,7 @@ namespace karabo {
               .description("The measured frame rate.")
               .unit(Unit::HERTZ)
               .readOnly()
-              .initialValue(0.)
+              .defaultValue(0.)
               .commit();
 
         UINT64_ELEMENT(expected)
@@ -193,7 +193,7 @@ namespace karabo {
               .description("The number of errors occurred during acquisition.")
               .unit(Unit::COUNT)
               .readOnly()
-              .initialValue(0)
+              .defaultValue(0)
               .commit();
 
         STRING_ELEMENT(expected)
@@ -201,7 +201,7 @@ namespace karabo {
               .displayedName("Last Acq. Error")
               .description("Description of the last error occurred during acquisition.")
               .readOnly()
-              .initialValue("")
+              .defaultValue("")
               .commit();
 
         NODE_ELEMENT(expected)
@@ -219,7 +219,7 @@ namespace karabo {
               .unit(Unit::SECOND)
               .metricPrefix(MetricPrefix::MILLI)
               .readOnly()
-              .initialValue(0.)
+              .defaultValue(0.)
               .commit();
 
         FLOAT_ELEMENT(expected)
@@ -229,7 +229,7 @@ namespace karabo {
               .unit(Unit::SECOND)
               .metricPrefix(MetricPrefix::MILLI)
               .readOnly()
-              .initialValue(0.)
+              .defaultValue(0.)
               .commit();
 
         FLOAT_ELEMENT(expected)
@@ -239,7 +239,7 @@ namespace karabo {
               .unit(Unit::SECOND)
               .metricPrefix(MetricPrefix::MILLI)
               .readOnly()
-              .initialValue(0.)
+              .defaultValue(0.)
               .commit();
 
         INT32_ELEMENT(expected)
@@ -254,14 +254,14 @@ namespace karabo {
               .reconfigurable()
               .commit();
 
-        STRING_ELEMENT(expected).key("camId").displayedName("Camera ID").readOnly().initialValue("").commit();
+        STRING_ELEMENT(expected).key("camId").displayedName("Camera ID").readOnly().defaultValue("").commit();
 
         STRING_ELEMENT(expected)
               .key("vendor")
               .displayedName("Vendor Name")
               .description("The vendor of the camera.")
               .readOnly()
-              .initialValue("")
+              .defaultValue("")
               .commit();
 
         STRING_ELEMENT(expected)
@@ -269,7 +269,7 @@ namespace karabo {
               .displayedName("Supported Vendor")
               .description("The vendor supported by this Karabo device.")
               .readOnly()
-              .initialValue("")
+              .defaultValue("")
               .commit();
 
         STRING_ELEMENT(expected)
@@ -277,7 +277,7 @@ namespace karabo {
               .displayedName("Model Name")
               .description("The model of the camera.")
               .readOnly()
-              .initialValue("")
+              .defaultValue("")
               .commit();
 
         VECTOR_STRING_ELEMENT(expected)
@@ -285,12 +285,12 @@ namespace karabo {
               .displayedName("Supported Models")
               .description("The camera models supported by this Karabo device.")
               .readOnly()
-              .initialValue({})
+              .defaultValue({})
               .commit();
 
-        INT32_ELEMENT(expected).key("width").displayedName("Sensor Width").readOnly().initialValue(0).commit();
+        INT32_ELEMENT(expected).key("width").displayedName("Sensor Width").readOnly().defaultValue(0).commit();
 
-        INT32_ELEMENT(expected).key("height").displayedName("Sensor Height").readOnly().initialValue(0).commit();
+        INT32_ELEMENT(expected).key("height").displayedName("Sensor Height").readOnly().defaultValue(0).commit();
 
         NODE_ELEMENT(expected).key("roi").displayedName("Image ROI").commit();
 
@@ -416,7 +416,7 @@ namespace karabo {
               .allowedStates(State::UNKNOWN, State::ON)
               .commit();
 
-        UINT16_ELEMENT(expected).key("bpp").displayedName("Bits-per-pixel").readOnly().initialValue(0).commit();
+        UINT16_ELEMENT(expected).key("bpp").displayedName("Bits-per-pixel").readOnly().defaultValue(0).commit();
 
         DOUBLE_ELEMENT(expected)
               .key("exposureTime")
