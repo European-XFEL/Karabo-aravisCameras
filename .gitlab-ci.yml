@@ -21,4 +21,4 @@ include:
     ref: main
   - project: karabo/gitlabci
     file: .mirror-device.yml
-    ref: main
+    ref: pypi
