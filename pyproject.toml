@@ -93,6 +93,10 @@ Boost_NO_BOOST_CMAKE="ON"
 Boost_NO_SYSTEM_PATHS="ON"
 DEVICE_SERVER_EXECUTABLE="karabo-aravis-server"
 
+[tool.scikit-build.wheel.packages]
+# the package path should match what we specified in the project name, and PACKAGE for ci-create-cpp-shim.py
+"karabo_aravis_cameras/shims" = "python/src/shims"
+
 [tool.cibuildwheel]
 # change this if docker is available (and podman not)
 container-engine = "podman"
@@ -133,9 +137,10 @@ before-build = "pip3 install conan==2.5.0 'karabo.cpp' meson ninja && conan prof
 # we need to help audit wheel find the karabo and karabo extern libs
 repair-wheel-command  = "LD_LIBRARY_PATH=/project/tmp/karabo/lib:/project/tmp/karabo/extern/lib:$LD_LIBRARY_PATH auditwheel repair -w {dest_dir} {wheel}"
 
-[tool.scikit-build.wheel.packages]
-# the package path should match what we specified in the project name, and PACKAGE for ci-create-cpp-shim.py
-"karabo_aravis_cameras/shims" = "python/src/shims"
+test-requires = ["pytest", "karabo.native"]
+# these are minimally required for a C++ server to start
+before-test = "mkdir /karabo && mkdir /karabo/var && mkdir /karabo/var/data && mkdir /karabo/plugins"
+test-command = "KARABO=/karabo KARABO_BROKER=amqp://xfel:karabo@exfl-broker-1:5672 pytest {project}/wheel_tests"
 
 [project.scripts]
 # the package path should match what we specified in the project name, and PACKAGE for ci-create-cpp-shim.py
