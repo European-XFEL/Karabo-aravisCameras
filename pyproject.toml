@@ -112,10 +112,10 @@ manylinux-pypy_x86_64-image = "quay.io/pypa/manylinux_2_28_x86_64"
 
 # we need a few things to happen before building:
 # 1) install supporting libraries. For conan to work this should minimally
-#    include perl and gettext.
+#    include perl and gettext. We also need git installed to resolve versions.
 #    You can add other dependencies which are necessary, and which then will
 #    will be copied onto the wheel.
-before-all = "dnf -y install perl gettext opencv* libxml2-devel glib2-devel libusbx-devel gtest-devel libjpeg-turbo-devel"
+before-all = "dnf -y install perl gettext git opencv* libxml2-devel glib2-devel libusbx-devel gtest-devel libjpeg-turbo-devel"
 # 2) - Here you should minimally install conan, karabo.cpp meson and ninja 
 #      this will ensure that most Karabo based installers should work
 #    - Then, we call conan profile detect --force to have a vaild conan profile
@@ -135,7 +135,7 @@ before-all = "dnf -y install perl gettext opencv* libxml2-devel glib2-devel libu
 before-build = "pip3 install conan==2.5.0 'karabo.cpp' meson ninja && conan profile detect --force && python ci-build-deps.py --skip-dependency opencv-bin && python ci-create-cpp-shim.py karabo-aravis-cameras karabo-aravis-server"
 
 # we need to help audit wheel find the karabo and karabo extern libs
-repair-wheel-command  = "LD_LIBRARY_PATH=/project/tmp/karabo/lib:/project/tmp/karabo/extern/lib:$LD_LIBRARY_PATH auditwheel repair -w {dest_dir} {wheel}"
+repair-wheel-command  = "LD_LIBRARY_PATH=/project/build/aravisCameras:/project/tmp/karabo/lib:/project/tmp/karabo/extern/lib:$LD_LIBRARY_PATH auditwheel repair -w {dest_dir} {wheel}"
 
 test-requires = ["pytest", "karabo.native"]
 # these are minimally required for a C++ server to start
