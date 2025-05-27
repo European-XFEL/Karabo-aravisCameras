@@ -11,7 +11,6 @@ license = "GPL-3.0"
 keywords = ["Karabo", "SCADA", "camera", "control system", "aravis"]
 authors = [{ name = "European XFEL GmbH", email = "opensource@xfel.eu" }]
 maintainers = [
-  { name = "S. Hauf", email = "steffen.hauf@xfel.eu" },
   { name = "A. Parenti", email = "andrea.parenti@xfel.eu" },
 ]
 
@@ -44,8 +43,7 @@ dependencies = [
 
 
 [project.optional-dependencies]
-# dev = ["check-manifest"]
-# test = ["coverage"]
+
 
 # List URLs that are relevant to your project
 #
@@ -58,15 +56,9 @@ dependencies = [
 # maintainers, and where to support the project financially. The key is
 # what's used to render the link text on PyPI.
 [project.urls]
-"Homepage" = "https://github.com/European-XFEL/Karabo-Aravis"
-"Bug Reports" = "https://github.com/European-XFEL/Karabo-Aravis/issues"
-#"Funding" = "https://donate.pypi.org"
-# "Say Thanks!" = "mailto://opensource@xfel.eu"
-"Source" = "https://github.com/European-XFEL/Karabo-Aravis"
-
-# The following would provide a command line executable called `sample`
-# which executes the function `main` from this package when invoked.
-# [project.scripts]
+"Homepage" = "https://github.com/European-XFEL/aravisCameras"
+"Bug Reports" = "https://github.com/European-XFEL/aravisCameras/issues"
+"Source" = "https://github.com/European-XFEL/aravisCameras"
 
 [tool.scikit-build]
 cmake.build-type = "Release"

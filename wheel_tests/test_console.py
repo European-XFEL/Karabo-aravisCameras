@@ -2,7 +2,7 @@ import subprocess
 from time import sleep
 
 
-EXPECTED_OUTPUT = "[info] karabo.core.Device : 'AravisBaslerCamera' with deviceId: 'AravisBaslerCamera' got started on server"
+EXPECTED_OUTPUT = "[info] karabo.core.Device : 'AravisBaslerCamera' with deviceId: 'MyTestCamera' got started on server"
 
 def _run_cmd(cmd: str) -> str:
     """
@@ -26,6 +26,6 @@ def _run_cmd(cmd: str) -> str:
         return err.stdout.decode().rstrip("\n")
 
 def test_cppserver():
-    output =_run_cmd("karabo-aravis-server init='{\"AravisBaslerCamera\": {\"deviceId\": \"AravisBaslerCamera\", \"classId\": \"AravisBaslerCamera\", \"cameraId\": \"192.168.0.1\"}}'")
+    output =_run_cmd("karabo-aravis-server init='{\"MyTestCamera\": {\"classId\": \"AravisBaslerCamera\", \"cameraId\": \"192.168.0.1\"}}'")
     print(output)
     assert EXPECTED_OUTPUT in output
