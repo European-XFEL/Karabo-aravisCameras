@@ -293,7 +293,7 @@ namespace karabo {
                     "on all the time regardless of this setting.")
               .assignmentOptional()
               .defaultValue(false)
-              .adminAccess()
+              .expertAccess()
               .reconfigurable()
               .allowedStates(State::UNKNOWN, State::ON)
               .commit();
@@ -308,7 +308,7 @@ namespace karabo {
                     "to image.")
               .assignmentOptional()
               .defaultValue(false)
-              .adminAccess()
+              .expertAccess()
               .reconfigurable()
               .allowedStates(State::UNKNOWN, State::ON)
               .commit();
@@ -336,7 +336,7 @@ namespace karabo {
               .assignmentOptional()
               .defaultValue("one")
               .options("one,Gamma_gain,Gamma_gain_low")
-              .adminAccess()
+              .expertAccess()
               .reconfigurable()
               .allowedStates(State::UNKNOWN, State::ON)
               .commit();
@@ -349,7 +349,7 @@ namespace karabo {
               .description("Turns on Bright pixel correction.")
               .assignmentOptional()
               .defaultValue(true)
-              .adminAccess()
+              .expertAccess()
               .reconfigurable()
               .allowedStates(State::UNKNOWN, State::ON)
               .commit();
@@ -362,7 +362,7 @@ namespace karabo {
               .description("If true image is binned 2x2 then rescaled to original size.")
               .assignmentOptional()
               .defaultValue(false)
-              .adminAccess()
+              .expertAccess()
               .reconfigurable()
               .allowedStates(State::UNKNOWN, State::ON)
               .commit();
@@ -375,7 +375,7 @@ namespace karabo {
               .description("Will correct more low level bright pixels when set But also erode edges.")
               .assignmentOptional()
               .defaultValue(true)
-              .adminAccess()
+              .expertAccess()
               .reconfigurable()
               .allowedStates(State::UNKNOWN, State::ON)
               .commit();
@@ -387,7 +387,7 @@ namespace karabo {
               .displayedName("Preamp Gain Mode")
               .assignmentOptional()
               .defaultValue(false)
-              .adminAccess()
+              .expertAccess()
               .reconfigurable()
               .allowedStates(State::UNKNOWN, State::ON)
               .commit();
@@ -401,7 +401,7 @@ namespace karabo {
               .assignmentOptional()
               .defaultValue("MHz50")
               .options("MHz50,MHz100")
-              .adminAccess()
+              .expertAccess()
               .reconfigurable()
               .allowedStates(State::UNKNOWN, State::ON)
               .commit();
@@ -413,7 +413,7 @@ namespace karabo {
               .displayedName("Display Test Chart")
               .assignmentOptional()
               .defaultValue(false)
-              .adminAccess()
+              .expertAccess()
               .reconfigurable()
               .allowedStates(State::UNKNOWN, State::ON)
               .commit();
