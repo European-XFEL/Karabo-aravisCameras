@@ -21,13 +21,13 @@ namespace karabo {
 
     class AravisBaslerBase : public AravisCamera {
        public:
-        static void expectedParameters(karabo::util::Schema& expected);
+        static void expectedParameters(karabo::data::Schema& expected);
 
-        explicit AravisBaslerBase(const karabo::util::Hash& config);
+        explicit AravisBaslerBase(const karabo::data::Hash& config);
 
         virtual ~AravisBaslerBase() = default;
 
-        bool get_timestamp(ArvBuffer* buffer, karabo::util::Timestamp& ts, const std::string& tsFeature);
+        bool get_timestamp(ArvBuffer* buffer, karabo::data::Timestamp& ts, const std::string& tsFeature);
 
         virtual bool is_flip_x_available() const override;
 

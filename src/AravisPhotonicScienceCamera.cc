@@ -14,10 +14,10 @@ USING_KARABO_NAMESPACES
 namespace karabo {
 
     // XXX The following does not compile - too many parameters
-    // KARABO_REGISTER_FOR_CONFIGURATION(BaseDevice, Device<>, ImageSource, CameraImageSource, AravisCamera,
+    // KARABO_REGISTER_FOR_CONFIGURATION(Device, ImageSource, CameraImageSource, AravisCamera,
     // AravisPhotonicScienceCamera)
     // XXX Work-around: do not register all parameters here, but call parent's expectedParameters in this class
-    KARABO_REGISTER_FOR_CONFIGURATION(BaseDevice, Device<>, ImageSource, CameraImageSource, AravisPhotonicScienceCamera)
+    KARABO_REGISTER_FOR_CONFIGURATION(Device, ImageSource, CameraImageSource, AravisPhotonicScienceCamera)
 
     void AravisPhotonicScienceCamera::expectedParameters(Schema& expected) {
         // Call parent's method, as KARABO_REGISTER_FOR_CONFIGURATION
@@ -506,7 +506,7 @@ namespace karabo {
               .commit();
     }
 
-    AravisPhotonicScienceCamera::AravisPhotonicScienceCamera(const karabo::util::Hash& config)
+    AravisPhotonicScienceCamera::AravisPhotonicScienceCamera(const karabo::data::Hash& config)
         : AravisCamera(config), m_reference_camera_timestamp(0.) {
         m_is_base_class = false;
         m_arv_camera_trigger = false; // Trigger properties to be accessed from non-standard paths
@@ -580,7 +580,7 @@ namespace karabo {
         return true; // success
     }
 
-    bool AravisPhotonicScienceCamera::get_timestamp(ArvBuffer* buffer, karabo::util::Timestamp& ts) {
+    bool AravisPhotonicScienceCamera::get_timestamp(ArvBuffer* buffer, karabo::data::Timestamp& ts) {
         // Get timestamp from buffer.
         // The timestamp is provided in ns, thus convert it to s.
         const double timestamp = arv_buffer_get_timestamp(buffer) / 1e+9;
@@ -621,7 +621,7 @@ namespace karabo {
         return true;
     }
 
-    void AravisPhotonicScienceCamera::configure(karabo::util::Hash& configuration) {
+    void AravisPhotonicScienceCamera::configure(karabo::data::Hash& configuration) {
         if (configuration.has("roi.width")) {
             // width must be multiple of 16
             int width = configuration.get<int>("roi.width");

@@ -24,9 +24,9 @@ namespace karabo {
        public:
         KARABO_CLASSINFO(AravisBaslerCamera, "AravisBaslerCamera", ARAVISCAMERAS_PACKAGE_VERSION)
 
-        static void expectedParameters(karabo::util::Schema& expected);
+        static void expectedParameters(karabo::data::Schema& expected);
 
-        explicit AravisBaslerCamera(const karabo::util::Hash& config);
+        explicit AravisBaslerCamera(const karabo::data::Hash& config);
 
         virtual ~AravisBaslerCamera() = default;
 
@@ -34,10 +34,10 @@ namespace karabo {
 
         bool configure_timestamp_chunk() override;
 
-        bool get_timestamp(ArvBuffer* buffer, karabo::util::Timestamp& ts) override;
+        bool get_timestamp(ArvBuffer* buffer, karabo::data::Timestamp& ts) override;
 
        private:
-        karabo::util::Epochstamp m_last_clock_reset;
+        karabo::data::Epochstamp m_last_clock_reset;
     };
 
 } // namespace karabo

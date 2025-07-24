@@ -14,9 +14,9 @@ USING_KARABO_NAMESPACES
 namespace karabo {
 
     // XXX The following does not compile - too many parameters
-    // KARABO_REGISTER_FOR_CONFIGURATION(BaseDevice, Device<>, ImageSource, CameraImageSource, AravisCamera, ...)
+    // KARABO_REGISTER_FOR_CONFIGURATION(Device, ImageSource, CameraImageSource, AravisCamera, ...)
     // XXX Work-around: do not register all parameters here, but call parent's expectedParameters in this class
-    KARABO_REGISTER_FOR_CONFIGURATION(BaseDevice, Device<>, ImageSource, CameraImageSource, AravisBaslerCamera)
+    KARABO_REGISTER_FOR_CONFIGURATION(Device, ImageSource, CameraImageSource, AravisBaslerCamera)
 
     void AravisBaslerCamera::expectedParameters(Schema& expected) {
         // Call parent's method, as KARABO_REGISTER_FOR_CONFIGURATION
@@ -114,7 +114,7 @@ namespace karabo {
               .commit();
     }
 
-    AravisBaslerCamera::AravisBaslerCamera(const karabo::util::Hash& config) : AravisBaslerBase(config) {
+    AravisBaslerCamera::AravisBaslerCamera(const karabo::data::Hash& config) : AravisBaslerBase(config) {
         m_is_device_reset_available = true; // "DeviceReset" command is available
         m_last_clock_reset.now();
     }
@@ -127,7 +127,7 @@ namespace karabo {
         // XXX Possibly use PTP in the future
         m_ptp_enabled = false;
 
-        const karabo::util::Epochstamp epoch;
+        const karabo::data::Epochstamp epoch;
         if (epoch.elapsed(m_last_clock_reset).getTotalSeconds() > 60.) {
             // Verify synchronization once every minute
             bool resetNeeded = false;
@@ -197,7 +197,7 @@ namespace karabo {
         return true; // success
     }
 
-    bool AravisBaslerCamera::get_timestamp(ArvBuffer* buffer, karabo::util::Timestamp& ts) {
+    bool AravisBaslerCamera::get_timestamp(ArvBuffer* buffer, karabo::data::Timestamp& ts) {
         return AravisBaslerBase::get_timestamp(buffer, ts, "ChunkTimestamp");
     }
 

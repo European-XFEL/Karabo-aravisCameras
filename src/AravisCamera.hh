@@ -36,7 +36,7 @@ namespace karabo {
          * Necessary method as part of the factory/configuration system
          * @param expected Will contain a description of expected parameters for this device
          */
-        static void expectedParameters(karabo::util::Schema& expected);
+        static void expectedParameters(karabo::data::Schema& expected);
 
         /**
          * Constructor providing the initial configuration in form of a Hash object.
@@ -44,7 +44,7 @@ namespace karabo {
          * already be validated using the information of the expectedParameters function.
          * The configuration is provided in a key/value fashion.
          */
-        explicit AravisCamera(const karabo::util::Hash& config);
+        explicit AravisCamera(const karabo::data::Hash& config);
 
         /**
          * The destructor will be called in case the device gets killed
@@ -63,7 +63,7 @@ namespace karabo {
          *           The reconfiguration will automatically be applied to the current state.
          * @param incomingReconfiguration The reconfiguration information as was triggered externally
          */
-        virtual void preReconfigure(karabo::util::Hash& incomingReconfiguration) override;
+        virtual void preReconfigure(karabo::data::Hash& incomingReconfiguration) override;
 
 
         /**
@@ -89,19 +89,19 @@ namespace karabo {
         ArvChunkParser* m_parser;
 
         bool isFeatureAvailable(const std::string& feature) const;
-        virtual void configure(karabo::util::Hash& configuration);
+        virtual void configure(karabo::data::Hash& configuration);
 
         virtual bool synchronize_timestamp();
         virtual bool configure_timestamp_chunk();
         bool m_chunk_mode;
-        karabo::util::Timestamp m_reference_karabo_time;
+        karabo::data::Timestamp m_reference_karabo_time;
 
         gint m_width;
         gint m_height;
         guint m_buffer_size;
         ArvPixelFormat m_format;
         virtual bool get_region(gint& x, gint& y, gint& width, gint& height);
-        virtual bool get_timestamp(ArvBuffer* buffer, karabo::util::Timestamp& ts);
+        virtual bool get_timestamp(ArvBuffer* buffer, karabo::data::Timestamp& ts);
 
         bool is_frame_count_available() const;
         virtual bool is_flip_x_available() const;
@@ -149,7 +149,7 @@ namespace karabo {
 
         void getPathsByTag(std::vector<std::string>& paths, const std::string& tags);
 
-        void disableElement(const std::string& key, karabo::util::Schema& schemaUpdate);
+        void disableElement(const std::string& key, karabo::data::Schema& schemaUpdate);
 
         Result getBoolFeature(const std::string& feature, bool& value);
         Result getStringFeature(const std::string& feature, std::string& value);
@@ -168,12 +168,12 @@ namespace karabo {
         void process_buffer(ArvBuffer* buffer);
         static void control_lost_cb(ArvGvDevice* gv_device, void* context);
 
-        void pollOnce(karabo::util::Hash& h);
+        void pollOnce(karabo::data::Hash& h);
         void pollCamera(const boost::system::error_code& ec);
-        void pollGenicamFeatures(const std::vector<std::string>& paths, karabo::util::Hash& h);
+        void pollGenicamFeatures(const std::vector<std::string>& paths, karabo::data::Hash& h);
         bool updateOutputSchema();
         template <class T>
-        void writeOutputChannels(const void* data, gint width, gint height, const karabo::util::Timestamp& ts);
+        void writeOutputChannels(const void* data, gint width, gint height, const karabo::data::Timestamp& ts);
         void updateFrameRate();
 
         bool resolveHostname(const std::string& hostname, std::string& ip_address, std::string& message);
@@ -199,7 +199,7 @@ namespace karabo {
         std::unordered_map<ArvBufferStatus, std::string> m_bufferStatus;
 
         // Image latency
-        karabo::util::Epochstamp m_timer;
+        karabo::data::Epochstamp m_timer;
         unsigned long m_counter;
         double m_mean_latency;
 
@@ -207,7 +207,7 @@ namespace karabo {
         // Images to be acquired
         unsigned long long m_imgsToBeAcquired;
 
-        karabo::xms::EncodingType m_encoding;
+        karabo::xms::Encoding m_encoding;
         std::vector<unsigned long long> m_shape;
 
         std::vector<uint16_t> m_unpackedData;
