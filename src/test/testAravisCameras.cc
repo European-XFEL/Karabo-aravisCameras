@@ -8,7 +8,7 @@
 
 #include <gtest/gtest.h>
 
-#include <boost/shared_ptr.hpp>
+#include <memory>
 #include <thread>
 #include <utility>
 
@@ -16,7 +16,7 @@
 #include "karabo/core/DeviceClient.hh"
 #include "karabo/core/DeviceServer.hh"
 #include "karabo/net/EventLoop.hh"
-#include "karabo/util/Hash.hh"
+#include "karabo/data/types/Hash.hh"
 #include "karabo/util/PluginLoader.hh"
 
 
@@ -42,15 +42,15 @@ class AravisCamerasFixture : public testing::Test {
         m_eventLoopThread = std::thread(&karabo::net::EventLoop::work);
 
         // Load the library dynamically
-        const karabo::util::Hash& pluginConfig = karabo::util::Hash("pluginDirectory", ".");
+        const karabo::data::Hash& pluginConfig = karabo::data::Hash("pluginDirectory", ".");
         karabo::util::PluginLoader::create("PluginLoader", pluginConfig)->update();
 
         // Instantiate C++ Device Server.
-        karabo::util::Hash config("serverId", DEVICE_SERVER_ID, "scanPlugins", true, "Logger.priority", LOG_PRIORITY);
+        karabo::data::Hash config("serverId", DEVICE_SERVER_ID,"log.level", LOG_PRIORITY);
         m_deviceSrv = karabo::core::DeviceServer::create("DeviceServer", config);
         m_deviceSrv->finalizeInternalInitialization();
         // Instantiate Device Client.
-        m_deviceCli = boost::make_shared<karabo::core::DeviceClient>();
+        m_deviceCli = std::make_shared<karabo::core::DeviceClient>();
     }
 
     void TearDown() {
@@ -60,8 +60,8 @@ class AravisCamerasFixture : public testing::Test {
         m_eventLoopThread.join();
     }
 
-    void instantiateAravisCamera(const karabo::util::Hash& devSpecificCfg) {
-        karabo::util::Hash devCfg("deviceId", TEST_ARAVIS_ID, "cameraId", "1.2.3.4");
+    void instantiateAravisCamera(const karabo::data::Hash& devSpecificCfg) {
+        karabo::data::Hash devCfg("deviceId", TEST_ARAVIS_ID, "cameraId", "1.2.3.4");
         devCfg.merge(devSpecificCfg);
 
         std::pair<bool, std::string> success =
@@ -70,8 +70,8 @@ class AravisCamerasFixture : public testing::Test {
         ASSERT_TRUE(success.first) << "Error instantiating '" << TEST_ARAVIS_ID << "':\n" << success.second;
     }
 
-    void instantiateAravisCameraFail(const karabo::util::Hash& devSpecificCfg) {
-        karabo::util::Hash devCfg("deviceId", TEST_ARAVIS_ID_FAIL); // missing mandatory parameter
+    void instantiateAravisCameraFail(const karabo::data::Hash& devSpecificCfg) {
+        karabo::data::Hash devCfg("deviceId", TEST_ARAVIS_ID_FAIL); // missing mandatory parameter
         devCfg.merge(devSpecificCfg);
 
         std::pair<bool, std::string> success =
@@ -80,8 +80,8 @@ class AravisCamerasFixture : public testing::Test {
         ASSERT_FALSE(success.first) << "Error instantiating '" << TEST_ARAVIS_ID_FAIL << "':\n" << success.second;
     }
 
-    void instantiateBaslerCamera(const karabo::util::Hash& devSpecificCfg) {
-        karabo::util::Hash devCfg("deviceId", TEST_BASLER_ID, "cameraId", "1.2.3.4");
+    void instantiateBaslerCamera(const karabo::data::Hash& devSpecificCfg) {
+        karabo::data::Hash devCfg("deviceId", TEST_BASLER_ID, "cameraId", "1.2.3.4");
         devCfg.merge(devSpecificCfg);
 
         std::pair<bool, std::string> success =
@@ -90,8 +90,8 @@ class AravisCamerasFixture : public testing::Test {
         ASSERT_TRUE(success.first) << "Error instantiating '" << TEST_BASLER_ID << "':\n" << success.second;
     }
 
-    void instantiateBasler2Camera(const karabo::util::Hash& devSpecificCfg) {
-        karabo::util::Hash devCfg("deviceId", TEST_BASLER2_ID, "cameraId", "1.2.3.4");
+    void instantiateBasler2Camera(const karabo::data::Hash& devSpecificCfg) {
+        karabo::data::Hash devCfg("deviceId", TEST_BASLER2_ID, "cameraId", "1.2.3.4");
         devCfg.merge(devSpecificCfg);
 
         std::pair<bool, std::string> success =
@@ -100,8 +100,8 @@ class AravisCamerasFixture : public testing::Test {
         ASSERT_TRUE(success.first) << "Error instantiating '" << TEST_BASLER2_ID << "':\n" << success.second;
     }
 
-    void instantiatePhScCamera(const karabo::util::Hash& devSpecificCfg) {
-        karabo::util::Hash devCfg("deviceId", TEST_PHSC_ID, "cameraId", "1.2.3.4");
+    void instantiatePhScCamera(const karabo::data::Hash& devSpecificCfg) {
+        karabo::data::Hash devCfg("deviceId", TEST_PHSC_ID, "cameraId", "1.2.3.4");
         devCfg.merge(devSpecificCfg);
 
         std::pair<bool, std::string> success =
@@ -134,11 +134,11 @@ class AravisCamerasFixture : public testing::Test {
 // TODO: Give the test case a proper name (not "testScaffold")
 TEST_F(AravisCamerasFixture, testScaffold) {
     // TODO: Provide a non-empty config for the device under test.
-    instantiateAravisCamera(karabo::util::Hash());
-    instantiateAravisCameraFail(karabo::util::Hash());
-    instantiateBaslerCamera(karabo::util::Hash());
-    instantiateBasler2Camera(karabo::util::Hash());
-    instantiatePhScCamera(karabo::util::Hash());
+    instantiateAravisCamera(karabo::data::Hash());
+    instantiateAravisCameraFail(karabo::data::Hash());
+    instantiateBaslerCamera(karabo::data::Hash());
+    instantiateBasler2Camera(karabo::data::Hash());
+    instantiatePhScCamera(karabo::data::Hash());
 
     // TODO: Define a test body.
 

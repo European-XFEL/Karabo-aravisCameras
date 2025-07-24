@@ -23,7 +23,7 @@ USING_KARABO_NAMESPACES;
 
 namespace karabo {
 
-    KARABO_REGISTER_FOR_CONFIGURATION(BaseDevice, Device<>, ImageSource, CameraImageSource, AravisCamera)
+    KARABO_REGISTER_FOR_CONFIGURATION(Device, ImageSource, CameraImageSource, AravisCamera)
 
     boost::mutex AravisCamera::m_connect_mtx;
 
@@ -562,7 +562,7 @@ namespace karabo {
     }
 
 
-    AravisCamera::AravisCamera(const karabo::util::Hash& config)
+    AravisCamera::AravisCamera(const karabo::data::Hash& config)
         : CameraImageSource(config),
           m_is_base_class(true),
           m_arv_camera_trigger(true),
@@ -630,7 +630,7 @@ namespace karabo {
     }
 
 
-    void AravisCamera::preReconfigure(karabo::util::Hash& incomingReconfiguration) {
+    void AravisCamera::preReconfigure(karabo::data::Hash& incomingReconfiguration) {
         this->configure(incomingReconfiguration);
     }
 
@@ -674,7 +674,7 @@ namespace karabo {
     }
 
 
-    void AravisCamera::disableElement(const std::string& key, karabo::util::Schema& schemaUpdate) {
+    void AravisCamera::disableElement(const std::string& key, karabo::data::Schema& schemaUpdate) {
         OVERWRITE_ELEMENT(schemaUpdate)
               .key(key)
               .setNewDescription("Not available on this camera.")
@@ -1607,7 +1607,7 @@ namespace karabo {
     }
 
 
-    void AravisCamera::configure(karabo::util::Hash& configuration) {
+    void AravisCamera::configure(karabo::data::Hash& configuration) {
         if (m_camera == nullptr) {
             // cannot configure camera, as we are not connected
             return;
@@ -1646,7 +1646,7 @@ namespace karabo {
                         if (configuration.has("packetSize")) configuration.erase("packetSize");
                         g_clear_error(&error);
                     }
-                } catch (const karabo::util::ParameterException& e) {
+                } catch (const karabo::data::ParameterException& e) {
                     // key neither in configuration nor on device
                 }
             }
@@ -1726,7 +1726,7 @@ namespace karabo {
             double frameRate;
             try {
                 frameRate = GET_PATH(configuration, "frameRate.target", float);
-            } catch (const karabo::util::ParameterException& e) {
+            } catch (const karabo::data::ParameterException& e) {
                 // key neither in configuration nor on device
                 frameRate = -1; // i.e. read from camera
             }
@@ -1933,7 +1933,7 @@ namespace karabo {
     }
 
 
-    bool AravisCamera::get_timestamp(ArvBuffer* buffer, karabo::util::Timestamp& ts) {
+    bool AravisCamera::get_timestamp(ArvBuffer* buffer, karabo::data::Timestamp& ts) {
         // If the camera provides HW timestamping in chunk data, this function shall be overridden
         return false;
     }
@@ -2200,7 +2200,7 @@ namespace karabo {
             if (buffer == arv_stream_pop_buffer(self->m_stream) && buffer_status == ARV_BUFFER_STATUS_SUCCESS) {
                 // AravisCamera::process_buffer can take long thus is posted to the event loop
                 // 'process_buffer' shall also take care of calling arv_stream_push_buffer
-                EventLoop::getIOService().post(karabo::util::bind_weak(&AravisCamera::process_buffer, self, buffer));
+                EventLoop::post(karabo::util::bind_weak(&AravisCamera::process_buffer, self, buffer));
             } else {
                 // Push back the buffer to the stream
                 arv_stream_push_buffer(self->m_stream, buffer);
@@ -2218,13 +2218,13 @@ namespace karabo {
 
 
     void AravisCamera::process_buffer(ArvBuffer* arv_buffer) {
-        const karabo::util::Timestamp dev_ts = this->getActualTimestamp();
+        const karabo::data::Timestamp dev_ts = this->getActualTimestamp();
         const std::string& deviceId = this->getInstanceId();
 
         size_t buffer_size;
         const void* buffer_data = arv_buffer_get_data(arv_buffer, &buffer_size);
 
-        karabo::util::Timestamp ts;
+        karabo::data::Timestamp ts;
         if (this->get_timestamp(arv_buffer, ts)) {
             // Latency between the image timestamp and the reception time
             const double latency = dev_ts.getEpochstamp() - ts.getEpochstamp();
@@ -2370,7 +2370,7 @@ namespace karabo {
     }
 
 
-    void AravisCamera::pollOnce(karabo::util::Hash& h) {
+    void AravisCamera::pollOnce(karabo::data::Hash& h) {
         bool success;
         GError* error = nullptr;
         const std::string& deviceId = this->getInstanceId();
@@ -2578,7 +2578,7 @@ namespace karabo {
     }
 
 
-    void AravisCamera::pollGenicamFeatures(const std::vector<std::string>& paths, karabo::util::Hash& h) {
+    void AravisCamera::pollGenicamFeatures(const std::vector<std::string>& paths, karabo::data::Hash& h) {
         for (const auto& key : paths) {
             const auto feature = this->getAliasFromKey<std::string>(key);
             const auto valueType = this->getValueType(key);
@@ -2707,22 +2707,23 @@ namespace karabo {
                 shape.push_back(3);
                 kType = Types::UINT16;
                 break;
-            case ARV_PIXEL_FORMAT_BAYER_RG_8:
-                m_encoding = Encoding::BAYER;
-                kType = Types::UINT8;
-                break;
-            case ARV_PIXEL_FORMAT_BAYER_RG_10:
-            case ARV_PIXEL_FORMAT_BAYER_RG_10P:
-            case ARV_PIXEL_FORMAT_BAYER_RG_12:
-            case ARV_PIXEL_FORMAT_BAYER_RG_12P:
-                m_encoding = Encoding::BAYER;
-                kType = Types::UINT16;
-                break;
-            case ARV_PIXEL_FORMAT_YCBCR_422_8:
-                m_encoding = Encoding::YUV;
-                shape.push_back(2);
-                kType = Types::UINT8;
-                break;
+            // XXX Use proper encoding as provided by Karabo 3
+            // case ARV_PIXEL_FORMAT_BAYER_RG_8:
+            //     m_encoding = Encoding::BAYER;
+            //     kType = Types::UINT8;
+            //     break;
+            // case ARV_PIXEL_FORMAT_BAYER_RG_10:
+            // case ARV_PIXEL_FORMAT_BAYER_RG_10P:
+            // case ARV_PIXEL_FORMAT_BAYER_RG_12:
+            // case ARV_PIXEL_FORMAT_BAYER_RG_12P:
+            //     m_encoding = Encoding::BAYER;
+            //     kType = Types::UINT16;
+            //     break;
+            // case ARV_PIXEL_FORMAT_YCBCR_422_8:
+            //     m_encoding = Encoding::YUV;
+            //     shape.push_back(2);
+            //     kType = Types::UINT8;
+            //     break;
             default:
                 m_encoding = Encoding::GRAY;
                 kType = Types::UNKNOWN;
@@ -2961,7 +2962,7 @@ namespace karabo {
 
     template <class T>
     void AravisCamera::writeOutputChannels(const void* data, gint width, gint height,
-                                           const karabo::util::Timestamp& ts) {
+                                           const karabo::data::Timestamp& ts) {
         Dims shape;
         const unsigned int rotation = this->get<unsigned int>("rotation");
         switch (rotation) {
@@ -2983,7 +2984,7 @@ namespace karabo {
         }
 
         // Non-copy NDArray constructor
-        karabo::util::NDArray imgArray((T*)data, shape.size(), karabo::util::NDArray::NullDeleter(), shape);
+        karabo::data::NDArray imgArray((T*)data, shape.size(), karabo::data::NDArray::NullDeleter(), shape);
 
         const unsigned short bpp = this->get<unsigned short>("bpp");
         Dims binning(this->get<int>("bin.y"), this->get<int>("bin.x"));
@@ -3051,23 +3052,18 @@ namespace karabo {
 
     bool AravisCamera::resolveHostname(const std::string& hostname, std::string& ip_address, std::string& message) {
         bool success = false;
-        boost::asio::io_service io_service;
-        boost::asio::ip::tcp::resolver resolver(io_service);
-        const boost::asio::ip::tcp::resolver::query query(hostname, "");
-        const boost::asio::ip::tcp::resolver::iterator end;
+        boost::asio::io_context io_context;
+        boost::asio::ip::tcp::resolver resolver(io_context);
         boost::system::error_code ec;
-        auto it = resolver.resolve(query, ec);
+        const boost::asio::ip::tcp::resolver::results_type endpoints = resolver.resolve(hostname, "", ec);
         if (ec != boost::system::errc::success) {
             ip_address = "";
             message = "Boost error in resolveHostname: " + ec.message();
-        } else if (it != end) {
-            const boost::asio::ip::tcp::endpoint endpoint = it->endpoint();
-            success = true;
+        } else {
+            const boost::asio::ip::tcp::endpoint endpoint = *endpoints.begin();
             ip_address = endpoint.address().to_string();
             message = "IP name resolved: " + hostname + " -> " + ip_address;
-        } else {
-            ip_address = "";
-            message = "Cannot resolve hostname: " + hostname;
+            success = true;
         }
 
         return success;

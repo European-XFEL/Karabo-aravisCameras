@@ -14,10 +14,10 @@ USING_KARABO_NAMESPACES
 namespace karabo {
 
     // XXX The following does not compile - too many parameters
-    // KARABO_REGISTER_FOR_CONFIGURATION(BaseDevice, Device<>, ImageSource, CameraImageSource, AravisCamera,
+    // KARABO_REGISTER_FOR_CONFIGURATION(Device, ImageSource, CameraImageSource, AravisCamera,
     // AravisBaslerBase)
     // XXX Work-around: do not register all parameters here, but call parent's expectedParameters in this class
-    KARABO_REGISTER_FOR_CONFIGURATION(BaseDevice, Device<>, ImageSource, CameraImageSource, AravisBaslerBase)
+    KARABO_REGISTER_FOR_CONFIGURATION(Device, ImageSource, CameraImageSource, AravisBaslerBase)
 
     void AravisBaslerBase::expectedParameters(Schema& expected) {
         // Call parent's method, as KARABO_REGISTER_FOR_CONFIGURATION
@@ -178,13 +178,13 @@ namespace karabo {
               .commit();
     }
 
-    AravisBaslerBase::AravisBaslerBase(const karabo::util::Hash& config)
+    AravisBaslerBase::AravisBaslerBase(const karabo::data::Hash& config)
         : AravisCamera(config), m_ptp_enabled(false), m_tick_frequency(0) {
         m_is_base_class = false;
-        this->registerScene(boost::bind(&AravisBaslerBase::aravisBaslerScene, this), "scene");
+        this->registerScene(std::bind(&AravisBaslerBase::aravisBaslerScene, this), "scene");
     }
 
-    bool AravisBaslerBase::get_timestamp(ArvBuffer* buffer, karabo::util::Timestamp& ts, const std::string& tsFeature) {
+    bool AravisBaslerBase::get_timestamp(ArvBuffer* buffer, karabo::data::Timestamp& ts, const std::string& tsFeature) {
         // XXX Possibly use PTP in the future
         GError* error = nullptr;
 

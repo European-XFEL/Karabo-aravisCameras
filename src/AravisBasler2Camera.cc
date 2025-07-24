@@ -14,9 +14,9 @@ USING_KARABO_NAMESPACES
 namespace karabo {
 
     // XXX The following does not compile - too many parameters
-    // KARABO_REGISTER_FOR_CONFIGURATION(BaseDevice, Device<>, ImageSource, CameraImageSource, AravisCamera, ...)
+    // KARABO_REGISTER_FOR_CONFIGURATION(Device, ImageSource, CameraImageSource, AravisCamera, ...)
     // XXX Work-around: do not register all parameters here, but call parent's expectedParameters in this class
-    KARABO_REGISTER_FOR_CONFIGURATION(BaseDevice, Device<>, ImageSource, CameraImageSource, AravisBasler2Camera)
+    KARABO_REGISTER_FOR_CONFIGURATION(Device, ImageSource, CameraImageSource, AravisBasler2Camera)
 
     void AravisBasler2Camera::expectedParameters(Schema& expected) {
         // Call parent's method, as KARABO_REGISTER_FOR_CONFIGURATION
@@ -99,7 +99,7 @@ namespace karabo {
               .commit();
     }
 
-    AravisBasler2Camera::AravisBasler2Camera(const karabo::util::Hash& config) : AravisBaslerBase(config) {
+    AravisBasler2Camera::AravisBasler2Camera(const karabo::data::Hash& config) : AravisBaslerBase(config) {
         m_is_device_reset_available = true; // "DeviceReset" command is available
     }
 
@@ -166,7 +166,7 @@ namespace karabo {
         return true; // success
     }
 
-    bool AravisBasler2Camera::get_timestamp(ArvBuffer* buffer, karabo::util::Timestamp& ts) {
+    bool AravisBasler2Camera::get_timestamp(ArvBuffer* buffer, karabo::data::Timestamp& ts) {
         return AravisBaslerBase::get_timestamp(buffer, ts, "BslChunkTimestampValue");
     }
 
