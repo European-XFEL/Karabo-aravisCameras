@@ -2296,13 +2296,13 @@ namespace karabo {
             case ARV_PIXEL_FORMAT_BAYER_RG_10P: {
                 const uint8_t* data = reinterpret_cast<const uint8_t*>(buffer_data);
                 uint16_t* unpackedData = m_unpackedData.data();
-                unpackBayerRG10p(data, m_width, m_height, unpackedData);
+                unpackBayer10p(data, m_width, m_height, unpackedData);
                 this->writeOutputChannels<unsigned short>(unpackedData, m_width, m_height, ts);
             } break;
             case ARV_PIXEL_FORMAT_BAYER_RG_12P: {
                 const uint8_t* data = reinterpret_cast<const uint8_t*>(buffer_data);
                 uint16_t* unpackedData = m_unpackedData.data();
-                unpackBayerRG12p(data, m_width, m_height, unpackedData);
+                unpackBayer12p(data, m_width, m_height, unpackedData);
                 this->writeOutputChannels<unsigned short>(unpackedData, m_width, m_height, ts);
             } break;
             case ARV_PIXEL_FORMAT_YCBCR_422_8:
