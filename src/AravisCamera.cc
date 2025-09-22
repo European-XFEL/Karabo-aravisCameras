@@ -632,6 +632,12 @@ namespace karabo {
 
     void AravisCamera::preReconfigure(karabo::data::Hash& incomingReconfiguration) {
         this->configure(incomingReconfiguration);
+
+        // Clear the stream.
+        // This should not be needed, but what has been observed is that if any
+        // camera parameter is set and the stream is not created anew, then
+        // when the acquisition is started we do not get any data.
+        this->clear_stream();
     }
 
 
