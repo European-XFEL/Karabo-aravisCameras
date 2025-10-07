@@ -1,16 +1,5 @@
 before_script:
-    - echo '*** Install packages needed by aravis ***'
-    - . /etc/os-release
-    - >
-      if [ "$ID" == "rhel" ]; then
-          REL=${VERSION_ID%.*}  # major release, e.g. "9"
-          yum-config-manager --add-repo=https://nims.desy.de/rhel/$REL/x86_64/os/appstream  # Needed for libusbx-devel
-          yum install -y libxml2-devel libusbx-devel
-      elif [ "$ID" = "ubuntu" ]; then
-          apt-get update
-          if [ ! -f /etc/localtime ]; then echo "Europe/Berlin" > /etc/localtime; fi  # Set-up tzdata for libglib2.0-dev
-          apt-get install -y libglib2.0-dev libxml2-dev libusb-1.0-0-dev
-      fi
+    - bash .ci-before-script.sh
 
 include:
   - project: karabo/gitlabci
