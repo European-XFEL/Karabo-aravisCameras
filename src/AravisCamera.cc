@@ -579,6 +579,7 @@ namespace karabo {
           m_max_correction_time(0),
           m_min_latency(0.),
           m_max_latency(0.),
+          m_outputStrand(karabo::data::Configurator<Strand>::create("Strand", Hash())),
           m_connect(true),
           m_is_connected(false),
           m_reconnect_timer(EventLoop::getIOService()),
@@ -2206,7 +2207,7 @@ namespace karabo {
             if (buffer == arv_stream_pop_buffer(self->m_stream) && buffer_status == ARV_BUFFER_STATUS_SUCCESS) {
                 // AravisCamera::process_buffer can take long thus is posted to the event loop
                 // 'process_buffer' shall also take care of calling arv_stream_push_buffer
-                EventLoop::post(karabo::util::bind_weak(&AravisCamera::process_buffer, self, buffer));
+                self->m_outputStrand->post(karabo::util::bind_weak(&AravisCamera::process_buffer, self, buffer));
             } else {
                 // Push back the buffer to the stream
                 arv_stream_push_buffer(self->m_stream, buffer);

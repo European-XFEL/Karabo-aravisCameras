@@ -115,6 +115,8 @@ namespace karabo {
         double m_max_latency;
 
        private:
+        karabo::net::Strand::Pointer m_outputStrand;
+
         bool m_need_schema_update;
         void initialize();
 
