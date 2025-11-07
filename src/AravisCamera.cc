@@ -27,16 +27,25 @@ namespace karabo {
 
     boost::mutex AravisCamera::m_connect_mtx;
 
-    // m_supportedPixelFormats contains the list of pixel formats supported by the process_buffer function
+    // m_supportedPixelFormats contains the list of pixel formats supported by the process_buffer and
+    // updateOutputSchema functions
     const std::set<ArvPixelFormat> AravisCamera::m_supportedPixelFormats = {
-          ARV_PIXEL_FORMAT_MONO_8,         ARV_PIXEL_FORMAT_MONO_10,       ARV_PIXEL_FORMAT_MONO_12,
-          ARV_PIXEL_FORMAT_MONO_14,        ARV_PIXEL_FORMAT_MONO_16,       ARV_PIXEL_FORMAT_MONO_10_PACKED,
-          ARV_PIXEL_FORMAT_MONO_12_PACKED, ARV_PIXEL_FORMAT_MONO_10_P,     ARV_PIXEL_FORMAT_MONO_12_P,
-          ARV_PIXEL_FORMAT_RGB_8_PACKED,   ARV_PIXEL_FORMAT_BGR_8_PACKED,  ARV_PIXEL_FORMAT_RGB_10_PACKED,
-          ARV_PIXEL_FORMAT_RGB_10_PLANAR,  ARV_PIXEL_FORMAT_BGR_10_PACKED, ARV_PIXEL_FORMAT_RGB_12_PACKED,
-          ARV_PIXEL_FORMAT_RGB_12_PLANAR,  ARV_PIXEL_FORMAT_BGR_12_PACKED, ARV_PIXEL_FORMAT_RGB_16_PLANAR,
-          ARV_PIXEL_FORMAT_BAYER_RG_8,     ARV_PIXEL_FORMAT_BAYER_RG_10,   ARV_PIXEL_FORMAT_BAYER_RG_12,
-          ARV_PIXEL_FORMAT_BAYER_RG_10P,   ARV_PIXEL_FORMAT_BAYER_RG_12P,  ARV_PIXEL_FORMAT_YCBCR_422_8};
+          ARV_PIXEL_FORMAT_MONO_8,         ARV_PIXEL_FORMAT_MONO_10,
+          ARV_PIXEL_FORMAT_MONO_12,        ARV_PIXEL_FORMAT_MONO_14,
+          ARV_PIXEL_FORMAT_MONO_16,        ARV_PIXEL_FORMAT_MONO_10_PACKED,
+          ARV_PIXEL_FORMAT_MONO_12_PACKED, ARV_PIXEL_FORMAT_MONO_10_P,
+          ARV_PIXEL_FORMAT_MONO_12_P,      ARV_PIXEL_FORMAT_RGB_8_PACKED,
+          ARV_PIXEL_FORMAT_RGB_8_PLANAR,   ARV_PIXEL_FORMAT_BGR_8_PACKED,
+          ARV_PIXEL_FORMAT_RGB_10_PACKED,  ARV_PIXEL_FORMAT_RGB_10_PLANAR,
+          ARV_PIXEL_FORMAT_BGR_10_PACKED,  ARV_PIXEL_FORMAT_RGB_12_PACKED,
+          ARV_PIXEL_FORMAT_RGB_12_PLANAR,  ARV_PIXEL_FORMAT_BGR_12_PACKED,
+          ARV_PIXEL_FORMAT_RGB_16_PLANAR,  ARV_PIXEL_FORMAT_BAYER_RG_8,
+          ARV_PIXEL_FORMAT_BAYER_RG_10,    ARV_PIXEL_FORMAT_BAYER_RG_12,
+          ARV_PIXEL_FORMAT_BAYER_RG_10P,   ARV_PIXEL_FORMAT_BAYER_RG_12P,
+          ARV_PIXEL_FORMAT_BAYER_GR_8,     ARV_PIXEL_FORMAT_BAYER_GR_10,
+          ARV_PIXEL_FORMAT_BAYER_GR_12,    ARV_PIXEL_FORMAT_BAYER_GR_10P,
+          ARV_PIXEL_FORMAT_BAYER_GR_12P,   ARV_PIXEL_FORMAT_YCBCR_422_8,
+          ARV_PIXEL_FORMAT_YUV_422_PACKED, ARV_PIXEL_FORMAT_YUV_422_YUYV_PACKED};
 
 
     void AravisCamera::expectedParameters(Schema& expected) {
@@ -2250,6 +2259,7 @@ namespace karabo {
         }
 
         // NB When a new pixel format is supported, do not forget to add it to m_supportedPixelFormats
+        // and to the updateOutputSchema function
         switch (m_format) {
             case ARV_PIXEL_FORMAT_MONO_8:
                 this->writeOutputChannels<unsigned char>(buffer_data, m_width, m_height, ts);
@@ -2263,7 +2273,7 @@ namespace karabo {
             case ARV_PIXEL_FORMAT_MONO_10_PACKED:
             case ARV_PIXEL_FORMAT_MONO_12_PACKED: {
                 const uint8_t* data = reinterpret_cast<const uint8_t*>(buffer_data);
-                uint16_t* unpackedData = this->m_unpackedData.data();
+                uint16_t* unpackedData = m_unpackedData.data();
                 unpackMono12Packed(data, m_width, m_height, unpackedData);
                 this->writeOutputChannels<unsigned short>(unpackedData, m_width, m_height, ts);
             } break;
@@ -2280,6 +2290,7 @@ namespace karabo {
                 this->writeOutputChannels<unsigned short>(unpackedData, m_width, m_height, ts);
             } break;
             case ARV_PIXEL_FORMAT_RGB_8_PACKED:
+            case ARV_PIXEL_FORMAT_RGB_8_PLANAR:
             case ARV_PIXEL_FORMAT_BGR_8_PACKED:
                 this->writeOutputChannels<unsigned char>(buffer_data, m_width, m_height, ts);
                 break;
@@ -2294,25 +2305,32 @@ namespace karabo {
                 this->writeOutputChannels<unsigned short>(buffer_data, m_width, m_height, ts);
                 break;
             case ARV_PIXEL_FORMAT_BAYER_RG_8:
+            case ARV_PIXEL_FORMAT_BAYER_GR_8:
                 this->writeOutputChannels<unsigned char>(buffer_data, m_width, m_height, ts);
                 break;
             case ARV_PIXEL_FORMAT_BAYER_RG_10:
             case ARV_PIXEL_FORMAT_BAYER_RG_12:
+            case ARV_PIXEL_FORMAT_BAYER_GR_10:
+            case ARV_PIXEL_FORMAT_BAYER_GR_12:
                 this->writeOutputChannels<unsigned short>(buffer_data, m_width, m_height, ts);
                 break;
-            case ARV_PIXEL_FORMAT_BAYER_RG_10P: {
+            case ARV_PIXEL_FORMAT_BAYER_RG_10P:
+            case ARV_PIXEL_FORMAT_BAYER_GR_10P: {
                 const uint8_t* data = reinterpret_cast<const uint8_t*>(buffer_data);
                 uint16_t* unpackedData = m_unpackedData.data();
                 unpackBayer10p(data, m_width, m_height, unpackedData);
                 this->writeOutputChannels<unsigned short>(unpackedData, m_width, m_height, ts);
             } break;
-            case ARV_PIXEL_FORMAT_BAYER_RG_12P: {
+            case ARV_PIXEL_FORMAT_BAYER_RG_12P:
+            case ARV_PIXEL_FORMAT_BAYER_GR_12P: {
                 const uint8_t* data = reinterpret_cast<const uint8_t*>(buffer_data);
                 uint16_t* unpackedData = m_unpackedData.data();
                 unpackBayer12p(data, m_width, m_height, unpackedData);
                 this->writeOutputChannels<unsigned short>(unpackedData, m_width, m_height, ts);
             } break;
             case ARV_PIXEL_FORMAT_YCBCR_422_8:
+            case ARV_PIXEL_FORMAT_YUV_422_PACKED:
+            case ARV_PIXEL_FORMAT_YUV_422_YUYV_PACKED:
                 this->writeOutputChannels<unsigned char>(buffer_data, m_width, m_height, ts);
                 break;
             default:
@@ -2328,7 +2346,6 @@ namespace karabo {
                     this->execute("stop");
                 }
         }
-
 
         // Push back the buffer to the stream
         arv_stream_push_buffer(m_stream, arv_buffer);
@@ -2677,9 +2694,13 @@ namespace karabo {
                 kType = Types::UINT16;
                 break;
             case ARV_PIXEL_FORMAT_RGB_8_PACKED:
-            case ARV_PIXEL_FORMAT_RGB_8_PLANAR:
                 m_encoding = Encoding::RGB;
                 shape.push_back(3);
+                kType = Types::UINT8;
+                break;
+            case ARV_PIXEL_FORMAT_RGB_8_PLANAR:
+                m_encoding = Encoding::RGB;     // We might want to have different encoding for PLANAR
+                shape.insert(shape.begin(), 3); // shape is (3, height, width)
                 kType = Types::UINT8;
                 break;
             case ARV_PIXEL_FORMAT_BGR_8_PACKED:
@@ -2688,49 +2709,59 @@ namespace karabo {
                 kType = Types::UINT8;
                 break;
             case ARV_PIXEL_FORMAT_RGB_10_PACKED:
-            case ARV_PIXEL_FORMAT_RGB_10_PLANAR:
+            case ARV_PIXEL_FORMAT_RGB_12_PACKED:
                 m_encoding = Encoding::RGB;
                 shape.push_back(3);
+                kType = Types::UINT16;
+                break;
+            case ARV_PIXEL_FORMAT_RGB_10_PLANAR:
+            case ARV_PIXEL_FORMAT_RGB_12_PLANAR:
+            case ARV_PIXEL_FORMAT_RGB_16_PLANAR:
+                m_encoding = Encoding::RGB;     // We might want to have  different encoding for PLANAR
+                shape.insert(shape.begin(), 3); // shape is (3, height, width)
                 kType = Types::UINT16;
                 break;
             case ARV_PIXEL_FORMAT_BGR_10_PACKED:
-                m_encoding = Encoding::BGR;
-                shape.push_back(3);
-                kType = Types::UINT16;
-                break;
-            case ARV_PIXEL_FORMAT_RGB_12_PACKED:
-            case ARV_PIXEL_FORMAT_RGB_12_PLANAR:
-                m_encoding = Encoding::RGB;
-                shape.push_back(3);
-                kType = Types::UINT16;
-                break;
             case ARV_PIXEL_FORMAT_BGR_12_PACKED:
                 m_encoding = Encoding::BGR;
                 shape.push_back(3);
                 kType = Types::UINT16;
                 break;
-            case ARV_PIXEL_FORMAT_RGB_16_PLANAR:
-                m_encoding = Encoding::RGB;
-                shape.push_back(3);
+            case ARV_PIXEL_FORMAT_BAYER_RG_8:
+                m_encoding = Encoding::BAYER_RG;
+                kType = Types::UINT8;
+                break;
+            case ARV_PIXEL_FORMAT_BAYER_RG_10:
+            case ARV_PIXEL_FORMAT_BAYER_RG_10P:
+            case ARV_PIXEL_FORMAT_BAYER_RG_12:
+            case ARV_PIXEL_FORMAT_BAYER_RG_12P:
+                m_encoding = Encoding::BAYER_RG;
                 kType = Types::UINT16;
                 break;
-            // XXX Use proper encoding as provided by Karabo 3
-            // case ARV_PIXEL_FORMAT_BAYER_RG_8:
-            //     m_encoding = Encoding::BAYER;
-            //     kType = Types::UINT8;
-            //     break;
-            // case ARV_PIXEL_FORMAT_BAYER_RG_10:
-            // case ARV_PIXEL_FORMAT_BAYER_RG_10P:
-            // case ARV_PIXEL_FORMAT_BAYER_RG_12:
-            // case ARV_PIXEL_FORMAT_BAYER_RG_12P:
-            //     m_encoding = Encoding::BAYER;
-            //     kType = Types::UINT16;
-            //     break;
-            // case ARV_PIXEL_FORMAT_YCBCR_422_8:
-            //     m_encoding = Encoding::YUV;
-            //     shape.push_back(2);
-            //     kType = Types::UINT8;
-            //     break;
+            case ARV_PIXEL_FORMAT_BAYER_GR_8:
+                m_encoding = Encoding::BAYER_GR;
+                kType = Types::UINT8;
+                break;
+            case ARV_PIXEL_FORMAT_BAYER_GR_10:
+            case ARV_PIXEL_FORMAT_BAYER_GR_10P:
+            case ARV_PIXEL_FORMAT_BAYER_GR_12:
+            case ARV_PIXEL_FORMAT_BAYER_GR_12P:
+                m_encoding = Encoding::BAYER_GR;
+                kType = Types::UINT16;
+                break;
+            case ARV_PIXEL_FORMAT_YCBCR_422_8:
+            case ARV_PIXEL_FORMAT_YUV_422_YUYV_PACKED:
+                // YUYV format (AKA YUY2)
+                m_encoding = Encoding::YUV422_YUYV;
+                shape.push_back(2);
+                kType = Types::UINT8;
+                break;
+            case ARV_PIXEL_FORMAT_YUV_422_PACKED:
+                // UYVY format
+                m_encoding = Encoding::YUV422_UYVY;
+                shape.push_back(2);
+                kType = Types::UINT8;
+                break;
             default:
                 m_encoding = Encoding::GRAY;
                 kType = Types::UNKNOWN;
