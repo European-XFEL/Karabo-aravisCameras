@@ -18,6 +18,7 @@ target_sources(
     AravisBaslerBase.cc
     AravisBaslerCameraScene.cc
     AravisBaslerCamera.cc
+    AravisBaslerUsbCamera.cc
     AravisBasler2Camera.cc
     AravisPhotonicScienceCamera.cc
 
