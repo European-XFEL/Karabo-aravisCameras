@@ -181,6 +181,7 @@ namespace karabo {
         bool resolveHostname(const std::string& hostname, std::string& ip_address, std::string& message);
 
         mutable boost::mutex m_stream_mtx; // Object lock for ArvStream
+        bool m_need_stream_clear;          // After a reconfiguration the stream need to be cleared
         ArvStream* m_stream;
 
         bool m_is_binning_available;
