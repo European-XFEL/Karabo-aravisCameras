@@ -169,7 +169,6 @@ namespace karabo {
               .assignmentOptional()
               .defaultValue(false)
               .reconfigurable()
-              .allowedStates(State::UNKNOWN, State::ON)
               .commit();
 
         FLOAT_ELEMENT(expected)
@@ -184,7 +183,6 @@ namespace karabo {
               .minInc(0.)
               .unit(Unit::HERTZ)
               .reconfigurable()
-              .allowedStates(State::UNKNOWN, State::ON)
               .commit();
 
         FLOAT_ELEMENT(expected)
@@ -439,7 +437,6 @@ namespace karabo {
               .defaultValue(10.)
               .minExc(0.)
               .reconfigurable()
-              .allowedStates(State::UNKNOWN, State::ON)
               .commit();
 
         STRING_ELEMENT(expected)
@@ -497,7 +494,6 @@ namespace karabo {
               .defaultValue("Off")
               .options("Off,Once,Continuous")
               .reconfigurable()
-              .allowedStates(State::UNKNOWN, State::ON)
               .commit();
 
         BOOL_ELEMENT(expected)
@@ -516,7 +512,6 @@ namespace karabo {
               .assignmentOptional()
               .noDefaultValue()
               .reconfigurable()
-              .allowedStates(State::UNKNOWN, State::ON)
               .commit();
 
         DOUBLE_ELEMENT(expected)
@@ -642,12 +637,10 @@ namespace karabo {
 
     void AravisCamera::preReconfigure(karabo::data::Hash& incomingReconfiguration) {
         this->configure(incomingReconfiguration);
-
-        // Clear the stream.
         // This should not be needed, but what has been observed is that if any
         // camera parameter is set and the stream is not created anew, then
         // when the acquisition is started we do not get any data.
-        this->clear_stream();
+        m_need_stream_clear = true;
     }
 
 
@@ -2014,10 +2007,12 @@ namespace karabo {
                 return;
             }
 
-            if (m_stream != nullptr && payload != m_buffer_size) {
-                // The payload size changed:
+            if (m_stream != nullptr && (payload != m_buffer_size || m_need_stream_clear)) {
+                // The payload size changed, or the stream need to be cleared for other reasons:
                 // clear the stream and the associated buffers.
+
                 this->clear_stream();
+                m_need_stream_clear = false;
             }
             m_buffer_size = payload;
 
@@ -2211,6 +2206,8 @@ namespace karabo {
                 KARABO_LOG_FRAMEWORK_WARN << deviceId << ": Failed to make stream thread high priority";
             }
         } else if (type == ARV_STREAM_CALLBACK_TYPE_BUFFER_DONE) {
+            boost::mutex::scoped_lock stream_lock(self->m_stream_mtx);
+
             // The buffer is received, successfully or not
             ArvBufferStatus buffer_status = arv_buffer_get_status(buffer);
             if (buffer == arv_stream_pop_buffer(self->m_stream) && buffer_status == ARV_BUFFER_STATUS_SUCCESS) {
@@ -2347,8 +2344,10 @@ namespace karabo {
                 }
         }
 
-        // Push back the buffer to the stream
-        arv_stream_push_buffer(m_stream, arv_buffer);
+        { // Push back the buffer to the stream
+            arv_stream_push_buffer(m_stream, arv_buffer);
+            boost::mutex::scoped_lock stream_lock(m_stream_mtx);
+        }
 
         m_counter += 1;
 
