@@ -88,6 +88,9 @@ namespace karabo {
         ArvDevice* m_device;
         ArvChunkParser* m_parser;
 
+        unsigned long long m_timestampErrorCount;
+        std::string m_timestampError;
+
         bool isFeatureAvailable(const std::string& feature) const;
         virtual void configure(karabo::data::Hash& configuration);
 
