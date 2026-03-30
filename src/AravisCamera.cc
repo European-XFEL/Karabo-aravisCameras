@@ -211,6 +211,23 @@ namespace karabo {
               .defaultValue("")
               .commit();
 
+        UINT64_ELEMENT(expected)
+              .key("timestampErrorCount")
+              .displayedName("Timestamp Error Count")
+              .description("The number of errors occurred while reading image timestamp.")
+              .unit(Unit::COUNT)
+              .readOnly()
+              .defaultValue(0)
+              .commit();
+
+        STRING_ELEMENT(expected)
+              .key("lastTimestampError")
+              .displayedName("Last Timestamp Error")
+              .description("Description of the last error occurred while reading image timestamp.")
+              .readOnly()
+              .defaultValue("")
+              .commit();
+
         NODE_ELEMENT(expected)
               .key("latency")
               .displayedName("Image Latency")
@@ -575,6 +592,7 @@ namespace karabo {
           m_camera(nullptr),
           m_device(nullptr),
           m_parser(nullptr),
+          m_timestampErrorCount(0),
           m_chunk_mode(false),
           m_width(0),
           m_height(0),
@@ -2086,6 +2104,8 @@ namespace karabo {
         h.set("frameRate.actual", 0.);
         h.set("errorCount", 0ull);
         h.set("lastError", "");
+        h.set("timestampErrorCount", 0ull);
+        h.set("lastTimestampError", "");
         h.set("latency.mean", 0.);
         h.set("latency.min", 0.);
         h.set("latency.max", 0.);
@@ -2098,6 +2118,8 @@ namespace karabo {
         m_is_acquiring = false;
         m_errorCount = 0;
         m_lastError = ARV_BUFFER_STATUS_SUCCESS;
+        m_timestampErrorCount = 0;
+        m_timestampError = "";
 
         if (error != nullptr) {
             const std::string message("Could not stop acquisition");
@@ -3080,6 +3102,13 @@ namespace karabo {
                 if (lastError != this->get<std::string>("lastError")) {
                     h.set("lastError", lastError);
                 }
+            }
+        }
+
+        if (m_timestampErrorCount != this->get<unsigned long long>("timestampErrorCount")) {
+            h.set("timestampErrorCount", m_timestampErrorCount);
+            if (m_timestampError != this->get<std::string>("lastTimestampError")) {
+                h.set("lastTimestampError", m_timestampError);
             }
         }
 

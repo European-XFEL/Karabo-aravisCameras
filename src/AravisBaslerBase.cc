@@ -195,8 +195,8 @@ namespace karabo {
             timestamp = arv_chunk_parser_get_integer_value(m_parser, buffer, tsFeature.c_str(), &error);
         }
         if (error != nullptr) {
-            KARABO_LOG_FRAMEWORK_ERROR << this->getInstanceId()
-                                       << ": Could not read image timestamp: " << error->message;
+            ++m_timestampErrorCount;
+            m_timestampError = error->message;
             g_clear_error(&error);
             return false; // failure
         }
