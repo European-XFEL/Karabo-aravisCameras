@@ -2592,6 +2592,17 @@ namespace karabo {
         Hash h;
         this->pollGenicamFeatures(paths, h);
 
+        const std::string& autoGainStr = this->get<std::string>("autoGain");
+        if (autoGainStr == "Once") {
+            // When auto-gain is set to "Once", the camera will set it back to "Off" after an
+            // image is acquired. Therefore we monitor the value and follow its changes.
+            boost::mutex::scoped_lock camera_lock(m_camera_mtx);
+            const ArvAuto autoGain = arv_camera_get_gain_auto(m_camera, nullptr);
+            if (autoGainStr != arv_auto_to_string(autoGain)) {
+                h.set("autoGain", arv_auto_to_string(autoGain));
+            }
+        }
+
         this->set(h);
 
         const int pollingInterval = this->get<int>("pollingInterval");
