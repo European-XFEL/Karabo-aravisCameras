@@ -25,7 +25,7 @@ target_sources(
     # see https://stackoverflow.com/questions/32411963/why-is-cmake-file-glob-evil.
 )
 
-pkg_check_modules(ARV REQUIRED aravis-0.8)
+pkg_check_modules(ARV REQUIRED aravis-0.10)
 
 target_compile_options(
     ${CMAKE_PROJECT_NAME}

@@ -2037,8 +2037,8 @@ namespace karabo {
             if (m_stream == nullptr) {
                 boost::mutex::scoped_lock stream_lock(m_stream_mtx);
 
-                m_stream =
-                      arv_camera_create_stream(m_camera, AravisCamera::stream_cb, static_cast<void*>(this), &error);
+                m_stream = arv_camera_create_stream(m_camera, AravisCamera::stream_cb, static_cast<void*>(this),
+                                                    nullptr, &error);
 
                 if (error != nullptr) {
                     std::stringstream ss;
