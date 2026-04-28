@@ -134,16 +134,6 @@ namespace karabo {
               .allowedStates(State::UNKNOWN, State::ON)
               .commit();
 
-        INT32_ELEMENT(expected)
-              .key("gevTimestampTickFrequency")
-              .alias("GevTimestampTickFrequency")
-              .tags("genicam")
-              .displayedName("Tick Frequency")
-              .description("This value indicates the number of clock ticks per second.")
-              .unit(Unit::HERTZ)
-              .readOnly()
-              .commit();
-
         // **************************************************************************************************************
         //                                   READ ONLY HARDWARE PARAMETERS
         // **************************************************************************************************************
@@ -178,8 +168,7 @@ namespace karabo {
               .commit();
     }
 
-    AravisBaslerBase::AravisBaslerBase(const karabo::data::Hash& config)
-        : AravisCamera(config), m_ptp_enabled(false), m_tick_frequency(0) {
+    AravisBaslerBase::AravisBaslerBase(const karabo::data::Hash& config) : AravisCamera(config), m_ptp_enabled(false) {
         m_is_base_class = false;
         this->registerScene(std::bind(&AravisBaslerBase::aravisBaslerScene, this), "scene");
     }
@@ -201,10 +190,17 @@ namespace karabo {
             return false; // failure
         }
 
+        const int tick_frequency = this->get<int>("tickFrequency");
+        if (tick_frequency == 0) {
+            KARABO_LOG_FRAMEWORK_ERROR << this->getInstanceId()
+                                       << ": Could not read image timestamp: tick_frequency is 0";
+            return false; // failure
+        }
+
         // Elapsed time since last synchronization.
         // NB This can be negative, if the image acquisition started before
         //    synchronization, but finished after.
-        const double elapsed_t = double(timestamp - m_reference_camera_timestamp) / m_tick_frequency;
+        const double elapsed_t = double(timestamp - m_reference_camera_timestamp) / tick_frequency;
 
         // Split elapsed time in seconds and attoseconds, then convert to TimeDuration.
         // elapsed_t is in seconds and TimeDuration expects fractions in attoseconds,
