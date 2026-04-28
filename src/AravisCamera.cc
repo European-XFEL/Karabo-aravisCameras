@@ -1425,6 +1425,9 @@ namespace karabo {
         return true; // success
     }
 
+    std::string AravisCamera::get_frame_rate_enable_parameter_name() const {
+         return "AcquisitionFrameRateEnable";
+    }
 
     bool AravisCamera::set_frame_rate(bool enable, double frame_rate) {
         GError* error = nullptr;
@@ -1515,10 +1518,11 @@ namespace karabo {
             }
 
         } else { // enable == false
-            arv_device_set_boolean_feature_value(m_device, "AcquisitionFrameRateEnable", false, &error);
+            const std::string parameter_name(get_frame_rate_enable_parameter_name());
+            arv_device_set_boolean_feature_value(m_device, parameter_name.c_str(), false, &error);
             if (error != nullptr) {
                 KARABO_LOG_FRAMEWORK_ERROR << deviceId
-                                           << ": Could not set AcquisitionFrameRateEnable: " << error->message;
+                                           << ": Could not set " << parameter_name << ": " << error->message;
                 g_clear_error(&error);
                 return false; // failure
             }
@@ -1694,7 +1698,7 @@ namespace karabo {
             arv_camera_set_pixel_format_from_string(m_camera, pixelFormat, &error);
             if (error == nullptr) m_format = arv_camera_get_pixel_format(m_camera, &error);
             if (error != nullptr) {
-                KARABO_LOG_FRAMEWORK_ERROR << deviceId << ": cold not set pixel format to " << pixelFormat << ": "
+                KARABO_LOG_FRAMEWORK_ERROR << deviceId << ": could not set pixel format to " << pixelFormat << ": "
                                            << error->message;
                 m_format = 0;
                 configuration.erase("pixelFormat");
@@ -2095,6 +2099,7 @@ namespace karabo {
         KARABO_LOG_ERROR << message;
         KARABO_LOG_FRAMEWORK_ERROR << this->getInstanceId() << ": " << detailed_msg;
         this->set("status", message);
+        this->postAcquisitionStop();
         this->updateState(State::ERROR);
     }
 
@@ -2135,6 +2140,7 @@ namespace karabo {
 
         h.set("status", "Acquisition stopped");
         this->signalEOS(); // End-of-Stream signal
+        this->postAcquisitionStop();
         this->set(h);
         this->updateState(State::ON);
     }
@@ -2189,6 +2195,10 @@ namespace karabo {
         if (success) {
             this->updateState(State::ON);
         }
+    }
+
+    void AravisCamera::postAcquisitionStop() {
+        // Hook that can be implemented in the derived class, if needed.
     }
 
 
@@ -2949,7 +2959,7 @@ namespace karabo {
             KARABO_LOG_FRAMEWORK_WARN << deviceId << ": arv_camera_get_vendor_name failed: " << error->message;
             g_clear_error(&error);
         }
-        if (vendor != "Basler") {
+        if ((vendor != "Basler") && (vendor != "IDS Imaging Development Systems GmbH")){
             // Only enable for Basler
             // XXX Check why this is needed...
             this->disableElement("frameRate.enable", schemaUpdate);

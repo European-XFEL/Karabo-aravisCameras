@@ -19,6 +19,7 @@ target_sources(
     AravisBaslerCameraScene.cc
     AravisBaslerCamera.cc
     AravisBasler2Camera.cc
+    AravisIdsCamera.cc
     AravisPhotonicScienceCamera.cc
 
     # For shortcomings about using file(GLOB ..) to gather source files, please
