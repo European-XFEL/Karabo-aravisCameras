@@ -168,8 +168,17 @@ ctest -VV
 If you want to manually start a server using this device, simply type:
 
 ```
-karabo-cppserver serverId=cppServer/1 deviceClasses=AravisCameras
+karabo-cppserver serverId=cppServer/1 deviceClasses=AravisBasler2Camera,AravisBaslerCamera,...
 ```
+
+and provide in the ``deviceClasses`` parameter the list of camera classes you want to load.
+
+As of today the available ones are
+- ``AravisCamera``: generic class for GenICam cameras;
+- ``AravisBaslerCamera``: the class for 1st generation Basler cameras (acA*, avA*, piA* and raL* models);
+- ``AravisBasler2Camera``: the class for 2nd generation Basler cameras (a2A* models);
+- ``AravisIdsCamera``: the class for IDS cameras (GV-53FxLE-M and GV-58CxLE-M models);
+- ``AravisPhotonicScienceCamera``: the class for Photonic Science cameras (SCMOS model).
 
 Or just use (a properly configured):
 
