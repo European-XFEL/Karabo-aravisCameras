@@ -17,7 +17,7 @@ namespace karabo {
         output << ""
                   "<?xml version=\"1.0\"?>"
                   "<svg:svg xmlns:krb=\"http://karabo.eu/scene\" xmlns:svg=\"http://www.w3.org/2000/svg\" "
-                  "height=\"654\" width=\"774\" krb:uuid=\"dbad6660-213f-4a1b-b529-f752f46bed34\" krb:version=\"2\">"
+                  "height=\"684\" width=\"774\" krb:uuid=\"dbad6660-213f-4a1b-b529-f752f46bed34\" krb:version=\"2\">"
                   "<svg:rect height=\"41\" width=\"461\" x=\"10\" y=\"10\" krb:class=\"DisplayComponent\" "
                   "krb:font_size=\"16\" krb:font_weight=\"bold\" krb:keys=\""
                << instanceId
@@ -27,13 +27,13 @@ namespace karabo {
                   "krb:frameWidth=\"0\" krb:text=\"Frame Rate\"/>"
                   "<svg:rect height=\"21\" width=\"82\" x=\"679\" y=\"10\" krb:class=\"DisplayComponent\" krb:keys=\""
                << instanceId
-               << ".frameRate.actual\" krb:widget=\"DisplayLabel\"/>"
+               << ".frameRate.actual\" krb:widget=\"DisplayFloat\" krb:fmt=\"f\" krb:decimals=\"2\"/>"
                   "<svg:rect height=\"21\" width=\"91\" x=\"590\" y=\"30\" krb:background=\"transparent\" "
                   "krb:class=\"Label\" krb:font=\"Source Sans Pro,10,-1,5,50,0,0,0,0,0\" krb:foreground=\"#000000\" "
                   "krb:frameWidth=\"0\" krb:text=\"Mean Latency\"/>"
                   "<svg:rect height=\"21\" width=\"81\" x=\"680\" y=\"30\" krb:class=\"DisplayComponent\" krb:keys=\""
                << instanceId
-               << ".latency.mean\" krb:widget=\"DisplayLabel\"/>"
+               << ".latency.mean\" krb:widget=\"DisplayFloat\" krb:fmt=\"f\" krb:decimals=\"2\"/>"
                   "<svg:rect height=\"27\" width=\"35\" x=\"10\" y=\"560\" krb:background=\"transparent\" "
                   "krb:class=\"Label\" krb:font=\"Source Sans Pro,10,-1,5,50,0,0,0,0,0\" krb:foreground=\"#000000\" "
                   "krb:frameWidth=\"0\" krb:text=\"Gain\"/>"
@@ -56,11 +56,21 @@ namespace karabo {
                << ".exposureTime\" krb:widget=\"DoubleLineEdit\"/>"
                   "<svg:rect height=\"25\" width=\"90\" x=\"10\" y=\"620\" krb:background=\"transparent\" "
                   "krb:class=\"Label\" krb:font=\"Source Sans Pro,10,-1,5,50,0,0,0,0,0\" krb:foreground=\"#000000\" "
-                  "krb:frameWidth=\"0\" krb:text=\"Trigger Source\"/>"
+                  "krb:frameWidth=\"0\" krb:text=\"Trigger Mode\"/>"
                   "<svg:rect height=\"25\" width=\"91\" x=\"120\" y=\"620\" krb:class=\"DisplayComponent\" krb:keys=\""
                << instanceId
-               << ".triggerSource\" krb:widget=\"DisplayLabel\"/>"
+               << ".triggerMode\" krb:widget=\"DisplayLabel\"/>"
                   "<svg:rect height=\"25\" width=\"91\" x=\"220\" y=\"620\" krb:class=\"EditableApplyLaterComponent\" "
+                  "krb:keys=\""
+               << instanceId
+               << ".triggerMode\" krb:widget=\"EditableComboBox\"/>"
+                  "<svg:rect height=\"25\" width=\"90\" x=\"10\" y=\"650\" krb:background=\"transparent\" "
+                  "krb:class=\"Label\" krb:font=\"Source Sans Pro,10,-1,5,50,0,0,0,0,0\" krb:foreground=\"#000000\" "
+                  "krb:frameWidth=\"0\" krb:text=\"Trigger Source\"/>"
+                  "<svg:rect height=\"25\" width=\"91\" x=\"120\" y=\"650\" krb:class=\"DisplayComponent\" krb:keys=\""
+               << instanceId
+               << ".triggerSource\" krb:widget=\"DisplayLabel\"/>"
+                  "<svg:rect height=\"25\" width=\"91\" x=\"220\" y=\"650\" krb:class=\"EditableApplyLaterComponent\" "
                   "krb:keys=\""
                << instanceId
                << ".triggerSource\" krb:widget=\"EditableComboBox\"/>"
