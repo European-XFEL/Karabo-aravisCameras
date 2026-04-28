@@ -117,6 +117,13 @@ namespace karabo {
         double m_min_latency;
         double m_max_latency;
 
+
+
+       protected:
+        void clear_stream();
+        virtual void postAcquisitionStop();
+        virtual std::string get_frame_rate_enable_parameter_name() const;
+
        private:
         karabo::net::Strand::Pointer m_outputStrand;
 
@@ -167,7 +174,6 @@ namespace karabo {
         Result setFloatFeature(const std::string& feature, double& value);
 
         void clear_camera();
-        void clear_stream();
 
         static void stream_cb(void* context, ArvStreamCallbackType type, ArvBuffer* buffer);
         void process_buffer(ArvBuffer* buffer);
