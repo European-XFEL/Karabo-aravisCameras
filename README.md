@@ -58,7 +58,7 @@ request before you send the CLA.
 
 ## Source Code
 
-The sources for this project can be found at 
+The sources for this project can be found at
 https://github.com/European-XFEL/Karabo-aravisCameras
 
 ## Dependencies
@@ -68,7 +68,7 @@ https://github.com/European-XFEL/Karabo-aravisCameras
   - meson (https://pypi.org/project/meson/)
   - ninja (https://pypi.org/project/ninja/)
 
-- imageSource (https://git.xfel.eu/karaboDevices/imageSource or
+- imageSource (https://git.xfel.eu/karabodevices3/imageSource or
   https://github.com/European-XFEL/imageSource)
 
   - opencv (https://opencv.org/)
@@ -86,7 +86,7 @@ SUBSYSTEM=="usb", ATTRS{idVendor}=="2676", MODE:="0666", TAG+="uaccess", TAG+="u
 
 ## Installing and Running from PyPI
 
-The device can further be installed from PyPI and ships in the form of 
+The device can further be installed from PyPI and ships in the form of
 a self-hosting device server. To install, run
 
 ```
@@ -109,7 +109,7 @@ You can directly start a device connected to a network camera using e.g.
 
 ```
 karabo-aravis-cameras-server \
-   serverId=MyServer 
+   serverId=MyServer
    init='{"MyCamera": {"classId": "AravisBaslerCamera", "cameraId": "192.168.0.1"}}'
 ```
 
