@@ -31,6 +31,17 @@ void AravisIdsCamera::expectedParameters(Schema& expected) {
         .setNewAlias("ReverseY")
         .setNewTags({"genicam"})
         .commit();
+
+    FLOAT_ELEMENT(expected)
+        .key("temperature")
+        .alias("DeviceTemperature")
+        .tags("poll")
+        .displayedName("Temperature")
+        .description("Shows the current temperature of the camera board.")
+        .unit(Unit::DEGREE_CELSIUS)
+        .readOnly()
+        .commit();
+
 }
 
 AravisIdsCamera::AravisIdsCamera(const karabo::data::Hash& config)
