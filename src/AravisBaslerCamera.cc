@@ -112,6 +112,35 @@ namespace karabo {
               .reconfigurable()
               .allowedStates(State::UNKNOWN, State::ON)
               .commit();
+
+        FLOAT_ELEMENT(expected)
+              .key("resultingLinePeriodAbs")
+              .alias("ResultingLinePeriodAbs")
+              .tags("poll")
+              .displayedName("Resulting Line Period (Abs)")
+              .description(
+                    "Indicates the 'absolute' value of the minimum allowed acquisition line period. "
+                    "The 'absolute' value is a float value that indicates the minimum allowed acquisition line "
+                    "period in microseconds given the current settings for the area of interest, exposure time, "
+                    "and bandwidth.")
+              .unit(Unit::SECOND)
+              .metricPrefix(MetricPrefix::MICRO)
+              .readOnly()
+              .commit();
+
+        FLOAT_ELEMENT(expected)
+              .key("resultingLineRateAbs")
+              .alias("ResultingLineRateAbs")
+              .tags("poll")
+              .displayedName("Resulting Line Rate (Abs)")
+              .description(
+                    "Indicates the 'absolute' value of the maximum allowed acquisition line rate. "
+                    "The 'absolute' value is a float value that indicates the maximum allowed acquisition line "
+                    "rate in lines per second given the current settings for the area of interest, exposure time, "
+                    "and bandwidth.")
+              .unit(Unit::HERTZ)
+              .readOnly()
+              .commit();
     }
 
     AravisBaslerCamera::AravisBaslerCamera(const karabo::data::Hash& config) : AravisBaslerBase(config) {
