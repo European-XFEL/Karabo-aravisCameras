@@ -29,8 +29,8 @@ namespace karabo {
               .setNewDefaultValue("Mono12p")
               .commit();
 
-        // This class supports the following models: ace2 (Area Scan)
-        const std::vector<std::string> supportedModels = {"a2A"};
+        // This class supports the following models: ace2 (Area Scan) and racer2 (Line Scan)
+        const std::vector<std::string> supportedModels = {"a2A", "r2L"};
         OVERWRITE_ELEMENT(expected).key("supportedModels").setNewDefaultValue(supportedModels).commit();
 
         FLOAT_ELEMENT(expected)
@@ -88,6 +88,16 @@ namespace karabo {
               .options("Global,Rolling,GlobalResetRelease")
               .reconfigurable()
               .allowedStates(State::UNKNOWN, State::ON)
+              .commit();
+
+        FLOAT_ELEMENT(expected)
+              .key("resultingAcquisitionLineRate")
+              .alias("BslResultingAcquisitionLineRate")
+              .tags("poll")
+              .displayedName("Resulting Acquisition Line Rate")
+              .description("Maximum number of lines that can be acquired with current camera settings.")
+              .unit(Unit::HERTZ)
+              .readOnly()
               .commit();
     }
 

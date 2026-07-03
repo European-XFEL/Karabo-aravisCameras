@@ -1421,15 +1421,12 @@ namespace karabo {
         }
 
         if (error != nullptr) {
-            KARABO_LOG_FRAMEWORK_ERROR << deviceId << ": arv_camera_get_xxx_increment failed: " << error->message;
+            KARABO_LOG_FRAMEWORK_ERROR << deviceId << ": arv_camera_get_*_increment failed: " << error->message;
             g_clear_error(&error);
-            return false; // failure
-        } else if (incr == G_MINDOUBLE) {
-            KARABO_LOG_FRAMEWORK_ERROR << deviceId << ": could not read exposure time increment";
             return false; // failure
         }
 
-        if (incr > 0.) {
+        if (incr > G_MINDOUBLE) {
             // Exposure time must be incremented in steps.
             exposure_time = tmin + incr * round((exposure_time - tmin) / incr);
         }
@@ -1449,7 +1446,7 @@ namespace karabo {
     }
 
     std::string AravisCamera::get_frame_rate_enable_parameter_name() const {
-         return "AcquisitionFrameRateEnable";
+        return "AcquisitionFrameRateEnable";
     }
 
     bool AravisCamera::set_frame_rate(bool enable, double frame_rate) {
@@ -1544,8 +1541,8 @@ namespace karabo {
             const std::string parameter_name(get_frame_rate_enable_parameter_name());
             arv_device_set_boolean_feature_value(m_device, parameter_name.c_str(), false, &error);
             if (error != nullptr) {
-                KARABO_LOG_FRAMEWORK_ERROR << deviceId
-                                           << ": Could not set " << parameter_name << ": " << error->message;
+                KARABO_LOG_FRAMEWORK_ERROR << deviceId << ": Could not set " << parameter_name << ": "
+                                           << error->message;
                 g_clear_error(&error);
                 return false; // failure
             }
@@ -1769,6 +1766,7 @@ namespace karabo {
 
             const bool success = this->set_exposure_time(exposureTime);
             if (success) { // update the value
+                exposureTime = arv_camera_get_exposure_time(m_camera, nullptr);
                 configuration.set("exposureTime", exposureTime);
             } else {
                 configuration.erase("exposureTime");
@@ -2983,6 +2981,7 @@ namespace karabo {
         }
 
         if (!m_is_frame_rate_available) {
+            this->disableElement("frameRate.enable", schemaUpdate);
             this->disableElement("frameRate.target", schemaUpdate);
         }
 
@@ -2991,8 +2990,8 @@ namespace karabo {
             KARABO_LOG_FRAMEWORK_WARN << deviceId << ": arv_camera_get_vendor_name failed: " << error->message;
             g_clear_error(&error);
         }
-        if ((vendor != "Basler") && (vendor != "IDS Imaging Development Systems GmbH")){
-            // Only enable for Basler
+        if ((vendor != "Basler") && (vendor != "IDS Imaging Development Systems GmbH")) {
+            // Only enable for Basler / IDS
             // XXX Check why this is needed...
             this->disableElement("frameRate.enable", schemaUpdate);
         }
