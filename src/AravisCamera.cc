@@ -651,13 +651,17 @@ namespace karabo {
     }
 
 
-    AravisCamera::~AravisCamera() {
-        this->clear_stream();
-        this->clear_camera();
-
+    void AravisCamera::preDestruction() {
         m_connect = false;
         m_reconnect_timer.cancel();
         m_poll_timer.cancel();
+
+        if (this->getState() == State::ACQUIRING) {
+            this->stop();
+        }
+
+        this->clear_stream();
+        this->clear_camera();
     }
 
 

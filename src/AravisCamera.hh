@@ -49,7 +49,9 @@ namespace karabo {
         /**
          * The destructor will be called in case the device gets killed
          */
-        virtual ~AravisCamera();
+        virtual ~AravisCamera() = default;
+
+        virtual void preDestruction() final;
 
         /**
          * This function acts as a hook and is called after an reconfiguration request was received,
