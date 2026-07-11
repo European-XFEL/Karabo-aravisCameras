@@ -37,6 +37,15 @@ namespace karabo {
 
         const std::vector<std::string> binModes = {"Sum", "Average"};
 
+        OVERWRITE_ELEMENT(expected)
+              .key("bin.x")
+              .setNewAlias("BinningHorizontal")
+              .setNewTags({"genicam"})
+              .setNewDescription(
+                    "Number of adjacent horizontal pixels to be summed. Their charges will be summed and reported out "
+                    "of the camera as a single pixel.")
+              .commit();
+
         STRING_ELEMENT(expected)
               .key("bin.binningHorizontalMode")
               .alias("BinningHorizontalMode")
@@ -50,11 +59,20 @@ namespace karabo {
               .allowedStates(State::UNKNOWN, State::ON)
               .commit();
 
+        OVERWRITE_ELEMENT(expected)
+              .key("bin.y")
+              .setNewAlias("BinningVertical")
+              .setNewTags({"genicam"})
+              .setNewDescription(
+                    "Number of adjacent verrtical pixels to be summed. Their charges will be summed and reported out "
+                    "of the camera as a single pixel.")
+              .commit();
+
         STRING_ELEMENT(expected)
               .key("bin.binningVerticalMode")
               .alias("BinningVerticalMode")
               .tags("genicam")
-              .displayedName("Binning Verticall Mode")
+              .displayedName("Binning Vertical Mode")
               .description("Sets the binning mode for vertical binning.")
               .assignmentOptional()
               .defaultValue("Sum")
@@ -214,6 +232,10 @@ namespace karabo {
 
         const std::string feature = this->getAliasFromKey<std::string>("flip.Y");
         return this->isFeatureAvailable(feature);
+    }
+
+    void AravisBaslerBase::postAcquisitionStop() {
+        this->clear_stream();
     }
 
     void AravisBaslerBase::resetCamera() {

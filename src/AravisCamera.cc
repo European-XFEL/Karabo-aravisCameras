@@ -1133,7 +1133,23 @@ namespace karabo {
                 h.set("height", height);
             }
 
+            // There are two ways of accessing camera features in ARAVIS, the low-level one (arv_device_* commands) and
+            // the high-level one (arv_camera_* commands).
+            // In the first case we need to know the GenICam feature name, which can have different name for
+            // different vendors. But if the camera vendor/type is known to ARAVIS, the library allows to use
+            // high-level functions (arv_camera_*) without knowing the camera details. In the case of binning one can
+            // use the arv_camera_set_binning function.
+            // Here we use arv_camera_is_binning_available to check whether the arv_camera_set_binning and the other
+            // high-level binning-related functions can be used; if so we set m_is_binning_available to true.
+            // For cameras where the high-level functions cannot be used for binning, but still the binning is
+            // available, we need to define alias and tags for "bin.x" and "bin.y", respectively to the feature name
+            // and to "genicam", then AravisCamera::configure will set the binning by calling the low-level
+            // arv_device_set_integer_feature_value function. There is also a protection in place to avoid that the
+            // binning parameters are set twice by high-level and low-level function calls.
+            // In case they are accessible via arv_camera_set_binning and they also have an alias, only the high-level
+            // function will be called.
             if (error == nullptr) m_is_binning_available = arv_camera_is_binning_available(m_camera, &error);
+
             if (error == nullptr) {
                 m_is_exposure_time_available = arv_camera_is_exposure_time_available(m_camera, &error);
             }
@@ -1731,16 +1747,19 @@ namespace karabo {
             m_need_schema_update = true; // Schema update is needes as data type changed
         }
 
-        if (configuration.has("bin") && m_is_binning_available) {
-            int bin_x = GET_PATH(configuration, "bin.x", int);
-            int bin_y = GET_PATH(configuration, "bin.y", int);
+        if (configuration.has("bin")) {
+            if (m_is_binning_available) {
+                // Use arv_camera functions to set binning
+                int bin_x = GET_PATH(configuration, "bin.x", int);
+                int bin_y = GET_PATH(configuration, "bin.y", int);
 
-            const bool success = this->set_binning(bin_x, bin_y);
-            if (success) { // update values
-                configuration.set("bin.x", bin_x);
-                configuration.set("bin.y", bin_y);
-            } else {
-                configuration.erase("bin");
+                const bool success = this->set_binning(bin_x, bin_y);
+                if (success) { // update values
+                    configuration.set("bin.x", bin_x);
+                    configuration.set("bin.y", bin_y);
+                } else {
+                    configuration.erase("bin");
+                }
             }
             m_need_schema_update = true; // Schema update is needed as image shape changed
         }
@@ -1904,6 +1923,11 @@ namespace karabo {
 
             if (accessMode == AccessType::READ) {
                 // Read-Only parameter
+                continue;
+            }
+
+            if (m_is_binning_available && (key == "bin.x" || key == "bin.y")) {
+                // Already taken care previously by calling set_binning
                 continue;
             }
 
@@ -2976,8 +3000,14 @@ namespace karabo {
         }
 
         if (!m_is_binning_available) {
-            this->disableElement("bin.x", schemaUpdate);
-            this->disableElement("bin.y", schemaUpdate);
+            // Binning is not available to arv_camera commands, but the feature can still be
+            // accessible by alias.
+            if (!this->keyHasAlias("bin.x")) {
+                this->disableElement("bin.x", schemaUpdate);
+            }
+            if (!this->keyHasAlias("bin.y")) {
+                this->disableElement("bin.y", schemaUpdate);
+            }
         }
 
         if (!m_is_exposure_time_available) {
