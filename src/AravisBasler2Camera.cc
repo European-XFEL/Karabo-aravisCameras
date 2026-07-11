@@ -33,18 +33,6 @@ namespace karabo {
         const std::vector<std::string> supportedModels = {"a2A", "r2L"};
         OVERWRITE_ELEMENT(expected).key("supportedModels").setNewDefaultValue(supportedModels).commit();
 
-        FLOAT_ELEMENT(expected)
-              .key("resultingFrameRate")
-              .alias("ResultingFrameRate")
-              .tags("poll")
-              .displayedName("Resulting Frame Rate")
-              .description(
-                    "Maximum frame acquisition rate with current camera settings (in "
-                    "frames per second).")
-              .unit(Unit::HERTZ)
-              .readOnly()
-              .commit();
-
         STRING_ELEMENT(expected)
               .key("temperatureSelector")
               .alias("DeviceTemperatureSelector")
@@ -77,15 +65,39 @@ namespace karabo {
               .readOnly()
               .commit();
 
-        STRING_ELEMENT(expected)
-              .key("shutterMode")
-              .alias("SensorShutterMode")
+        FLOAT_ELEMENT(expected)
+              .key("resultingFrameRate")
+              .alias("ResultingFrameRate")
+              .tags("poll")
+              .displayedName("Resulting Frame Rate")
+              .description(
+                    "Maximum frame acquisition rate with current camera settings (in "
+                    "frames per second).")
+              .unit(Unit::HERTZ)
+              .readOnly()
+              .commit();
+
+        FLOAT_ELEMENT(expected)
+              .key("acquisitionLineRate")
+              .alias("AcquisitionLineRate")
               .tags("genicam")
-              .displayedName("Shutter Mode")
-              .description("Sets the shutter mode of the camera.")
+              .displayedName("Acquisition Line Rate")
+              .description("Acquisition line rate of the camera.")
+              .unit(Unit::HERTZ)
               .assignmentOptional()
-              .defaultValue("Global")
-              .options("Global,Rolling,GlobalResetRelease")
+              .noDefaultValue()
+              .reconfigurable()
+              .allowedStates(State::UNKNOWN, State::ON)
+              .commit();
+
+        BOOL_ELEMENT(expected)
+              .key("acquisitionLineRateEnable")
+              .alias("AcquisitionLineRateEnable")
+              .tags("genicam")
+              .displayedName("Acquisition Line Rate Enable")
+              .description("Enables setting the camera's acquisition line rate to a specified value.")
+              .assignmentOptional()
+              .defaultValue(false)
               .reconfigurable()
               .allowedStates(State::UNKNOWN, State::ON)
               .commit();
@@ -98,6 +110,19 @@ namespace karabo {
               .description("Maximum number of lines that can be acquired with current camera settings.")
               .unit(Unit::HERTZ)
               .readOnly()
+              .commit();
+
+        STRING_ELEMENT(expected)
+              .key("shutterMode")
+              .alias("SensorShutterMode")
+              .tags("genicam")
+              .displayedName("Shutter Mode")
+              .description("Sets the shutter mode of the camera.")
+              .assignmentOptional()
+              .defaultValue("Global")
+              .options("Global,Rolling,GlobalResetRelease")
+              .reconfigurable()
+              .allowedStates(State::UNKNOWN, State::ON)
               .commit();
     }
 
