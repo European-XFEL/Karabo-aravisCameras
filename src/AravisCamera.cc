@@ -600,7 +600,7 @@ namespace karabo {
           m_camera(nullptr),
           m_device(nullptr),
           m_parser(nullptr),
-          m_timestampErrorCount(0),
+          m_timestampErrorCount(0ull),
           m_chunk_mode(false),
           m_width(0),
           m_height(0),
@@ -624,7 +624,7 @@ namespace karabo {
           m_is_frame_rate_available(false),
           m_is_gain_available(false),
           m_is_gain_auto_available(false),
-          m_errorCount(0),
+          m_errorCount(0ull),
           m_lastError(ARV_BUFFER_STATUS_SUCCESS),
           m_counter(0) {
         m_max_correction_time = config.get<unsigned int>("maxCorrectionTime");
@@ -1053,14 +1053,13 @@ namespace karabo {
                 const std::string msg("Unsupported interface standard");
                 h.set("status", msg);
                 KARABO_LOG_ERROR << msg;
-                this->set(h);
 
                 // Must unlock before 'clear_camera' is called
                 camera_lock.unlock();
                 this->clear_camera();
                 // Camera not supported -> quit connection loop
                 m_connect = false;
-                this->updateState(State::ERROR);
+                this->updateState(State::ERROR, h);
                 return;
             }
 
@@ -1078,13 +1077,12 @@ namespace karabo {
             // For derived classes, check that vendor and model are supported by the class
             const bool is_supported = m_is_base_class || this->verify_vendor_and_model(vendor, model);
             if (!is_supported) {
-                this->set(h);
                 // Must unlock before 'clear_camera' is called
                 camera_lock.unlock();
                 this->clear_camera();
                 // Camera not supported -> quit connection loop. It can be restarted by 'reset'
                 m_connect = false;
-                this->updateState(State::ERROR);
+                this->updateState(State::ERROR, h);
                 return;
             }
 
@@ -2153,22 +2151,21 @@ namespace karabo {
 
         KARABO_LOG_ERROR << message;
         KARABO_LOG_FRAMEWORK_ERROR << this->getInstanceId() << ": " << detailed_msg;
-        this->set("status", message);
         this->postAcquisitionStop();
-        this->updateState(State::ERROR);
+        this->updateState(State::ERROR, Hash("status", message));
     }
 
 
     void AravisCamera::stop() {
         Hash h;
-        h.set("frameRate.actual", 0.);
+        h.set("frameRate.actual", 0.f);
         h.set("errorCount", 0ull);
         h.set("lastError", "");
         h.set("timestampErrorCount", 0ull);
         h.set("lastTimestampError", "");
-        h.set("latency.mean", 0.);
-        h.set("latency.min", 0.);
-        h.set("latency.max", 0.);
+        h.set("latency.mean", 0.f);
+        h.set("latency.min", 0.f);
+        h.set("latency.max", 0.f);
 
         GError* error = nullptr;
         {
@@ -2188,16 +2185,14 @@ namespace karabo {
                                        << ": arv_camera_stop_acquisition failed: " << error->message;
             g_clear_error(&error);
             h.set("status", message);
-            this->set(h);
-            this->updateState(State::ERROR);
+            this->updateState(State::ERROR, h);
             return;
         }
 
         h.set("status", "Acquisition stopped");
         this->signalEOS(); // End-of-Stream signal
         this->postAcquisitionStop();
-        this->set(h);
-        this->updateState(State::ON);
+        this->updateState(State::ON, h);
     }
 
 
@@ -2236,8 +2231,7 @@ namespace karabo {
     void AravisCamera::reset() {
         if (!m_connect) {
             // Connection task has been stopped
-            this->updateState(State::UNKNOWN);
-            this->set("status", "");
+            this->updateState(State::UNKNOWN, Hash("status", ""));
             m_connect = true;
             m_reconnect_timer.expires_from_now(boost::posix_time::milliseconds(1));
             m_reconnect_timer.async_wait(
@@ -2248,7 +2242,7 @@ namespace karabo {
         // Poll parameters and update options
         const bool success = this->updateOutputSchema();
         if (success) {
-            this->updateState(State::ON);
+            this->updateState(State::ON, Hash("status", ""));
         }
     }
 
@@ -3172,9 +3166,9 @@ namespace karabo {
 
         if (m_counter > 0) { // Only update if available
             // Convert latency to ms
-            h.set("latency.min", 1000. * m_min_latency);
-            h.set("latency.max", 1000. * m_max_latency);
-            h.set("latency.mean", 1000. * m_mean_latency);
+            h.set<float>("latency.min", 1000. * m_min_latency);
+            h.set<float>("latency.max", 1000. * m_max_latency);
+            h.set<float>("latency.mean", 1000. * m_mean_latency);
         }
 
         // Calculate frame rate
