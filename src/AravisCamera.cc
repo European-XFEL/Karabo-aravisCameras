@@ -2149,9 +2149,10 @@ namespace karabo {
     void AravisCamera::acquire_failed_helper(const std::string& detailed_msg) {
         const std::string message("Could not start acquisition");
 
+        this->clear_stream();
+
         KARABO_LOG_ERROR << message;
         KARABO_LOG_FRAMEWORK_ERROR << this->getInstanceId() << ": " << detailed_msg;
-        this->postAcquisitionStop();
         this->updateState(State::ERROR, Hash("status", message));
     }
 
@@ -2172,6 +2173,7 @@ namespace karabo {
             boost::mutex::scoped_lock camera_lock(m_camera_mtx);
             arv_camera_stop_acquisition(m_camera, &error);
         }
+        this->clear_stream();
         m_is_acquiring = false;
         m_errorCount = 0;
         m_lastError = ARV_BUFFER_STATUS_SUCCESS;
@@ -2191,7 +2193,6 @@ namespace karabo {
 
         h.set("status", "Acquisition stopped");
         this->signalEOS(); // End-of-Stream signal
-        this->postAcquisitionStop();
         this->updateState(State::ON, h);
     }
 
@@ -2245,11 +2246,6 @@ namespace karabo {
             this->updateState(State::ON, Hash("status", ""));
         }
     }
-
-    void AravisCamera::postAcquisitionStop() {
-        // Hook that can be implemented in the derived class, if needed.
-    }
-
 
     void AravisCamera::resetCamera() {
         // To be implemented in the derived class, if the feature is available.

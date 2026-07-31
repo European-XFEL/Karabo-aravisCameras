@@ -40,8 +40,6 @@ namespace karabo {
         gint64 m_reference_camera_timestamp;
 
        private:
-        void postAcquisitionStop() override;
-
         void resetCamera() override;
     };
 
