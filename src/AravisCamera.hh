@@ -122,10 +122,8 @@ namespace karabo {
         double m_max_latency;
 
 
-
        protected:
         void clear_stream();
-        virtual void postAcquisitionStop();
         virtual std::string get_frame_rate_enable_parameter_name() const;
 
        private:

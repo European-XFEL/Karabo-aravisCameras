@@ -234,10 +234,6 @@ namespace karabo {
         return this->isFeatureAvailable(feature);
     }
 
-    void AravisBaslerBase::postAcquisitionStop() {
-        this->clear_stream();
-    }
-
     void AravisBaslerBase::resetCamera() {
         GError* error = nullptr;
         boost::mutex::scoped_lock camera_lock(m_camera_mtx);
