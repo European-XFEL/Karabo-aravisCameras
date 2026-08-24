@@ -35,8 +35,6 @@ namespace karabo {
 
         OVERWRITE_ELEMENT(expected).key("flip.Y").setNewAlias("ReverseY").setNewTags({"genicam"}).commit();
 
-        const std::vector<std::string> binModes = {"Sum", "Average"};
-
         OVERWRITE_ELEMENT(expected)
               .key("bin.x")
               .setNewAlias("BinningHorizontal")
@@ -46,6 +44,7 @@ namespace karabo {
                     "of the camera as a single pixel.")
               .commit();
 
+        const std::vector<std::string> binModeOptions = {"Sum", "Average"};
         STRING_ELEMENT(expected)
               .key("bin.binningHorizontalMode")
               .alias("BinningHorizontalMode")
@@ -54,7 +53,7 @@ namespace karabo {
               .description("Sets the binning mode for horizontal binning.")
               .assignmentOptional()
               .defaultValue("Sum")
-              .options(binModes)
+              .options(binModeOptions)
               .reconfigurable()
               .allowedStates(State::UNKNOWN, State::ON)
               .commit();
@@ -76,13 +75,12 @@ namespace karabo {
               .description("Sets the binning mode for vertical binning.")
               .assignmentOptional()
               .defaultValue("Sum")
-              .options(binModes)
+              .options(binModeOptions)
               .reconfigurable()
               .allowedStates(State::UNKNOWN, State::ON)
               .commit();
 
-        const std::vector<std::string> expTimeModes = {"Standard", "Short", "UltraShort"};
-
+        const std::vector<std::string> expTimeModeOptions = {"Standard", "Short", "UltraShort"};
         STRING_ELEMENT(expected)
               .key("exposureTimeMode")
               .alias("BslExposureTimeMode")
@@ -91,7 +89,7 @@ namespace karabo {
               .description("Sets the exposure time mode.")
               .assignmentOptional()
               .defaultValue("Standard")
-              .options(expTimeModes)
+              .options(expTimeModeOptions)
               .reconfigurable()
               .allowedStates(State::UNKNOWN, State::ON)
               .commit();

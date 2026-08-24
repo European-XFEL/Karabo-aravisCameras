@@ -23,9 +23,10 @@ namespace karabo {
         // does not compile with too many parameters
         AravisBaslerBase::expectedParameters(expected);
 
+        const std::vector<std::string> pixelFormatOptions = {"Mono8", "Mono10", "Mono10p", "Mono12", "Mono12p"};
         OVERWRITE_ELEMENT(expected)
               .key("pixelFormat")
-              .setNewOptions("Mono8,Mono10,Mono10p,Mono12,Mono12p")
+              .setNewOptions(pixelFormatOptions)
               .setNewDefaultValue("Mono12p")
               .commit();
 
@@ -33,6 +34,7 @@ namespace karabo {
         const std::vector<std::string> supportedModels = {"a2A", "r2L"};
         OVERWRITE_ELEMENT(expected).key("supportedModels").setNewDefaultValue(supportedModels).commit();
 
+        const std::vector<std::string> temperatureSelectorOptions = {"Coreboard"};
         STRING_ELEMENT(expected)
               .key("temperatureSelector")
               .alias("DeviceTemperatureSelector")
@@ -41,7 +43,7 @@ namespace karabo {
               .description("Lists the temperature sources available for readout.")
               .assignmentOptional()
               .defaultValue("Coreboard")
-              .options("Coreboard")
+              .options(temperatureSelectorOptions)
               .reconfigurable()
               .allowedStates(State::UNKNOWN, State::ON)
               .commit();
@@ -112,6 +114,7 @@ namespace karabo {
               .readOnly()
               .commit();
 
+        const std::vector<std::string> shutterModeOptions = {"Global", "Rolling", "GlobalResetRelease"};
         STRING_ELEMENT(expected)
               .key("shutterMode")
               .alias("SensorShutterMode")
@@ -120,7 +123,7 @@ namespace karabo {
               .description("Sets the shutter mode of the camera.")
               .assignmentOptional()
               .defaultValue("Global")
-              .options("Global,Rolling,GlobalResetRelease")
+              .options(shutterModeOptions)
               .reconfigurable()
               .allowedStates(State::UNKNOWN, State::ON)
               .commit();

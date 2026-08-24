@@ -134,13 +134,15 @@ namespace karabo {
         //                .allowedStates(State::UNKNOWN, State::ON)
         //                .commit();
 
+        std::vector<std::string> pixelFormatOptions = {"Mono8", "Mono12", "Mono12Packed", "Mono16"};
         OVERWRITE_ELEMENT(expected)
               .key("pixelFormat")
               // Fill-up with some commonly available options. They will be updated on connection.
-              .setNewOptions("Mono8,Mono12,Mono12Packed,Mono16")
+              .setNewOptions(pixelFormatOptions)
               .setNewDefaultValue("Mono16")
               .commit();
 
+        std::vector<std::string> displayModeOptions = {"Low_Gain", "High_Gain", "Combined_low_and_high_gains"};
         STRING_ELEMENT(expected)
               .key("displayMode")
               .alias("Display_mode")
@@ -149,11 +151,12 @@ namespace karabo {
               .description("Select nonstandard display modes. Use to select between low gain, high gain or combined.")
               .assignmentOptional()
               .defaultValue("Combined_low_and_high_gains")
-              .options("Low_Gain,High_Gain,Combined_low_and_high_gains")
+              .options(displayModeOptions)
               .reconfigurable()
               .allowedStates(State::UNKNOWN, State::ON)
               .commit();
 
+        std::vector<std::string> exposureModeOptions = {"Timed"};
         STRING_ELEMENT(expected)
               .key("exposureMode")
               .alias("ExposureMode")
@@ -162,7 +165,7 @@ namespace karabo {
               .description("This feature is used to set the operation mode of the Exposure (or shutter).")
               .assignmentOptional()
               .defaultValue("Timed")
-              .options("Timed")
+              .options(exposureModeOptions)
               .reconfigurable()
               .allowedStates(State::UNKNOWN, State::ON)
               .commit();
@@ -184,6 +187,8 @@ namespace karabo {
               .allowedStates(State::UNKNOWN, State::ON)
               .commit();
 
+        std::vector<std::string> triggerModeOptions = {"freerun",    "Hardware_falling_edge", "Hardware_rising_edge",
+                                                       "SW_Trigger", "Pipeline_Marser",       "Pipeline_slave"};
         STRING_ELEMENT(expected)
               .key("triggerMode")
               .alias("PSL_TRIGGER_MODE")
@@ -192,7 +197,7 @@ namespace karabo {
               .description("Trigger mode selector.")
               .assignmentOptional()
               .defaultValue("Hardware_rising_edge")
-              .options("freerun,Hardware_falling_edge,Hardware_rising_edge,SW_Trigger,Pipeline_Marser,Pipeline_slave")
+              .options(triggerModeOptions)
               .reconfigurable()
               .allowedStates(State::UNKNOWN, State::ON)
               .commit();
@@ -211,6 +216,7 @@ namespace karabo {
               .readOnly()
               .commit();
 
+        std::vector<std::string> powerSavingOptions = {"Camera_On", "Cooling_Off", "Camera_Off"};
         STRING_ELEMENT(expected)
               .key("powerSaving")
               .alias("Power_saving")
@@ -219,7 +225,7 @@ namespace karabo {
               .description("The power saving mode.")
               .assignmentOptional()
               .defaultValue("Camera_On")
-              .options("Camera_On,Cooling_Off,Camera_Off")
+              .options(powerSavingOptions)
               .reconfigurable()
               .allowedStates(State::UNKNOWN, State::ON)
               .commit();
@@ -235,6 +241,7 @@ namespace karabo {
         //                .allowedStates(State::UNKNOWN, State::ON)
         //                .commit();
 
+        std::vector<std::string> flickerReductionOptions = {"OFF", "FIFTY_HERTZ", "SIXTY_HERTZ"};
         STRING_ELEMENT(expected)
               .key("flickerReduction")
               .alias("flicker_reduction")
@@ -245,7 +252,7 @@ namespace karabo {
                     "Only works with exposure times greater than 10ms.")
               .assignmentOptional()
               .defaultValue("OFF")
-              .options("OFF,FIFTY_HERTZ,SIXTY_HERTZ")
+              .options(flickerReductionOptions)
               .reconfigurable()
               .allowedStates(State::UNKNOWN, State::ON)
               .commit();
@@ -313,6 +320,7 @@ namespace karabo {
               .allowedStates(State::UNKNOWN, State::ON)
               .commit();
 
+        std::vector<std::string> offsetCorrectionOptions = {"OFF", "OFFSET_CORRECTED", "OFFSET_AND_CLAMP_CORRECTED"};
         STRING_ELEMENT(expected)
               .key("offsetCorrection")
               .alias("Offset_corection")
@@ -321,11 +329,12 @@ namespace karabo {
               .description("Corrects the image for offset variations.")
               .assignmentOptional()
               .defaultValue("OFFSET_AND_CLAMP_CORRECTED")
-              .options("OFF,OFFSET_CORRECTED,OFFSET_AND_CLAMP_CORRECTED")
+              .options(offsetCorrectionOptions)
               .reconfigurable()
               .allowedStates(State::UNKNOWN, State::ON)
               .commit();
 
+        std::vector<std::string> gammaSelOptions = {"one", "Gamma_gain", "Gamma_gain_low"};
         STRING_ELEMENT(expected)
               .key("gammaSel")
               .alias("Gamma_sel")
@@ -335,7 +344,7 @@ namespace karabo {
                     "Selects gamma 1 or gamma gain which is controlled by the Gamma_gain_dark control or the best fit.")
               .assignmentOptional()
               .defaultValue("one")
-              .options("one,Gamma_gain,Gamma_gain_low")
+              .options(gammaSelOptions)
               .expertAccess()
               .reconfigurable()
               .allowedStates(State::UNKNOWN, State::ON)
@@ -392,6 +401,7 @@ namespace karabo {
               .allowedStates(State::UNKNOWN, State::ON)
               .commit();
 
+        std::vector<std::string> pixelSpeedOptions = {"MHz50", "MHz100"};
         STRING_ELEMENT(expected)
               .key("pixelSpeed")
               .alias("Pixel_Speed")
@@ -400,7 +410,7 @@ namespace karabo {
               .description("Sets the pixel speed in MHz. Only preset values are supported.")
               .assignmentOptional()
               .defaultValue("MHz50")
-              .options("MHz50,MHz100")
+              .options(pixelSpeedOptions)
               .expertAccess()
               .reconfigurable()
               .allowedStates(State::UNKNOWN, State::ON)
