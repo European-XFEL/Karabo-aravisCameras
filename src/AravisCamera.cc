@@ -54,6 +54,7 @@ namespace karabo {
               .setNewOptions(State::UNKNOWN, State::ERROR, State::ON, State::ACQUIRING)
               .commit();
 
+        const std::vector<std::string> idTypeOptions = {"IP", "HOST", "SN", "MAC"};
         STRING_ELEMENT(expected)
               .key("idType")
               .displayedName("ID Type")
@@ -64,7 +65,7 @@ namespace karabo {
                     "For USB3V cameras only SN can be used.")
               .assignmentOptional()
               .defaultValue("IP")
-              .options("IP,HOST,SN,MAC")
+              .options(idTypeOptions)
               .init()
               .commit();
 
@@ -422,18 +423,20 @@ namespace karabo {
               .allowedStates(State::UNKNOWN, State::ON)
               .commit();
 
+        const std::vector<unsigned int> rotationOptions = {0u, 90u, 180u, 270u};
         UINT32_ELEMENT(expected)
               .key("rotation")
               .displayedName("Image Rotation")
               .description("The image rotation. This is done after the image flip.")
               .assignmentOptional()
-              .defaultValue(0)
-              .options("0,90,180,270")
+              .defaultValue(0u)
+              .options(rotationOptions)
               .unit(Unit::DEGREE)
               .allowedStates(State::UNKNOWN, State::ON)
               .reconfigurable()
               .commit();
 
+        const std::vector<std::string> pixelFormatOptions = {"Mono8", "Mono12"};
         STRING_ELEMENT(expected)
               .key("pixelFormat")
               .displayedName("Pixel Format")
@@ -441,9 +444,9 @@ namespace karabo {
                     "This enumeration sets the format of the pixel data transmitted for acquired images. "
                     "For example Mono8 means monochromatic, 8 bits-per-pixel.")
               .assignmentOptional()
-              .defaultValue("Mono12Packed")
+              .defaultValue("Mono12")
               // Fill-up with some commonly available options. They will be updated on connection.
-              .options("Mono8,Mono12,Mono12Packed")
+              .options(pixelFormatOptions)
               .reconfigurable()
               .allowedStates(State::UNKNOWN, State::ON)
               .commit();
@@ -478,13 +481,14 @@ namespace karabo {
               .allowedStates(State::UNKNOWN, State::ON)
               .commit();
 
+        const std::vector<std::string> triggerModeOptions = {"On", "Off"};
         STRING_ELEMENT(expected)
               .key("triggerMode")
               .displayedName("Trigger Mode")
               .description("This enumeration enables or disables the selected trigger.")
               .assignmentOptional()
               .defaultValue("Off")
-              .options("On,Off")
+              .options(triggerModeOptions)
               .reconfigurable()
               .allowedStates(State::UNKNOWN, State::ON)
               .commit();
@@ -500,24 +504,26 @@ namespace karabo {
               .allowedStates(State::UNKNOWN, State::ON)
               .commit();
 
+        const std::vector<std::string> triggerActivationOptions = {"RisingEdge", "FallingEdge"};
         STRING_ELEMENT(expected)
               .key("triggerActivation")
               .displayedName("Trigger Activation")
               .description("This enumeration sets the signal transition needed to activate the selected trigger.")
               .assignmentOptional()
               .defaultValue("RisingEdge")
-              .options("RisingEdge,FallingEdge")
+              .options(triggerActivationOptions)
               .reconfigurable()
               .allowedStates(State::UNKNOWN, State::ON)
               .commit();
 
+        const std::vector<std::string> autoGainOptions = {"Off", "Once", "Continuous"};
         STRING_ELEMENT(expected)
               .key("autoGain")
               .displayedName("Auto Gain")
               .description("Configures automatic gain feature.")
               .assignmentOptional()
               .defaultValue("Off")
-              .options("Off,Once,Continuous")
+              .options(autoGainOptions)
               .reconfigurable()
               .commit();
 
@@ -546,13 +552,14 @@ namespace karabo {
               .readOnly()
               .commit();
 
+        const std::vector<std::string> acquisitionModeOptions = {"Continuous", "SingleFrame", "MultiFrame"};
         STRING_ELEMENT(expected)
               .key("acquisitionMode")
               .displayedName("Acquisition Mode")
               .description("This property sets the image acquisition mode.")
               .assignmentOptional()
               .defaultValue("Continuous")
-              .options("Continuous,SingleFrame,MultiFrame")
+              .options(acquisitionModeOptions)
               .reconfigurable()
               .allowedStates(State::UNKNOWN, State::ON)
               .commit();

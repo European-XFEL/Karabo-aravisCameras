@@ -27,6 +27,13 @@ namespace karabo {
         const std::vector<std::string> supportedModels = {"acA", "avA", "piA", "raL"};
         OVERWRITE_ELEMENT(expected).key("supportedModels").setNewDefaultValue(supportedModels).commit();
 
+        const std::vector<std::string> pixelFormatOptions = {"Mono8", "Mono12", "Mono12Packed"};
+        OVERWRITE_ELEMENT(expected)
+              .key("pixelFormat")
+              .setNewOptions(pixelFormatOptions)
+              .setNewDefaultValue("Mono12Packed")
+              .commit();
+
         FLOAT_ELEMENT(expected)
               .key("resultingFramePeriodAbs")
               .alias("ResultingFramePeriodAbs")
@@ -56,6 +63,7 @@ namespace karabo {
               .readOnly()
               .commit();
 
+        std::vector<std::string> temperatureSelectorOptions = {"Sensorboard", "Coreboard"};
         STRING_ELEMENT(expected)
               .key("temperatureSelector")
               .alias("TemperatureSelector")
@@ -64,7 +72,7 @@ namespace karabo {
               .description("Lists the temperature sources available for readout.")
               .assignmentOptional()
               .defaultValue("Sensorboard")
-              .options("Sensorboard,Coreboard")
+              .options(temperatureSelectorOptions)
               .reconfigurable()
               .allowedStates(State::UNKNOWN, State::ON)
               .commit();
@@ -88,6 +96,7 @@ namespace karabo {
               .readOnly()
               .commit();
 
+        std::vector<std::string> shutterModeOptions = {"Global", "Rolling", "GlobalResetRelease"};
         STRING_ELEMENT(expected)
               .key("shutterMode")
               .alias("ShutterMode")
@@ -96,7 +105,7 @@ namespace karabo {
               .description("Sets the shutter mode.")
               .assignmentOptional()
               .defaultValue("Global")
-              .options("Global,Rolling,GlobalResetRelease")
+              .options(shutterModeOptions)
               .reconfigurable()
               .allowedStates(State::UNKNOWN, State::ON)
               .commit();
