@@ -23,7 +23,7 @@ namespace karabo {
         // does not compile with too many parameters
         AravisBaslerBase::expectedParameters(expected);
 
-        const std::vector<std::string> pixelFormatOptions = {"Mono8", "Mono10", "Mono10p", "Mono12", "Mono12p"};
+        const std::vector<std::string> pixelFormatOptions = {"Mono8", "Mono10", "Mono10p", "Mono12", "Mono12p", "RGB8", "BGR8", "YCbCr422_8", "BayerRG8", "BayerRG10", "BayerRG10p", "BayerRG12", "BayerRG12p"};
         OVERWRITE_ELEMENT(expected)
               .key("pixelFormat")
               .setNewOptions(pixelFormatOptions)
