@@ -519,7 +519,7 @@ namespace karabo {
     AravisPhotonicScienceCamera::AravisPhotonicScienceCamera(const karabo::data::Hash& config)
         : AravisCamera(config), m_reference_camera_timestamp(0.) {
         m_is_base_class = false;
-        m_arv_camera_trigger = false; // Trigger properties to be accessed from non-standard paths
+        m_use_arv_camera_trigger = false; // Trigger properties to be accessed from non-standard paths
     }
 
     bool AravisPhotonicScienceCamera::synchronize_timestamp() {

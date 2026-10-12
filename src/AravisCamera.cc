@@ -601,13 +601,8 @@ namespace karabo {
     AravisCamera::AravisCamera(const karabo::data::Hash& config)
         : CameraImageSource(config),
           m_is_base_class(true),
-          m_arv_camera_trigger(true),
           m_is_device_reset_available(false),
-          m_is_frame_count_available(false),
-          m_camera(nullptr),
-          m_device(nullptr),
-          m_parser(nullptr),
-          m_timestampErrorCount(0ull),
+          m_use_arv_camera_trigger(true),
           m_chunk_mode(false),
           m_width(0),
           m_height(0),
@@ -616,14 +611,11 @@ namespace karabo {
           m_max_correction_time(0),
           m_min_latency(0.),
           m_max_latency(0.),
-          m_outputStrand(karabo::data::Configurator<Strand>::create("Strand", Hash())),
-          m_connect(true),
-          m_is_connected(false),
-          m_reconnect_timer(EventLoop::getIOService()),
-          m_failed_connections(0u),
-          m_poll_timer(EventLoop::getIOService()),
-          m_is_acquiring(false),
-          m_stream(nullptr),
+          m_camera(nullptr),
+          m_device(nullptr),
+          m_parser(nullptr),
+          m_timestampErrorCount(0ull),
+          m_is_frame_count_available(false),
           m_is_binning_available(false),
           m_is_exposure_time_available(false),
           m_is_flip_x_available(false),
@@ -631,6 +623,14 @@ namespace karabo {
           m_is_frame_rate_available(false),
           m_is_gain_available(false),
           m_is_gain_auto_available(false),
+          m_connect(true),
+          m_is_connected(false),
+          m_reconnect_timer(EventLoop::getIOService()),
+          m_failed_connections(0u),
+          m_stream(nullptr),
+          m_poll_timer(EventLoop::getIOService()),
+          m_is_acquiring(false),
+          m_outputStrand(karabo::data::Configurator<Strand>::create("Strand", Hash())),
           m_errorCount(0ull),
           m_lastError(ARV_BUFFER_STATUS_SUCCESS),
           m_counter(0) {
@@ -1817,7 +1817,7 @@ namespace karabo {
             }
         }
 
-        if (m_arv_camera_trigger) {
+        if (m_use_arv_camera_trigger) {
             // trigger properties can be accessed with the arv_camera interface
             Result success;
 
@@ -2205,7 +2205,7 @@ namespace karabo {
 
 
     void AravisCamera::trigger() {
-        if (!m_arv_camera_trigger) {
+        if (!m_use_arv_camera_trigger) {
             return;
         }
 
@@ -2547,7 +2547,7 @@ namespace karabo {
             }
         }
 
-        if (m_arv_camera_trigger) {
+        if (m_use_arv_camera_trigger) {
             boost::mutex::scoped_lock camera_lock(m_camera_mtx);
             const std::string triggerSelector =
                   arv_device_get_string_feature_value(m_device, "TriggerSelector", &error);
@@ -2949,7 +2949,7 @@ namespace karabo {
                   .commit();
         }
 
-        if (m_arv_camera_trigger) {
+        if (m_use_arv_camera_trigger) {
             // get available trigger selectors
             str_options = arv_camera_dup_available_triggers(m_camera, &n_str_values, &error);
             if (error != nullptr) {
