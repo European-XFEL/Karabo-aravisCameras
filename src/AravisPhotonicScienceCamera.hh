@@ -29,23 +29,18 @@ namespace karabo {
 
         virtual ~AravisPhotonicScienceCamera() = default;
 
-        bool synchronize_timestamp() override;
-
-        bool configure_timestamp_chunk() override;
-
-        bool get_region(gint& x, gint& y, gint& width, gint& height) override;
-
-        int get_tick_frequency() override;
-
-        bool get_timestamp(ArvBuffer* buffer, karabo::data::Timestamp& ts) override;
-
-        bool is_flip_y_available() const override;
-
        private:
-        void configure(karabo::data::Hash& configuration) override;
+        double m_reference_camera_timestamp;
+
         void trigger() override;
 
-        double m_reference_camera_timestamp;
+        void configure(karabo::data::Hash& configuration) override;
+        bool synchronize_timestamp() override;
+        bool configure_timestamp_chunk() override;
+        bool get_region(gint& x, gint& y, gint& width, gint& height) override;
+        int get_tick_frequency() override;
+        bool get_timestamp(ArvBuffer* buffer, karabo::data::Timestamp& ts) override;
+        bool is_flip_y_available() const override;
     };
 
 } // namespace karabo

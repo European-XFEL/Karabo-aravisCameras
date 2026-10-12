@@ -29,12 +29,10 @@ namespace karabo {
 
         virtual ~AravisBasler2Camera() = default;
 
+       private:
         bool synchronize_timestamp() override;
-
         bool configure_timestamp_chunk() override;
-
         int get_tick_frequency() override;
-
         bool get_timestamp(ArvBuffer* buffer, karabo::data::Timestamp& ts) override;
     };
 

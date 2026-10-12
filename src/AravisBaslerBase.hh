@@ -27,20 +27,18 @@ namespace karabo {
 
         virtual ~AravisBaslerBase() = default;
 
-        bool get_timestamp(ArvBuffer* buffer, karabo::data::Timestamp& ts, const std::string& tsFeature);
-
-        virtual bool is_flip_x_available() const override;
-
-        virtual bool is_flip_y_available() const override;
-
-        std::string aravisBaslerScene();
-
        protected:
         bool m_ptp_enabled;
         gint64 m_reference_camera_timestamp;
 
+        bool get_timestamp(ArvBuffer* buffer, karabo::data::Timestamp& ts, const std::string& tsFeature);
+
        private:
         void resetCamera() override;
+        std::string aravisBaslerScene();
+
+        virtual bool is_flip_x_available() const override;
+        virtual bool is_flip_y_available() const override;
     };
 
 } // namespace karabo
