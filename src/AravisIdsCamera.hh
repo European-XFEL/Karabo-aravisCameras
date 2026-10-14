@@ -14,15 +14,20 @@ namespace karabo {
 
         static void expectedParameters(karabo::data::Schema& expected);
         explicit AravisIdsCamera(const karabo::data::Hash& config);
+        bool get_timestamp(ArvBuffer* buffer, karabo::data::Timestamp& ts) override;
         ~AravisIdsCamera() override = default;
 
-       protected:
+       private:
+        bool m_is_timestamp_latch_available;
+        double m_reference_camera_timestamp;
+
+        void resetCamera() override;
+
         bool is_flip_x_available() const override;
         bool is_flip_y_available() const override;
         std::string get_frame_rate_enable_parameter_name() const override;
-
-       private:
-        void resetCamera() override;
+        bool synchronize_timestamp() override;
+        int get_tick_frequency() override;
     };
 
 } // namespace karabo
