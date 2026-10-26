@@ -19,6 +19,18 @@ settings during runtime. This class simplifies the interaction with the camera
 and streamlines the process making it easier to integrate the camera into
 various applications.
 
+## Supported Cameras
+
+This package consists of several classes, each one supporting multiple cameras.
+
+- ``AravisBaslerCamera``: Basler 1st generation cameras from the following
+  families: ace (i.e. "acA\*" models), aviator ("avA\*" models), pilot ("piA\*"
+  models), racer ("raL\*" models);
+- ``AravisBasler2Camera``: Basler 2nd generation cameras from the following
+  families: ace2 (i.e. "a2A\*" models), racer2 ("r2L\*" models);
+- ``AravisIdsCamera``: IDS cameras: "GV-53FxLE-M", "GV-58CxLE-M";
+- ``AravisPhotonicScienceCamera``: sCMOS cameras (not fully tested).
+
 ## Contact
 
 For questions, please contact opensource@xfel.eu.
